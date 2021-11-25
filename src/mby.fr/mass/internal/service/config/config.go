@@ -25,8 +25,8 @@ func (s MassConfigService) Config() *MassConfig {
 	return s.config
 }
 
-func newMassConfigService() MassConfigService {
-	maasConfig := &MassConfig{"badPath"}
+func newMassConfigService(workspacePath string) MassConfigService {
+	maasConfig := &MassConfig{workspacePath}
 	configService := MassConfigService{maasConfig}
 	return configService
 }

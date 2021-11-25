@@ -20,14 +20,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	ConfigService "mby.fr/mass/internal/service/config"
+	"mby.fr/mass/internal/service/config"
 )
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configure MASS",
-	Long: ``,
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		displayConfig()
 	},
@@ -48,7 +48,7 @@ func init() {
 }
 
 func displayConfig() {
-	configService := ConfigService.GetMassConfigService()
+	configService := config.GetMassConfigService()
 	config := configService.Config()
-	fmt.Printf("MASs config:\n%v\n", config)
+	fmt.Println(config)
 }
