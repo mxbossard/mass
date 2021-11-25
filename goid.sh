@@ -41,7 +41,7 @@ mkdir -p "$hostModCacheDir"
 runCmd="docker run --rm -d --user=$( id -u ):$( id -g ) --workdir=$workDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw golang:1.17"
 #echo $runCmd
 
->&2 echo "Executing go in a container on workspace: $rootDir with GOMODCACHE: $hostModCacheDir ..."
+#>&2 echo "Executing go in a container on workspace: $rootDir with GOMODCACHE: $hostModCacheDir ..."
 ctId=$( $runCmd sleep $ctDurationInSec )
 #echo $ctId
 
@@ -49,4 +49,4 @@ ctId=$( $runCmd sleep $ctDurationInSec )
 #docker exec -it $ctId "$@"
 #exit 0
 
-docker exec -it $ctId go "$@"
+docker exec $ctId go "$@"
