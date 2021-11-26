@@ -3,11 +3,9 @@ package workspace
 import (
 	"log"
 	"os"
-
-	"mby.fr/mass/internal/service/config"
 )
 
-func InitWorkspace(name string) {
+func Init(name string) {
 	err := os.Mkdir(name, 0755)
 	if (err != nil) {
 		log.Fatal(err)
@@ -18,6 +16,6 @@ func InitWorkspace(name string) {
 		log.Fatal(err)
 	}
 
-	config.InitMassConfig()
+	InitConfig()
 }
 

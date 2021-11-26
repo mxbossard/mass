@@ -1,4 +1,4 @@
-package config
+package workspace
 
 import (
 	"fmt"
@@ -12,26 +12,29 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// --- MassConfig ---
+const configDir = ".mass/"
+const configFilePath = "config.yaml"
 
-type MassConfig struct {
+// --- Config ---
+
+type Config struct {
 	Name string
 	WorkspacePath string
 }
 
-func (c MassConfig) String() string {
-	return fmt.Sprintf("MassConfig name: %s ; workspacePath: %s.", c.Name, c.WorkspacePath)
+func (c Config) String() string {
+	return fmt.Sprintf("Config name: %s ; workspacePath: %s.", c.Name, c.WorkspacePath)
 }
 
-func (c MassConfig) ConfigDirPath() string {
-	return filepath.Join(c.WorkspacePath, "/.mass/")
+func (c Config) ConfigDirPath() string {
+	return filepath.Join(c.WorkspacePath, configDir)
 }
 
-func (c MassConfig) ConfigFilePath() string {
+func (c Config) ConfigFilePath() string {
 	return filepath.Join(c.ConfigDirPath(), "config.yaml")
 }
 
-func (c MassConfig) store() {
+func (c Config) store() {
 	configFilePath := c.ConfigFilePath()
 	data, err := yaml.Marshal(&c)
 	if err != nil {
@@ -57,26 +60,26 @@ func getWorkDirPath() string {
 	return workDirPath
 }
 
-func InitMassConfig() {
+func InitConfig() {
 	workspacePath := getWorkDirPath()
 	name := filepath.Base(workspacePath)
-	config := MassConfig{name, workspacePath}
+	config := Config{name, workspacePath}
 
 	_, err := os.Stat(config.ConfigFilePath())
 	if err == nil {
 		// config file already exists
-		log.Fatal("mass config already exists !")
+		log.Fatal("Workspace config already exists !")
 	}
 
 	config.store()
 }
 
-func seekMassConfigPathRecurse(dirPath string) (string, error) {
-	//log.Printf("Seek MassConfig in dir: %s ...\n", dirPath)
+func seekConfigPathRecurse(dirPath string) (string, error) {
+	//log.Printf("Seek Config in dir: %s ...\n", dirPath)
 	if dirPath == "/" {
 		return "", errors.New("Unable to found config path")
 	}
-	configFilePath := filepath.Join(dirPath, "/.mass/config.yaml")
+	configFilePath := filepath.Join(dirPath, "/" + configFilePath)
 
 	_, err := os.Stat(configFilePath)
 	if err == nil {
@@ -91,13 +94,13 @@ func seekMassConfigPathRecurse(dirPath string) (string, error) {
 	}
 
 	parentDirPath := filepath.Dir(dirPath)
-	return seekMassConfigPathRecurse(parentDirPath)
+	return seekConfigPathRecurse(parentDirPath)
 }
 
-func seekMassConfigPath() string {
+func seekConfigPath() string {
 	workDirPath := getWorkDirPath()
 
-	configPath, err := seekMassConfigPathRecurse(workDirPath)
+	configPath, err := seekConfigPathRecurse(workDirPath)
 
 	if configPath != "" && err == nil {
 		return configPath
@@ -105,10 +108,10 @@ func seekMassConfigPath() string {
 	return ""
 }
 
-func loadMassConfig() (*MassConfig, bool) {
-	configFilePath := seekMassConfigPath()
+func loadConfig() (*Config, bool) {
+	configFilePath := seekConfigPath()
 	if configFilePath == "" {
-		// Mass config does not exists yet
+		// Workspace config does not exists yet
 		return nil, false
 	}
 
@@ -117,7 +120,7 @@ func loadMassConfig() (*MassConfig, bool) {
 		log.Fatal(err)
 	}
 
-	config := MassConfig{}
+	config := Config{}
 
 	err = yaml.Unmarshal(yfile, &config)
 	if err != nil {
@@ -127,42 +130,42 @@ func loadMassConfig() (*MassConfig, bool) {
 	return &config, true
 }
 
-// --- MassConfigService ---
+// --- ConfigService ---
 
-type MassConfigService struct {
-	config *MassConfig
+type ConfigService struct {
+	config *Config
 }
 
 // constructor
-func newMassConfigService() MassConfigService {
-	massConfig, ok := loadMassConfig()
+func newConfigService() ConfigService {
+	config, ok := loadConfig()
 	if !ok {
-		log.Fatal("Unable to load mass config !")
+		log.Fatal("Unable to load workspace config !")
 	}
-	configService := MassConfigService{massConfig}
+	configService := ConfigService{config}
 	return configService
 }
 
 // config getter
-func (s MassConfigService) Config() *MassConfig {
+func (s ConfigService) Config() *Config {
 	return s.config
 }
 
 // singleton
 var lock = &sync.Mutex{}
 
-var maasConfigService *MassConfigService
+var configService *ConfigService
 
-func GetMassConfigService() *MassConfigService {
-	if maasConfigService == nil {
+func GetConfigService() *ConfigService {
+	if configService == nil {
 		lock.Lock()
 		defer lock.Unlock()
-		if maasConfigService == nil {
-			service := newMassConfigService()
-			maasConfigService = &service
+		if configService == nil {
+			service := newConfigService()
+			configService = &service
 		}
 	}
-	return maasConfigService
+	return configService
 }
 
 

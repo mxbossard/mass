@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/service/config"
+	"mby.fr/mass/internal/workspace"
 )
 
 // configCmd represents the config command
@@ -48,7 +48,7 @@ func init() {
 }
 
 func displayConfig() {
-	configService := config.GetMassConfigService()
+	configService := workspace.GetConfigService()
 	config := configService.Config()
 	fmt.Println(config)
 }
