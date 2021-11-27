@@ -16,33 +16,31 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
 
-	"mby.fr/mass/internal/workspace"
+	"github.com/spf13/cobra"
 )
 
-// workspaceCmd represents the workspace command
-var workspaceCmd = &cobra.Command{
-	Use:   "workspace <name>",
-	Short: "Initialize a new workspace",
+// envCmd represents the env command
+var envCmd = &cobra.Command{
+	Use:   "env <name>",
+	Short: "Initialize e new environment",
 	Long: ``,
-	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		name := args[0]
-		workspace.Init(name)
+		fmt.Println("env called")
 	},
 }
 
 func init() {
-	initCmd.AddCommand(workspaceCmd)
+	initCmd.AddCommand(envCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// workspaceCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// envCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// workspaceCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// envCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
