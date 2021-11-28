@@ -16,9 +16,9 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+
+        "mby.fr/mass/internal/workspace"
 )
 
 // envCmd represents the env command
@@ -26,8 +26,10 @@ var envCmd = &cobra.Command{
 	Use:   "env <name>",
 	Short: "Initialize e new environment",
 	Long: ``,
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("env called")
+                name := args[0]
+                workspace.InitEnv(name)
 	},
 }
 

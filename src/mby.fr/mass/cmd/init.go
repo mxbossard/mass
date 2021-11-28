@@ -24,6 +24,9 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize some stuff",
 	Long:  ``,
+	// No Run field => Cannot run init command without sub command
+	//Run: func(cmd *cobra.Command, args []string) {
+	//},
 }
 
 func init() {

@@ -16,9 +16,9 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+
+	"mby.fr/mass/internal/workspace"
 )
 
 // projectCmd represents the project command
@@ -26,8 +26,10 @@ var projectCmd = &cobra.Command{
 	Use:   "project <name>",
 	Short: "Initialize a new project",
 	Long: `A project is a set of services isolated from other projects.`,
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("project called")
+		name := args[0]
+		workspace.InitProject(name)
 	},
 }
 

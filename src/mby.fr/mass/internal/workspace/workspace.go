@@ -5,17 +5,21 @@ import (
 	"os"
 )
 
+var defaultEnvs = []string{"dev", "stage", "prod"}
+
 func Init(name string) {
-	err := os.Mkdir(name, 0755)
-	if (err != nil) {
-		log.Fatal(err)
-	}
+	CreateNewDirectory(".", name)
 
-	err = os.Chdir(name)
-	if (err != nil) {
-		log.Fatal(err)
-	}
+        err := os.Chdir(name)
+        if (err != nil) {
+                log.Fatal(err)
+        }
 
+	InitSettings()
 	InitConfig()
+
+	for _, envName := range defaultEnvs {
+		InitEnv(envName)
+	}
 }
 
