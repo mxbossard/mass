@@ -6,8 +6,7 @@ import (
 
 func InitEnv(name string) {
 	settingsService := GetSettingsService()
-        settings := settingsService.Settings()
 
-	CreateNewSubDirectory(settings.ConfigDirPath(), name)
+	CreateNewSubDirectory(settingsService.ConfigDirPath(), name)
 }
 

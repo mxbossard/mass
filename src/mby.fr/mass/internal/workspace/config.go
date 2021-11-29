@@ -21,55 +21,10 @@ const configDir = "config"
 
 type Settings struct {
 	Name string
-	WorkspacePath string
 }
 
 func (s Settings) String() string {
-	return fmt.Sprintf("Settings name: %s ; workspacePath: %s.", s.Name, s.WorkspacePath)
-}
-
-func (s Settings) SettingsDirPath() string {
-	return filepath.Join(s.WorkspacePath, settingsDir)
-}
-
-func (s Settings) SettingsFilePath() string {
-	return filepath.Join(s.WorkspacePath, settingsFilePath)
-}
-
-func (s Settings) ConfigDirPath() string {
-	return filepath.Join(s.WorkspacePath, configDir)
-}
-
-func (s Settings) store() {
-	settingsFilePath := s.SettingsFilePath()
-	data, err := yaml.Marshal(&s)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = os.MkdirAll(s.SettingsDirPath(), 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = ioutil.WriteFile(settingsFilePath, data, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func InitSettings() {
-	workspacePath := GetWorkDirPath()
-	name := filepath.Base(workspacePath)
-	settings := Settings{name, workspacePath}
-
-	_, err := os.Stat(settings.SettingsFilePath())
-	if err == nil {
-		// settings file already exists
-		log.Fatal("Workspace settings already exists !")
-	}
-
-	settings.store()
+	return fmt.Sprintf("Settings name: %s", s.Name)
 }
 
 func InitConfig() {
@@ -104,18 +59,17 @@ func seekSettingsPath() string {
 	workDirPath := GetWorkDirPath()
 
 	settingsPath, err := seekSettingsPathRecurse(workDirPath)
-
-	if settingsPath != "" && err == nil {
-		return settingsPath
+	if err != nil {
+		log.Fatal(err)
 	}
-	return ""
+	return settingsPath
 }
 
-func loadSettings() (*Settings, bool) {
+func loadSettings() (*Settings, string, bool) {
 	settingsFilePath := seekSettingsPath()
 	if settingsFilePath == "" {
 		// Workspace settings does not exists yet
-		return nil, false
+		return nil, "", false
 	}
 
 	yfile, err := ioutil.ReadFile(settingsFilePath)
@@ -130,28 +84,78 @@ func loadSettings() (*Settings, bool) {
 		log.Fatal(err)
 	}
 
-	return &settings, true
+	return &settings, settingsFilePath, true
 }
 
 // --- SettingsService ---
 
 type SettingsService struct {
+	workspacePath string
 	settings *Settings
 }
 
 // constructor
 func newSettingsService() SettingsService {
-	settings, ok := loadSettings()
+	settings, settingsFilePath, ok := loadSettings()
 	if !ok {
 		log.Fatal("Unable to load workspace settings !")
 	}
-	settingsService := SettingsService{settings}
+	workspacePath := filepath.Dir(settingsFilePath)
+	settingsService := SettingsService{settings: settings, workspacePath: workspacePath}
 	return settingsService
+}
+
+// workspacePath getter
+func (s SettingsService) WorkspacePath() string {
+	return s.workspacePath
 }
 
 // settings getter
 func (s SettingsService) Settings() *Settings {
 	return s.settings
+}
+
+func (s SettingsService) SettingsDirPath() string {
+	return filepath.Join(s.workspacePath, settingsDir)
+}
+
+func (s SettingsService) SettingsFilePath() string {
+	return filepath.Join(s.workspacePath, settingsFilePath)
+}
+
+func (s SettingsService) ConfigDirPath() string {
+	return filepath.Join(s.workspacePath, configDir)
+}
+
+func (s *SettingsService) InitSettings() {
+	name := filepath.Base(s.workspacePath)
+	s.settings = &Settings{Name: name}
+
+	_, err := os.Stat(s.SettingsFilePath())
+	if err == nil {
+		// settings file already exists
+		log.Fatal("Workspace settings already exists !")
+	}
+
+	s.store()
+}
+
+func (s SettingsService) store() {
+	settingsFilePath := s.SettingsFilePath()
+	data, err := yaml.Marshal(s.settings)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.MkdirAll(s.SettingsDirPath(), 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = ioutil.WriteFile(settingsFilePath, data, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // singleton
