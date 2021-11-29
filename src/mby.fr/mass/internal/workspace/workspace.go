@@ -3,14 +3,15 @@ package workspace
 import (
 	"log"
 	"os"
+	"fmt"
 )
 
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
-func Init(name string) {
-	CreateNewDirectory(".", name)
+func Init(path string) {
+	CreateNewDirectory(path)
 
-        err := os.Chdir(name)
+        err := os.Chdir(path)
         if (err != nil) {
                 log.Fatal(err)
         }
@@ -21,5 +22,11 @@ func Init(name string) {
 	for _, envName := range defaultEnvs {
 		InitEnv(envName)
 	}
+
+	settingsService := GetSettingsService()
+        settings := settingsService.Settings()
+	worspacePath := settings.WorkspacePath
+
+	fmt.Printf("New workspace initialized in %s\n", worspacePath)
 }
 

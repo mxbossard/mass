@@ -12,8 +12,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const settingsDir = ".mass"
-const settingsFilePath = settingsDir + "/mass.yaml"
+const settingsDir = ".mass/"
+const settingsFilePath = "./mass.yaml"
 
 const configDir = "config"
 
@@ -58,16 +58,8 @@ func (s Settings) store() {
 	}
 }
 
-func getWorkDirPath() string {
-	workDirPath, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return workDirPath
-}
-
 func InitSettings() {
-	workspacePath := getWorkDirPath()
+	workspacePath := GetWorkDirPath()
 	name := filepath.Base(workspacePath)
 	settings := Settings{name, workspacePath}
 
@@ -81,8 +73,8 @@ func InitSettings() {
 }
 
 func InitConfig() {
-	workspacePath := getWorkDirPath()
-	CreateNewDirectory(workspacePath, configDir)
+	workspacePath := GetWorkDirPath()
+	CreateNewSubDirectory(workspacePath, configDir)
 }
 
 func seekSettingsPathRecurse(dirPath string) (string, error) {
@@ -109,7 +101,7 @@ func seekSettingsPathRecurse(dirPath string) (string, error) {
 }
 
 func seekSettingsPath() string {
-	workDirPath := getWorkDirPath()
+	workDirPath := GetWorkDirPath()
 
 	settingsPath, err := seekSettingsPathRecurse(workDirPath)
 

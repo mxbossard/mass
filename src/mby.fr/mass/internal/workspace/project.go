@@ -8,6 +8,6 @@ func InitProject(name string) {
 	settingsService := GetSettingsService()
         settings := settingsService.Settings()
 
-	CreateNewDirectory(settings.WorkspacePath, name)
+	CreateNewSubDirectory(settings.WorkspacePath, name)
 }
 

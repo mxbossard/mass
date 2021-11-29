@@ -23,7 +23,7 @@ import (
 
 // workspaceCmd represents the workspace command
 var workspaceCmd = &cobra.Command{
-	Use:   "workspace <name>",
+	Use:   "workspace <path>",
 	Short: "Initialize a new workspace",
 	Long: ``,
 	Args: cobra.ExactArgs(1),
