@@ -16,8 +16,12 @@ func Init(path string) {
                 log.Fatal(err)
         }
 
-	settingsService := GetSettingsService()
-	settingsService.InitSettings()
+	workspacePath := GetWorkDirPath()
+	initSettings(workspacePath)
+
+	//settingsService := GetSettingsService()
+
+	//settingsService.InitSettings()
 
 	InitConfig()
 
@@ -25,8 +29,6 @@ func Init(path string) {
 		InitEnv(envName)
 	}
 
-	worspacePath := settingsService.WorkspacePath()
-
-	fmt.Printf("New workspace initialized in %s\n", worspacePath)
+	fmt.Printf("New workspace initialized in %s\n", workspacePath)
 }
 
