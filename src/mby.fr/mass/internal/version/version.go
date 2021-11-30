@@ -6,11 +6,15 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-func BumpPatch(version string) *semver.Version {
+func BumpPatch(version string) string {
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Unable to parse version: [%v] ! %v", version, err)
+		return ""
+	} else {
+		log.Printf("Parsed version: [%v].", v)
 	}
 	bumped := v.IncPatch()
-	return &bumped
+	log.Printf("Bumped version: [%v].", bumped)
+	return bumped.String()
 }
