@@ -2,33 +2,40 @@ package workspace
 
 import (
 	"log"
-	"os"
 	"fmt"
+	"path/filepath"
 )
 
-var defaultEnvs = []string{"dev", "stage", "prod"}
-
 func Init(path string) {
+	assertPathNotInExistingWorkspace(path)
+
 	CreateNewDirectory(path)
 
-        err := os.Chdir(path)
-        if (err != nil) {
-                log.Fatal(err)
-        }
+        Chdir(path)
 
 	workspacePath := GetWorkDirPath()
 	initSettings(workspacePath)
 
-	//settingsService := GetSettingsService()
-
-	//settingsService.InitSettings()
-
 	InitConfig()
 
-	for _, envName := range defaultEnvs {
+	settingsService := GetSettingsService()
+	settings := settingsService.Settings()
+
+	for _, envName := range settings.Environments {
 		InitEnv(envName)
 	}
 
 	fmt.Printf("New workspace initialized in %s\n", workspacePath)
 }
 
+func assertPathNotInExistingWorkspace(path string) {
+	workPath := GetWorkDirPath()
+	// Search for settings already present in target parent path
+	parentPath := filepath.Dir(path)
+	Chdir(parentPath)
+        settingsFilePath, _ := seekSettingsFilePath()
+	if settingsFilePath != "" {
+		log.Fatal("Cannot init a workspace inside another workspace !")
+	}
+	Chdir(workPath)
+}

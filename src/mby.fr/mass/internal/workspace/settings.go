@@ -12,28 +12,38 @@ import (
 )
 
 const settingsDir = ".mass/"
-const settingsFilePath = settingsDir + "settings.yaml"
+const settingsFile = settingsDir + "settings.yaml"
+
+// Default settings
+const defaultConfigDir = "config"
+var defaultEnvs = []string{"dev", "stage", "prod"}
+
 
 // --- Settings ---
 
+type Settings struct {
+	Name string
+	ConfigDir string
+	Environments []string
+}
+
 func initViper(workspacePath string) {
-	settingsDirPath := filepath.Join(workspacePath, settingsDir)
+	//settingsDirPath := filepath.Join(workspacePath, settingsDir)
+	settingsFilePath := filepath.Join(workspacePath, settingsFile)
 	workspaceName := filepath.Base(workspacePath)
 
-	//log.Println("Initialize viper ...", workspaceName, settingsDirPath)
-
-	viper.SetConfigName("settings")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(settingsDirPath)
+	//viper.SetConfigName("settings")
+	viper.SetConfigFile(settingsFilePath)
 
 	viper.SetDefault("Name", workspaceName)
-	viper.SetDefault("ConfigDir", "config")
-	viper.SetDefault("Environments", []string{"dev", "stage", "prod"})
+	viper.SetDefault("ConfigDir", defaultConfigDir)
+	viper.SetDefault("Environments", defaultEnvs)
 }
 
 // Store settings erasing previous settings
 func storeSettings() {
-	//log.Println("Store settings ...")
+	log.Println("Store settings in:", viper.ConfigFileUsed())
 	err := viper.WriteConfig()
 	if err != nil {
 		log.Fatal("Unable to store settings !", err)
@@ -46,9 +56,10 @@ func readSettings() (Settings) {
 		// Handle errors reading the config file
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
-			storeSettings()
+			log.Fatal("Settings file not found:", err)
 		} else {
 			// Config file was found but another error was produced
+			log.Fatal("Unable to read settings:", err)
 		}
 	}
 
@@ -56,26 +67,21 @@ func readSettings() (Settings) {
 
 	err := viper.Unmarshal(&s)
 	if err != nil {
-		log.Fatal("unable to decode into struct, %v", err)
+		log.Fatal("Unable to unmarshal settings:", err)
 	}
 	// Config file found and successfully parsed
 	return s
 }
 
 func initSettings(workspacePath string) {
-	//log.Println("Initialize settings ...")
+	//log.Println("Initialize settings ...", viper.ConfigFileUsed())
 	initViper(workspacePath)
 	os.MkdirAll(filepath.Join(workspacePath, settingsDir), 0755)
-	path := filepath.Join(workspacePath, settingsFilePath)
-	err := viper.SafeWriteConfigAs(path)
-	//err := viper.SafeWriteConfig()
+	err := viper.WriteConfig()
 	if err != nil {
-		log.Fatal("Unable to initialize settings !", err)
+		log.Fatalf("Unable to initialize settings: %v", err)
 	}
-}
-
-type Settings struct {
-	Name string
+	fmt.Println("Initialized settings in:", viper.ConfigFileUsed())
 }
 
 func (s Settings) String() string {
@@ -87,7 +93,7 @@ func seekSettingsFilePathRecurse(dirPath string) (string, error) {
 	if dirPath == "/" {
 		return "", errors.New("Unable to found settings path")
 	}
-	settingsFilePath := filepath.Join(dirPath, settingsFilePath)
+	settingsFilePath := filepath.Join(dirPath, settingsFile)
 
 	_, err := os.Stat(settingsFilePath)
 	if err == nil {
@@ -148,11 +154,11 @@ func (s SettingsService) SettingsDirPath() string {
 }
 
 func (s SettingsService) SettingsFilePath() string {
-	return filepath.Join(s.workspacePath, settingsFilePath)
+	return filepath.Join(s.workspacePath, settingsFile)
 }
 
 func (s SettingsService) ConfigDirPath() string {
-	return filepath.Join(s.workspacePath, configDir)
+	return filepath.Join(s.workspacePath, s.settings.ConfigDir)
 }
 
 // singleton

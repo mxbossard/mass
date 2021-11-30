@@ -32,3 +32,9 @@ func GetWorkDirPath() string {
         return workDirPath
 }
 
+func Chdir(path string) {
+	err := os.Chdir(path)
+        if (err != nil) {
+                log.Fatal(err)
+        }
+}
