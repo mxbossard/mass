@@ -1,31 +1,115 @@
 package version
 
 import (
-	"errors"
 	"testing"
-
-	"github.com/Masterminds/semver/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNextPatch(t *testing.T) {
 	cases := []struct {
-		in, want string; err error
+		in, want, err string
 	}{
-		{"0.1.2", "0.1.3", nil},
-		{"1.0.7-dev", "1.0.7", nil},
-		{"1.0.3-rc1", "1.0.3", nil},
-		{"1", "1.0.1", nil},
-		{"1.1", "1.1.1", nil},
-		{"", "", semver.ErrInvalidSemVer},
-		{"foo", "", semver.ErrInvalidSemVer},
+		{"0.1.2", "0.1.3", ""},
+		{"1.0.7-dev", "1.0.7", ""},
+		{"1.0.3-rc1", "1.0.3", ""},
+		{"1", "1.0.1", ""},
+		{"1.1", "1.1.1", ""},
+		{"", "", "Invalid Semantic Version"},
+		{"foo", "", "Invalid Semantic Version"},
 	}
 	for _, c := range cases {
 		got, err := NextPatch(c.in)
-		if got != c.want {
-			t.Errorf("NextPatch(%q) == %q, want %q", c.in, got, c.want)
+		assert.Equal(t, c.want, got, "should be equal")
+		if c.err != "" {
+			assert.EqualError(t, err, c.err)
 		}
-		if !errors.Is(err, c.err) {
-			t.Errorf("NextPatch(%q) error == %q, expected %q", c.in, err, c.err)
+	}
+}
+
+func TestNextMinor(t *testing.T) {
+	cases := []struct {
+		in, want, err string
+	}{
+		{"0.1.2", "0.2.0", ""},
+		{"1.0.7-dev", "1.1.0", ""},
+		{"1.0.3-rc1", "1.1.0", ""},
+		{"1", "1.1.0", ""},
+		{"1.1", "1.2.0", ""},
+		{"", "", "Invalid Semantic Version"},
+		{"foo", "", "Invalid Semantic Version"},
+	}
+	for _, c := range cases {
+		got, err := NextMinor(c.in)
+		assert.Equal(t, c.want, got, "should be equal")
+		if c.err != "" {
+			assert.EqualError(t, err, c.err)
+		}
+	}
+}
+
+func TestNextMajor(t *testing.T) {
+	cases := []struct {
+		in, want, err string
+	}{
+		{"0.1.2", "1.0.0", ""},
+		{"1.0.7-dev", "2.0.0", ""},
+		{"1.0.3-rc1", "2.0.0", ""},
+		{"1", "2.0.0", ""},
+		{"1.1", "2.0.0", ""},
+		{"", "", "Invalid Semantic Version"},
+		{"foo", "", "Invalid Semantic Version"},
+	}
+	for _, c := range cases {
+		got, err := NextMajor(c.in)
+		assert.Equal(t, c.want, got, "should be equal")
+		if c.err != "" {
+			assert.EqualError(t, err, c.err)
+		}
+	}
+}
+
+func TestIsDev(t *testing.T) {
+	cases := []struct {
+		in string
+		want bool
+		err string
+	}{
+		{"0.1.2", false, ""},
+		{"1.0.7-dev", true, ""},
+		{"1.0.3-rc1", false, ""},
+		{"1", false, ""},
+		{"1.1", false, ""},
+		{"", false, "Invalid Semantic Version"},
+		{"foo", false, "Invalid Semantic Version"},
+	}
+	for _, c := range cases {
+		got, err := IsDev(c.in)
+		assert.Equal(t, c.want, got, "should be equal")
+		if c.err != "" {
+			assert.EqualError(t, err, c.err)
+		}
+	}
+}
+
+func TestIsRc(t *testing.T) {
+	cases := []struct {
+		in string
+		want bool
+		err string
+	}{
+		{"0.1.2", false, ""},
+		{"1.0.7-dev", false, ""},
+		{"1.0.3-rc1", true, ""},
+		{"1", false, ""},
+		{"1.1", false, ""},
+		{"", false, "Invalid Semantic Version"},
+		{"foo", false, "Invalid Semantic Version"},
+	}
+	for _, c := range cases {
+		got, err := IsRc(c.in)
+		assert.Equal(t, c.want, got, "should be equal")
+		if c.err != "" {
+			assert.EqualError(t, err, c.err)
 		}
 	}
 }
