@@ -1,20 +1,43 @@
 package version
 
 import (
-	"log"
 
 	"github.com/Masterminds/semver/v3"
 )
 
-func BumpPatch(version string) string {
-	v, err := semver.NewVersion(version)
+func parse(version string) (v *semver.Version, err error) {
+	//v, err = semver.StrictNewVersion(version)
+	v, err = semver.NewVersion(version)
+	return
+}
+
+func NextPatch(version string) (res string, err error) {
+	v, err := parse(version)
 	if err != nil {
-		log.Printf("Unable to parse version: [%v] ! %v", version, err)
-		return ""
-	} else {
-		log.Printf("Parsed version: [%v].", v)
+		return
 	}
 	bumped := v.IncPatch()
-	log.Printf("Bumped version: [%v].", bumped)
-	return bumped.String()
+	res = bumped.String()
+	return
 }
+
+func NextMinor(version string) (res string, err error) {
+	v, err := parse(version)
+	if err != nil {
+		return
+	}
+	bumped := v.IncMinor()
+	res = bumped.String()
+	return
+}
+
+func NextMajor(version string) (res string, err error) {
+	v, err := parse(version)
+	if err != nil {
+		return
+	}
+	bumped := v.IncMajor()
+	res = bumped.String()
+	return
+}
+

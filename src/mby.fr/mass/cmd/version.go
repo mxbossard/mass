@@ -35,7 +35,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		v := "1.0.0"
-		bumped := version.BumpPatch(v)
+		bumped, _ := version.NextPatch(v)
 		fmt.Printf("bumped version: %s\n", bumped)
 	},
 }
