@@ -9,7 +9,8 @@ import (
 func Init(path string) {
 	assertPathNotInExistingWorkspace(path)
 
-	CreateNewDirectory(path)
+	CreateDirectory(path)
+	assertWorkspaceDontAlreadyExists(path)
 
         Chdir(path)
 
@@ -36,6 +37,17 @@ func assertPathNotInExistingWorkspace(path string) {
         settingsFilePath, _ := seekSettingsFilePath()
 	if settingsFilePath != "" {
 		log.Fatal("Cannot init a workspace inside another workspace !")
+	}
+	Chdir(workPath)
+}
+
+func assertWorkspaceDontAlreadyExists(workspacePath string) {
+	workPath := GetWorkDirPath()
+	// Search for settings already present in target path
+	Chdir(workspacePath)
+        settingsFilePath, _ := seekSettingsFilePath()
+	if settingsFilePath != "" {
+		log.Fatal("Cannot init an already existing workspace !")
 	}
 	Chdir(workPath)
 }

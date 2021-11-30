@@ -6,6 +6,15 @@ import (
 	"path/filepath"
 )
 
+// Create a directory. It may already exists. 
+// Fail if cannot create directory.
+func CreateDirectory(path string) {
+	err := os.MkdirAll(path, 0755)
+        if (err != nil) {
+                log.Fatal(err)
+        }
+}
+
 // Create a new directory. 
 // Fail if cannot create directory or directory already exists.
 func CreateNewDirectory(path string) {
