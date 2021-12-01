@@ -24,6 +24,19 @@ export GOPATH=$PWD
 cobra
 ```
 
+# Testing
+To launch all unit tests there is a conveniant script:
+``` bash
+./unittest.sh
+```
+
+To launch unit test on an entire go module:
+``` bash
+cd <my_go_module>
+go test -cover ./...
+```
+
+
 # Specifications
 
 ## Project management
