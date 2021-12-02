@@ -1,9 +1,9 @@
 package workspace
 
 import (
+	"fmt"
 	"testing"
 	"os"
-	"fmt"
 	"path/filepath"
 	"github.com/stretchr/testify/assert"
 	"time"
@@ -58,7 +58,8 @@ func TestInitInNotExistingRelativePath(t *testing.T) {
 	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
 
 	os.Chdir(os.TempDir())
-	Init(wksDir)
+	err := Init(wksDir)
+	assert.NoError(t, err, "Init should not return an error")
 	assertWorkspaceFileTree(t, wksPath)
 }
 
@@ -71,7 +72,8 @@ func TestInitInExistingAbsolutePath(t *testing.T) {
 	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
 
 	os.Mkdir(wksPath, 0755)
-	Init(wksPath)
+	err := Init(wksPath)
+	assert.NoError(t, err, "Init should not return an error")
 	assertWorkspaceFileTree(t, wksPath)
 }
 
@@ -86,6 +88,39 @@ func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
 	assert.NoFileExists(t, parentPath, "parent dir should not exists")
 	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
 
-	Init(wksPath)
+	err := Init(wksPath)
+	assert.NoError(t, err, "Init should not return an error")
 	assertWorkspaceFileTree(t, wksPath)
+}
+
+func TestInitWithDotPath(t *testing.T) {
+	wksDir := randSeq(10)
+	wksPath := filepath.Join(os.TempDir(), wksDir)
+	os.RemoveAll(wksPath)
+	defer os.RemoveAll(wksPath)
+
+	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
+	os.Mkdir(wksPath, 0755)
+	os.Chdir(wksPath)
+
+	dotPath := "."
+	err := Init(dotPath)
+	assert.NoError(t, err, "Init should not return an error")
+	assertWorkspaceFileTree(t, wksPath)
+}
+
+func TestInitWithEmptyPath(t *testing.T) {
+	wksDir := randSeq(10)
+	wksPath := filepath.Join(os.TempDir(), wksDir)
+	os.RemoveAll(wksPath)
+	defer os.RemoveAll(wksPath)
+
+	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
+	os.Mkdir(wksPath, 0755)
+	os.Chdir(wksPath)
+
+	emptyPath := ""
+	err := Init(emptyPath)
+	assert.Error(t, err, "Init should return an error")
+	assert.NoFileExists(t, wksPath, "workspace dir should not exists")
 }

@@ -73,20 +73,3 @@ func isPathInExistingWorkspace(path string) (ok bool, err error) {
 	return
 }
 
-//func doesWorkspaceAlreadyExists(workspacePath string) (ok bool, err error) {
-//	// Search for settings already present in target path
-//	workPath, err := WorkDirPath()
-//	if err != nil {
-//		return
-//	}
-//	if err = Chdir(workspacePath); err != nil {
-//		defer err = Chdir(workPath)
-//		settingsFilePath, _ := seekSettingsFilePath()
-//		if settingsFilePath != "" {
-//			os.Stderr.WriteString("Cannot init an already existing workspace !")
-//			return false
-//		}
-//		return Chdir(workPath)
-//	}
-//	return false
-//}

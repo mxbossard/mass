@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"mby.fr/mass/internal/logging"
+	//"mby.fr/mass/internal/logging"
 )
 
 const settingsDir = ".mass/"
@@ -35,6 +35,7 @@ func initViper(workspacePath string) {
 	workspaceName := filepath.Base(workspacePath)
 
 	viper.SetConfigType("yaml")
+	// Do not use SetConfigName, use SetConfigFile instead
 	//viper.SetConfigName("settings")
 	viper.SetConfigFile(settingsFilePath)
 
@@ -44,14 +45,13 @@ func initViper(workspacePath string) {
 }
 
 // Store settings erasing previous settings
-func storeSettings() bool {
+func storeSettings() (err error) {
 	log.Println("Store settings in:", viper.ConfigFileUsed())
-	err := viper.WriteConfig()
+	err = viper.WriteConfig()
 	if err != nil {
-		logging.ErrorPrint("Unable to store settings !", err)
-		return false
+		fmt.Errorf("Unable to store settings: %w !", err)
 	}
-	return true
+	return
 }
 
 func readSettings() (s *Settings, err error) {
@@ -69,7 +69,7 @@ func readSettings() (s *Settings, err error) {
 		}
 	}
 
-	err = viper.Unmarshal(s)
+	err = viper.Unmarshal(&s)
 	if err != nil {
 		err = fmt.Errorf("Unable to unmarshal settings: %w !", err)
 		return
@@ -79,7 +79,7 @@ func readSettings() (s *Settings, err error) {
 }
 
 func InitSettings(workspacePath string) (err error) {
-	log.Println("Initialize settings ...", viper.ConfigFileUsed())
+	//log.Println("Initialize settings ...", viper.ConfigFileUsed())
 	initViper(workspacePath)
 	err = os.MkdirAll(filepath.Join(workspacePath, settingsDir), 0755)
 	if err != nil {
@@ -95,11 +95,11 @@ func InitSettings(workspacePath string) (err error) {
 }
 
 func (s Settings) String() string {
-	return fmt.Sprintf("Settings name: %s", s.Name)
+	return fmt.Sprintf("Settings worspace name: %s", s.Name)
 }
 
 func seekSettingsFilePathRecurse(dirPath string) (string, error) {
-	log.Printf("Seek Settings in dir: %s ...\n", dirPath)
+	//log.Printf("Seek Settings in dir: %s ...\n", dirPath)
 	if dirPath == "/" {
 		return "", nil
 	}
@@ -122,12 +122,11 @@ func seekSettingsFilePathRecurse(dirPath string) (string, error) {
 }
 
 func seekSettingsFilePath(path string) (settingsPath string, err error) {
-	//workDirPath, err := WorkDirPath()
-	//if err != nil {
-	//	//err = fmt.Errorf("Unable to get working dir %s !\n")
-	//	return 
-	//}
-	settingsPath, err = seekSettingsFilePathRecurse(path)
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return
+	}
+	settingsPath, err = seekSettingsFilePathRecurse(absolutePath)
 	return
 }
 
