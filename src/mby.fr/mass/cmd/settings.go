@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 
@@ -29,7 +30,10 @@ var settingsCmd = &cobra.Command{
 	Short: "Configure MASS",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		settingsService := workspace.GetSettingsService()
+		settingsService, err := workspace.GetSettingsService()
+		if err != nil {
+			log.Fatal(err)
+		}
 		settings := settingsService.Settings()
 		fmt.Println(settings)
 	},

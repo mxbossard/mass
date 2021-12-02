@@ -4,9 +4,10 @@ import (
 
 )
 
-func InitProject(name string) {
-	settingsService := GetSettingsService()
-
-	CreateNewSubDirectory(settingsService.WorkspacePath(), name)
+func InitProject(name string) (err error) {
+	if settingsService, err := GetSettingsService(); err == nil {
+		err = CreateNewSubDirectory(settingsService.WorkspacePath(), name)
+	}
+	return
 }
 

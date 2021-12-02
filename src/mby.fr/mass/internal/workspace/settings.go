@@ -9,6 +9,8 @@ import (
 	"errors"
 
 	"github.com/spf13/viper"
+
+	"mby.fr/mass/internal/logging"
 )
 
 const settingsDir = ".mass/"
@@ -42,46 +44,54 @@ func initViper(workspacePath string) {
 }
 
 // Store settings erasing previous settings
-func storeSettings() {
+func storeSettings() bool {
 	log.Println("Store settings in:", viper.ConfigFileUsed())
 	err := viper.WriteConfig()
 	if err != nil {
-		log.Fatal("Unable to store settings !", err)
+		logging.ErrorPrint("Unable to store settings !", err)
+		return false
 	}
+	return true
 }
 
-func readSettings() (Settings) {
+func readSettings() (s *Settings, err error) {
 	// Find and read the config file
-	if err := viper.ReadInConfig(); err != nil {
+	if err = viper.ReadInConfig(); err != nil {
 		// Handle errors reading the config file
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
-			log.Fatal("Settings file not found:", err)
+			err = fmt.Errorf("Settings file not found: %w !", err)
+			return
 		} else {
 			// Config file was found but another error was produced
-			log.Fatal("Unable to read settings:", err)
+			err = fmt.Errorf("Unable to read settings: %w !", err)
+			return
 		}
 	}
 
-	var s Settings
-
-	err := viper.Unmarshal(&s)
+	err = viper.Unmarshal(s)
 	if err != nil {
-		log.Fatal("Unable to unmarshal settings:", err)
+		err = fmt.Errorf("Unable to unmarshal settings: %w !", err)
+		return
 	}
 	// Config file found and successfully parsed
-	return s
+	return
 }
 
-func initSettings(workspacePath string) {
-	//log.Println("Initialize settings ...", viper.ConfigFileUsed())
+func InitSettings(workspacePath string) (err error) {
+	log.Println("Initialize settings ...", viper.ConfigFileUsed())
 	initViper(workspacePath)
-	os.MkdirAll(filepath.Join(workspacePath, settingsDir), 0755)
-	err := viper.WriteConfig()
+	err = os.MkdirAll(filepath.Join(workspacePath, settingsDir), 0755)
 	if err != nil {
-		log.Fatalf("Unable to initialize settings: %v", err)
+		return
+	}
+	err = viper.WriteConfig()
+	if err != nil {
+		err = fmt.Errorf("Unable to initialize settings: %w", err)
+		return
 	}
 	fmt.Println("Initialized settings in:", viper.ConfigFileUsed())
+	return
 }
 
 func (s Settings) String() string {
@@ -89,9 +99,9 @@ func (s Settings) String() string {
 }
 
 func seekSettingsFilePathRecurse(dirPath string) (string, error) {
-	//log.Printf("Seek Settings in dir: %s ...\n", dirPath)
+	log.Printf("Seek Settings in dir: %s ...\n", dirPath)
 	if dirPath == "/" {
-		return "", errors.New("Unable to found settings path")
+		return "", nil
 	}
 	settingsFilePath := filepath.Join(dirPath, settingsFile)
 
@@ -111,11 +121,14 @@ func seekSettingsFilePathRecurse(dirPath string) (string, error) {
 	return seekSettingsFilePathRecurse(parentDirPath)
 }
 
-func seekSettingsFilePath() (string, error) {
-	workDirPath := GetWorkDirPath()
-
-	settingsPath, err := seekSettingsFilePathRecurse(workDirPath)
-	return settingsPath, err
+func seekSettingsFilePath(path string) (settingsPath string, err error) {
+	//workDirPath, err := WorkDirPath()
+	//if err != nil {
+	//	//err = fmt.Errorf("Unable to get working dir %s !\n")
+	//	return 
+	//}
+	settingsPath, err = seekSettingsFilePathRecurse(path)
+	return
 }
 
 // --- SettingsService ---
@@ -126,17 +139,28 @@ type SettingsService struct {
 }
 
 // constructor
-func newSettingsService() SettingsService {
-	settingsFilePath, err := seekSettingsFilePath()
+func newSettingsService() (service *SettingsService, err error) {
+	workDirPath, err := WorkDirPath()
 	if err != nil {
-		log.Fatal(err)
+		return
+	}
+	settingsFilePath, err := seekSettingsFilePath(workDirPath)
+	if err != nil {
+		return
+	}
+	if settingsFilePath == "" {
+		err = errors.New("Unable to found settings path")
+		return
 	}
 	workspacePath := filepath.Dir(filepath.Dir(settingsFilePath))
 	initViper(workspacePath)
-	settings := readSettings()
+	settings, err := readSettings()
+	if err != nil {
+		return
+	}
 
-	settingsService := SettingsService{settings: &settings, workspacePath: workspacePath}
-	return settingsService
+	service = &SettingsService{settings: settings, workspacePath: workspacePath}
+	return
 }
 
 // workspacePath getter
@@ -166,16 +190,14 @@ var lock = &sync.Mutex{}
 
 var settingsService *SettingsService
 
-func GetSettingsService() *SettingsService {
-	if settingsService == nil {
-		lock.Lock()
-		defer lock.Unlock()
-		if settingsService == nil {
-			service := newSettingsService()
-			settingsService = &service
-		}
+func GetSettingsService() (service *SettingsService, err error) {
+	lock.Lock()
+	defer lock.Unlock()
+	// FIXME: disable singleton because unitest are failing.
+	if settingsService == nil || true {
+		service, err = newSettingsService()
 	}
-	return settingsService
+	return
 }
 
 

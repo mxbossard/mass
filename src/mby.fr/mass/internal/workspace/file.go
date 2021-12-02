@@ -1,49 +1,45 @@
 package workspace
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 )
 
+func manageError(err error) bool {
+	if err != nil {
+		os.Stderr.WriteString(err.Error())
+		return false
+	}
+	return true
+}
+
 // Create a directory. It may already exists. 
-// Fail if cannot create directory.
-func CreateDirectory(path string) {
-	err := os.MkdirAll(path, 0755)
-        if (err != nil) {
-                log.Fatal(err)
-        }
+func CreateDirectory(path string) (err error) {
+	err = os.MkdirAll(path, 0755)
+	return
 }
 
 // Create a new directory. 
-// Fail if cannot create directory or directory already exists.
-func CreateNewDirectory(path string) {
-	err := os.Mkdir(path, 0755)
-        if (err != nil) {
-                log.Fatal(err)
-        }
+func CreateNewDirectory(path string) (err error){
+	err = os.Mkdir(path, 0755)
+	return
 }
 
 // Create a new directory in a parent directory. 
-// Fail if cannot create directory or directory already exists.
-func CreateNewSubDirectory(parentDirPath, name string) {
-	newDirPath := filepath.Join(parentDirPath, name)
-	CreateNewDirectory(newDirPath)
+func CreateNewSubDirectory(parentDirPath, name string) (err error) {
+	path := filepath.Join(parentDirPath, name)
+	err = CreateNewDirectory(path)
+	return
 }
 
 // Get working directory path.
 // Fail if cannot get working directory.
-func GetWorkDirPath() string {
-        workDirPath, err := os.Getwd()
-        if err != nil {
-                log.Fatal(err)
-        }
-        return workDirPath
+func WorkDirPath() (path string, err error) {
+	path, err = os.Getwd()
+	return
 }
 
-func Chdir(path string) {
-	err := os.Chdir(path)
-        if (err != nil) {
-                log.Fatal(err)
-        }
+func Chdir(path string) (err error) {
+	err = os.Chdir(path)
+	return
 }

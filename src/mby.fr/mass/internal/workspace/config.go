@@ -3,10 +3,10 @@ package workspace
 import (
 )
 
-const configDir = "config"
-
-func InitConfig() {
-	workspacePath := GetWorkDirPath()
-	CreateNewSubDirectory(workspacePath, configDir)
+func InitConfig() (err error) {
+	if settingsService, err := GetSettingsService(); err == nil {
+		err = CreateNewDirectory(settingsService.ConfigDirPath())
+	}
+	return 
 }
 

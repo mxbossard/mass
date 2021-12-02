@@ -1,53 +1,92 @@
 package workspace
 
 import (
-	"log"
+	//"os"
 	"fmt"
-	"path/filepath"
+	//"path/filepath"
 )
 
-func Init(path string) {
-	assertPathNotInExistingWorkspace(path)
+func init() {
+  	//fmt.Println("This will get called on main initialization")
+}
 
-	CreateDirectory(path)
-	assertWorkspaceDontAlreadyExists(path)
+func Init(path string) (err error) {
+	fmt.Println("foo")
+	ok, err := isPathInExistingWorkspace(path)
+	if err != nil {
+		return
+	} else if ok {
+		err = fmt.Errorf("Supplied path is in already existing workspace !")
+		return
+	}
+	fmt.Println("bar")
 
-        Chdir(path)
+	err = CreateDirectory(path)
+	if err != nil {
+		return
+	}
 
-	workspacePath := GetWorkDirPath()
-	initSettings(workspacePath)
+	err = Chdir(path)
+	if err != nil {
+		return
+	}
 
-	InitConfig()
+	workspacePath, err := WorkDirPath()
+	if err != nil {
+		return
+	}
 
-	settingsService := GetSettingsService()
+	err = InitSettings(workspacePath)
+	if err != nil {
+		return
+	}
+
+	err = InitConfig()
+	if err != nil {
+		return
+	}
+
+	settingsService, err := GetSettingsService()
+	if err != nil {
+		return
+	}
+
 	settings := settingsService.Settings()
 
 	for _, envName := range settings.Environments {
-		InitEnv(envName)
+		err = InitEnv(envName)
+		if err != nil {
+			return
+		}
 	}
 
 	fmt.Printf("New workspace initialized in %s\n", workspacePath)
+	return
 }
 
-func assertPathNotInExistingWorkspace(path string) {
-	workPath := GetWorkDirPath()
-	// Search for settings already present in target parent path
-	parentPath := filepath.Dir(path)
-	Chdir(parentPath)
-        settingsFilePath, _ := seekSettingsFilePath()
-	if settingsFilePath != "" {
-		log.Fatal("Cannot init a workspace inside another workspace !")
-	}
-	Chdir(workPath)
-}
-
-func assertWorkspaceDontAlreadyExists(workspacePath string) {
-	workPath := GetWorkDirPath()
+func isPathInExistingWorkspace(path string) (ok bool, err error) {
 	// Search for settings already present in target path
-	Chdir(workspacePath)
-        settingsFilePath, _ := seekSettingsFilePath()
+	settingsFilePath, err := seekSettingsFilePath(path)
 	if settingsFilePath != "" {
-		log.Fatal("Cannot init an already existing workspace !")
+		ok = true
 	}
-	Chdir(workPath)
+	return
 }
+
+//func doesWorkspaceAlreadyExists(workspacePath string) (ok bool, err error) {
+//	// Search for settings already present in target path
+//	workPath, err := WorkDirPath()
+//	if err != nil {
+//		return
+//	}
+//	if err = Chdir(workspacePath); err != nil {
+//		defer err = Chdir(workPath)
+//		settingsFilePath, _ := seekSettingsFilePath()
+//		if settingsFilePath != "" {
+//			os.Stderr.WriteString("Cannot init an already existing workspace !")
+//			return false
+//		}
+//		return Chdir(workPath)
+//	}
+//	return false
+//}
