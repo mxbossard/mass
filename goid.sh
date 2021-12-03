@@ -22,7 +22,7 @@ relpath() {
     echo "$down${ref##$pos/}"
 }
 
-ctDurationInSec=60
+ctDurationInSec=7200
 rootDir=$scriptDir
 rootDirInCt=/tmp/goid
 workDir=$PWD
@@ -38,16 +38,24 @@ hostGoDir="$HOME/go"
 hostModCacheDir="$hostGoDir/pkg/mod"
 mkdir -p "$hostModCacheDir"
 
-runCmd="docker run --rm -d --user=$( id -u ):$( id -g ) --workdir=$workDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw golang:1.17"
+ctName="goid_$( basename $scriptDir )"
+
+runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw golang:1.17"
 #echo $runCmd
 
 #>&2 echo "Executing go in a container on workspace: $rootDir with workdir: $workDirInCt ..."
 #>&2 echo "GOMODCACHE: $hostModCacheDir ..."
-ctId=$( $runCmd sleep $ctDurationInSec )
+
+ctId=$( docker ps -f name=$ctName -q )
+if [ -z "$ctId" ]; then
+	ctId=$( $runCmd sleep $ctDurationInSec )
+fi
+
 #echo $ctId
 
 # Debug
 #docker exec -it $ctId "$@"
 #exit 0
 
-docker exec $ctId go "$@"
+#docker exec $ctId go "$@"
+docker exec --workdir=$workDirInCt $ctId go "$@"
