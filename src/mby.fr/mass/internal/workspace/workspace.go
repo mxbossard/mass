@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	//"os"
+	"os"
 	"fmt"
 	//"path/filepath"
 )
@@ -11,7 +11,6 @@ func init() {
 }
 
 func Init(path string) (err error) {
-	fmt.Println("foo")
 	ok, err := isPathInExistingWorkspace(path)
 	if err != nil {
 		return
@@ -19,7 +18,6 @@ func Init(path string) (err error) {
 		err = fmt.Errorf("Supplied path is in already existing workspace !")
 		return
 	}
-	fmt.Println("bar")
 
 	err = CreateDirectory(path)
 	if err != nil {
@@ -52,6 +50,9 @@ func Init(path string) (err error) {
 	}
 
 	settings := settingsService.Settings()
+
+	hashDirPath := settingsService.HashDirPath()
+	os.MkdirAll(hashDirPath, 0755)
 
 	for _, envName := range settings.Environments {
 		err = InitEnv(envName)

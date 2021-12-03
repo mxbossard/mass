@@ -5,9 +5,12 @@ import (
 )
 
 func InitEnv(name string) (err error) {
-	if settingsService, err := GetSettingsService(); err == nil {
-		err = CreateNewSubDirectory(settingsService.ConfigDirPath(), name)
+	settingsService, err := GetSettingsService()
+	if err != nil {
+		return
 	}
+
+	_, err = CreateNewSubDirectory(settingsService.ConfigDirPath(), name)
 	return
 }
 

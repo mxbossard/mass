@@ -24,15 +24,31 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+func assertSettingsFileTree(t *testing.T, path string) {
+	assert.FileExists(t, path + "/settings.yaml", "settings file should exists")
+}
+
+func assertConfigFileTree(t *testing.T, path string) {
+}
+
+func assertEnvFileTree(t *testing.T, path string) {
+}
 
 func assertWorkspaceFileTree(t *testing.T, wksPath string) {
 	assert.DirExists(t, wksPath, "workspace dir should exists")
-	assert.DirExists(t, wksPath + "/.mass", ".mass/ dir should exists")
-	assert.FileExists(t, wksPath + "/.mass/settings.yaml", "settings file should exists")
-	assert.DirExists(t, wksPath + "/config", "config dir should exists")
+
+	settingsDir := wksPath + "/.mass"
+	assert.DirExists(t, settingsDir, ".mass/ dir should exists")
+	assertSettingsFileTree(t, settingsDir)
+
+	configDir := wksPath + "/config"
+	assert.DirExists(t, configDir, "config dir should exists")
+	assertConfigFileTree(t, settingsDir)
+
 	for _, env := range defaultEnvs {
 		envPath := wksPath + "/config/" + env
 		assert.DirExists(t, envPath, "%s config dir should exists", envPath)
+		assertEnvFileTree(t, envPath)
 	}
 }
 

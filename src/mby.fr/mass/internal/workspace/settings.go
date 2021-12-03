@@ -15,6 +15,8 @@ import (
 
 const settingsDir = ".mass/"
 const settingsFile = settingsDir + "settings.yaml"
+const cacheDir = ".cache/"
+const hashDir = cacheDir + "hashes/"
 
 // Default settings
 const defaultConfigDir = "config"
@@ -174,6 +176,10 @@ func (s SettingsService) Settings() *Settings {
 
 func (s SettingsService) SettingsDirPath() string {
 	return filepath.Join(s.workspacePath, settingsDir)
+}
+
+func (s SettingsService) HashDirPath() string {
+	return filepath.Join(s.workspacePath, hashDir)
 }
 
 func (s SettingsService) SettingsFilePath() string {
