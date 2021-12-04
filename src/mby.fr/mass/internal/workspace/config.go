@@ -5,7 +5,7 @@ import (
 
 func InitConfig() (err error) {
 	if settingsService, err := GetSettingsService(); err == nil {
-		err = CreateNewDirectory(settingsService.ConfigDirPath())
+		err = CreateNewDirectory(settingsService.ConfigDir())
 	}
 	return 
 }

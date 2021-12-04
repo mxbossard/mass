@@ -25,6 +25,12 @@ func CreateNewDirectory(path string) (err error){
 	return
 }
 
+// Create a directory in a parent directory. 
+func CreateSubDirectory(parentDirPath, name string) (path string, err error) {
+	path = filepath.Join(parentDirPath, name)
+	err = CreateDirectory(path)
+	return
+}
 // Create a new directory in a parent directory. 
 func CreateNewSubDirectory(parentDirPath, name string) (path string, err error) {
 	path = filepath.Join(parentDirPath, name)

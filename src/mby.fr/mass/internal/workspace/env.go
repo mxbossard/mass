@@ -10,7 +10,7 @@ func InitEnv(name string) (err error) {
 		return
 	}
 
-	_, err = CreateNewSubDirectory(settingsService.ConfigDirPath(), name)
+	_, err = CreateNewSubDirectory(settingsService.ConfigDir(), name)
 	return
 }
 

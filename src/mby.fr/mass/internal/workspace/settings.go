@@ -166,7 +166,7 @@ func newSettingsService() (service *SettingsService, err error) {
 }
 
 // workspacePath getter
-func (s SettingsService) WorkspacePath() string {
+func (s SettingsService) WorkspaceDir() string {
 	return s.workspacePath
 }
 
@@ -175,20 +175,24 @@ func (s SettingsService) Settings() *Settings {
 	return s.settings
 }
 
-func (s SettingsService) SettingsDirPath() string {
+func (s SettingsService) SettingsDir() string {
 	return filepath.Join(s.workspacePath, settingsDir)
 }
 
-func (s SettingsService) SettingsFilePath() string {
+func (s SettingsService) SettingsFile() string {
 	return filepath.Join(s.workspacePath, settingsFile)
 }
 
-func (s SettingsService) ConfigDirPath() string {
+func (s SettingsService) ConfigDir() string {
 	return filepath.Join(s.workspacePath, s.settings.ConfigDir)
 }
 
-func (s SettingsService) CacheDirPath() string {
+func (s SettingsService) CacheDir() string {
 	return filepath.Join(s.workspacePath, s.settings.CacheDir)
+}
+
+func (s SettingsService) ProjectsDir() string {
+	return s.WorkspaceDir()
 }
 
 // singleton
