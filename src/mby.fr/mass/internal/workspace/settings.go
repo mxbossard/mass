@@ -13,13 +13,12 @@ import (
 	//"mby.fr/mass/internal/logging"
 )
 
-const settingsDir = ".mass/"
-const settingsFile = settingsDir + "settings.yaml"
-const cacheDir = ".cache/"
-const hashDir = cacheDir + "hashes/"
+const settingsDir = ".mass"
+var settingsFile = filepath.Join(settingsDir, "settings.yaml")
 
 // Default settings
 const defaultConfigDir = "config"
+const defaultCacheDir = ".cache"
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
 
@@ -28,6 +27,7 @@ var defaultEnvs = []string{"dev", "stage", "prod"}
 type Settings struct {
 	Name string
 	ConfigDir string
+	CacheDir string
 	Environments []string
 }
 
@@ -43,6 +43,7 @@ func initViper(workspacePath string) {
 
 	viper.SetDefault("Name", workspaceName)
 	viper.SetDefault("ConfigDir", defaultConfigDir)
+	viper.SetDefault("CacheDir", defaultCacheDir)
 	viper.SetDefault("Environments", defaultEnvs)
 }
 
@@ -178,16 +179,16 @@ func (s SettingsService) SettingsDirPath() string {
 	return filepath.Join(s.workspacePath, settingsDir)
 }
 
-func (s SettingsService) HashDirPath() string {
-	return filepath.Join(s.workspacePath, hashDir)
-}
-
 func (s SettingsService) SettingsFilePath() string {
 	return filepath.Join(s.workspacePath, settingsFile)
 }
 
 func (s SettingsService) ConfigDirPath() string {
 	return filepath.Join(s.workspacePath, s.settings.ConfigDir)
+}
+
+func (s SettingsService) CacheDirPath() string {
+	return filepath.Join(s.workspacePath, s.settings.CacheDir)
 }
 
 // singleton

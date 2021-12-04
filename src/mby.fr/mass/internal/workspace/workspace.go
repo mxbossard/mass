@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	"os"
+	//"os"
 	"fmt"
 	//"path/filepath"
 )
@@ -50,9 +50,6 @@ func Init(path string) (err error) {
 	}
 
 	settings := settingsService.Settings()
-
-	hashDirPath := settingsService.HashDirPath()
-	os.MkdirAll(hashDirPath, 0755)
 
 	for _, envName := range settings.Environments {
 		err = InitEnv(envName)
