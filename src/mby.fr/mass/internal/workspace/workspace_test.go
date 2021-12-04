@@ -1,27 +1,22 @@
 package workspace
 
 import (
-	"fmt"
+	//"fmt"
 	"testing"
 	"os"
 	"path/filepath"
 	"github.com/stretchr/testify/assert"
-	"time"
-	"math/rand"
+
+	"mby.fr/utils/test"
 )
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-func randSeq(n int) string {
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letters[rand.Intn(len(letters))]
-    }
-    return string(b)
-}
-
-func init() {
-	fmt.Println("Rand seed initialization ...")
-	rand.Seed(time.Now().UnixNano())
+func initTempWorkspace(t *testing.T) (path string) {
+        path, _ = test.BuildRandTempPath()
+        os.Chdir(path)
+        err := Init(path)
+        assert.NoError(t, err, "Init should not return an error")
+        assertWorkspaceFileTree(t, path)
+        return
 }
 
 func assertSettingsFileTree(t *testing.T, path string) {
@@ -53,7 +48,7 @@ func assertWorkspaceFileTree(t *testing.T, wksPath string) {
 }
 
 func TestInitInNotExistingAbsolutePath(t *testing.T) {
-	wksDir := randSeq(10)
+	wksDir := test.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -66,7 +61,7 @@ func TestInitInNotExistingAbsolutePath(t *testing.T) {
 }
 
 func TestInitInNotExistingRelativePath(t *testing.T) {
-	wksDir := randSeq(10)
+	wksDir := test.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -80,7 +75,7 @@ func TestInitInNotExistingRelativePath(t *testing.T) {
 }
 
 func TestInitInExistingAbsolutePath(t *testing.T) {
-	wksDir := randSeq(10)
+	wksDir := test.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -94,8 +89,8 @@ func TestInitInExistingAbsolutePath(t *testing.T) {
 }
 
 func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
-	wksDir := randSeq(10)
-	parentDir := randSeq(10)
+	wksDir := test.RandSeq(10)
+	parentDir := test.RandSeq(10)
 	parentPath := filepath.Join(os.TempDir(), parentDir)
 	wksPath := filepath.Join(parentPath, wksDir)
 	os.RemoveAll(parentPath)
@@ -110,7 +105,7 @@ func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
 }
 
 func TestInitWithDotPath(t *testing.T) {
-	wksDir := randSeq(10)
+	wksDir := test.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -126,7 +121,7 @@ func TestInitWithDotPath(t *testing.T) {
 }
 
 func TestInitWithEmptyPath(t *testing.T) {
-	wksDir := randSeq(10)
+	wksDir := test.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
