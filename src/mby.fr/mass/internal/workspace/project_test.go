@@ -6,7 +6,7 @@ import (
 	"os"
 	"github.com/stretchr/testify/assert"
 
-	"mby.fr/mass/internal/test"
+	"mby.fr/utils/test"
 )
 
 func assertProjectFileTree(t *testing.T, path string) {

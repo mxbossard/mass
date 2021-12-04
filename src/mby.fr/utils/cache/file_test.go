@@ -2,18 +2,18 @@ package cache
 
 import (
 	//"fmt"
-	"testing"
-	"os"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"testing"
 
-	"mby.fr/mass/internal/test"
+	"mby.fr/utils/test"
 )
 
 func TestFileCacheStoreAndLoad(t *testing.T) {
 	path, _ := test.BuildRandTempPath()
 	defer os.RemoveAll(path)
 
-	cache, err := NewFileCache(path)
+	cache, err := NewPersistentCache(path)
 
 	key := "test"
 	value := "val"
@@ -31,7 +31,7 @@ func TestFileCacheStoreEmptyValue(t *testing.T) {
 	path, _ := test.BuildRandTempPath()
 	defer os.RemoveAll(path)
 
-	cache, err := NewFileCache(path)
+	cache, err := NewPersistentCache(path)
 
 	key := "test"
 	value := ""
@@ -49,7 +49,7 @@ func TestFileCacheStoreSpecialChars(t *testing.T) {
 	path, _ := test.BuildRandTempPath()
 	defer os.RemoveAll(path)
 
-	cache, err := NewFileCache(path)
+	cache, err := NewPersistentCache(path)
 
 	key := "test"
 	value := `<>!$\n42?'foo"bar%baz`
@@ -67,7 +67,7 @@ func TestFileCachePersistence(t *testing.T) {
 	path, _ := test.BuildRandTempPath()
 	defer os.RemoveAll(path)
 
-	cache, err := NewFileCache(path)
+	cache, err := NewPersistentCache(path)
 
 	key := "test"
 	value := "val"
@@ -76,7 +76,7 @@ func TestFileCachePersistence(t *testing.T) {
 	assert.DirExists(t, path, "FileCache dir should exists")
 	assert.NoError(t, err, "StoreString() should not return an error")
 
-	cache2, err := NewFileCache(path)
+	cache2, err := NewPersistentCache(path)
 	res, ok, err := cache2.LoadString(key)
 	assert.True(t, ok, "LoadString() should return ok")
 	assert.NoError(t, err, "LoadString() should not return an error")
@@ -84,7 +84,7 @@ func TestFileCachePersistence(t *testing.T) {
 
 	os.RemoveAll(path)
 
-	cache3, err := NewFileCache(path)
+	cache3, err := NewPersistentCache(path)
 	res, ok, err = cache3.LoadString(key)
 	assert.False(t, ok, "LoadString() should not return ok")
 	assert.NoError(t, err, "LoadString() should not return an error")
@@ -95,7 +95,7 @@ func TestFileCacheLoadNotExistingKey(t *testing.T) {
 	path, _ := test.BuildRandTempPath()
 	defer os.RemoveAll(path)
 
-	cache, err := NewFileCache(path)
+	cache, err := NewPersistentCache(path)
 
 	key := "test"
 
@@ -104,4 +104,3 @@ func TestFileCacheLoadNotExistingKey(t *testing.T) {
 	assert.NoError(t, err, "LoadString() should not return an error")
 	assert.Equal(t, "", res, "LoadString() should return the empty string")
 }
-

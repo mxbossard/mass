@@ -1,11 +1,11 @@
 package cache
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
-	"crypto/sha256"
-	"encoding/hex"
 	//"errors"
 )
 
@@ -16,11 +16,11 @@ type Cache interface {
 	StoreString(key, value string) (err error)
 }
 
-type fileCache struct {
+type persistentCache struct {
 	path string
 }
 
-func NewFileCache(path string) (cache Cache, err error) {
+func NewPersistentCache(path string) (cache Cache, err error) {
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return
@@ -29,18 +29,18 @@ func NewFileCache(path string) (cache Cache, err error) {
 	if err != nil {
 		return
 	}
-	cache = fileCache{path}
+	cache = persistentCache{path}
 	return
 }
 
-func (fc fileCache) bucketFilepath(key string) (path string) {
+func (c persistentCache) bucketFilepath(key string) (path string) {
 	hashedKey := hashKey(key)
-	path = filepath.Join(fc.path, hashedKey)
+	path = filepath.Join(c.path, hashedKey)
 	return
 }
 
-func (fc fileCache) LoadString(key string) (value string, ok bool, err error) {
-	bucketPath := fc.bucketFilepath(key)
+func (c persistentCache) LoadString(key string) (value string, ok bool, err error) {
+	bucketPath := c.bucketFilepath(key)
 	//fmt.Printf("Loading value from bucket: %s\n", bucketPath)
 	content, err := os.ReadFile(bucketPath)
 	if os.IsNotExist(err) {
@@ -55,8 +55,8 @@ func (fc fileCache) LoadString(key string) (value string, ok bool, err error) {
 	return
 }
 
-func (fc fileCache) StoreString(key, value string) (err error) {
-	bucket := fc.bucketFilepath(key)
+func (c persistentCache) StoreString(key, value string) (err error) {
+	bucket := c.bucketFilepath(key)
 	//fmt.Printf("Storing value: %s in bucket: %s ...\n", value, bucket)
 	err = os.WriteFile(bucket, []byte(value), 0644)
 	return
@@ -67,4 +67,3 @@ func hashKey(key string) (h string) {
 	h = hex.EncodeToString(hBytes[:])
 	return
 }
-

@@ -7,16 +7,8 @@ import (
 	"path/filepath"
 	"github.com/stretchr/testify/assert"
 
-	"mby.fr/mass/internal/test"
-	"mby.fr/mass/internal/workspace"
+	"mby.fr/utils/test"
 )
-
-func InitTempDir() (path string) {
-	path, _ = test.BuildRandTempPath()
-	workspace.Init(path)
-	os.Chdir(path)
-	return
-}
 
 func TestHashEmptyDir(t *testing.T) {
 	path := test.MkRandTempDir()

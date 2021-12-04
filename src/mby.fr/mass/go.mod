@@ -2,12 +2,14 @@ module mby.fr/mass
 
 go 1.17
 
+replace mby.fr/utils => ../utils
+
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/mod v0.4.2
+	mby.fr/utils v0.0.0-00010101000000-000000000000
 )
 
 require (
