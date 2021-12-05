@@ -2,6 +2,7 @@ package project
 
 import (
 	"os"
+	"io/fs"
 	"path/filepath"
 
 	"mby.fr/mass/internal/workspace"
@@ -110,31 +111,30 @@ func ListProjects() (projects []Project, err error) {
         }
 
 	projectsDir := settingsService.ProjectsDir()
-	dirEntries, err := os.ReadDir(projectsDir)
-	if err != nil {
-		return
-	}
 
-	for _, dirEntry := range dirEntries {
-		if dirEntry.IsDir() {
-			dirpath := filepath.Join(projectsDir, dirEntry.Name())
-			versionFile := versionFilepath(dirpath)
-			_, err = os.Stat(versionFile);
-        		if os.IsNotExist(err) {
-				err = nil
-				// Version file does not exists => not a project
-				continue
-			} else if err != nil {
-				return
-			}
-			// Found a project
-			p, err := buildProject(dirpath)
+	// Look for a version file then stop walking the branch
+	projectCollector := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Name() == defaultVersionFile {
+			// Found a version file
+			parentDir := filepath.Dir(path)
+
+			// => Found a project
+			p, err := buildProject(parentDir)
 			if err != nil {
-				return projects, err
+				return err
 			}
 			projects = append(projects, p)
+
+			// Stop walking the branch
+			return fs.SkipDir
 		}
+		return nil
 	}
+
+	filepath.WalkDir(projectsDir, projectCollector)
 
 	return
 }
