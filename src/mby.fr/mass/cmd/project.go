@@ -18,7 +18,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/workspace"
+	"mby.fr/mass/internal/project"
 )
 
 // projectCmd represents the project command
@@ -29,7 +29,7 @@ var projectCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		workspace.InitProject(name)
+		project.InitProject(name)
 	},
 }
 

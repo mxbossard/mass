@@ -1,8 +1,10 @@
-package workspace
+package project
 
 import (
 	"os"
 	"path/filepath"
+
+	"mby.fr/mass/internal/workspace"
 )
 
 const defaultImageSourcesDir = "src"
@@ -11,20 +13,20 @@ const defaultVersionFile = "version.txt"
 const defaultInitialVersion = "0.0.1"
 
 func InitProject(name string) (projectPath string, err error) {
-	settingsService, err := GetSettingsService()
+	settingsService, err := workspace.GetSettingsService()
 	if err != nil {
 		return
 	}
 
 	// Create project dir
-	projectPath, err = CreateSubDirectory(settingsService.ProjectsDir(), name)
+	projectPath, err = workspace.CreateSubDirectory(settingsService.ProjectsDir(), name)
 	if err != nil {
 		return
 	}
 
 	// Create test dir
 	path := testDirpath(projectPath)
-	err = CreateDirectory(path)
+	err = workspace.CreateDirectory(path)
 	if err != nil {
 		return
 	}
@@ -47,18 +49,18 @@ func InitImage(projectName, name string) (err error) {
 }
 
 type Image struct {
-	//Name string
+	Name string
 	Dir string
 	TestDir string
 	Version string
 }
 
 type Project struct {
-	//Name string
+	Name string
 	Dir string
 	TestDir string
 	Version string
-	Images *[]Image
+	Images []Image
 
 }
 
@@ -75,6 +77,7 @@ func buildProject(path string) (p Project, err error) {
 	if err != nil {
 		return
 	}
+	name := filepath.Base(path)
 
 	testDir := testDirpath(path)
 	_, err = os.Stat(testDir); 
@@ -93,13 +96,13 @@ func buildProject(path string) (p Project, err error) {
 		return
 	}
 
-	p = Project{Dir: path, TestDir: testDir, Version: version}
+	p = Project{Name: name, Dir: path, TestDir: testDir, Version: version}
 	return
 }
 
 func ListProjects() (projects []Project, err error) {
 	// List directories with a version file to build project list
-        settingsService, err := GetSettingsService()
+        settingsService, err := workspace.GetSettingsService()
         if err != nil {
                 return
         }
@@ -116,6 +119,7 @@ func ListProjects() (projects []Project, err error) {
 			versionFile := versionFilepath(dirpath)
 			_, err = os.Stat(versionFile);
         		if os.IsNotExist(err) {
+				err = nil
 				// Version file does not exists => not a project
 				continue
 			} else if err != nil {
@@ -132,3 +136,16 @@ func ListProjects() (projects []Project, err error) {
 
 	return
 }
+
+func GetProject(name string) (p Project, ok bool, err error) {
+	projects, err := ListProjects()
+	for _, p = range projects {
+		if p.Name == name {
+			ok = true
+			return
+		}
+	}
+	return
+	
+}
+
