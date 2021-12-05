@@ -52,7 +52,7 @@ func Init(path string) (err error) {
 	settings := settingsService.Settings()
 
 	for _, envName := range settings.Environments {
-		err = InitEnv(envName)
+		_, err = InitEnv(envName)
 		if err != nil {
 			return
 		}

@@ -16,6 +16,8 @@ limitations under the License.
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 
 	"mby.fr/mass/internal/project"
@@ -29,7 +31,10 @@ var projectCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		project.InitProject(name)
+		_, err := project.InitProject(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 

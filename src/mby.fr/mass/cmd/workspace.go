@@ -16,6 +16,8 @@ limitations under the License.
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 
 	"mby.fr/mass/internal/workspace"
@@ -29,7 +31,10 @@ var workspaceCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		workspace.Init(name)
+		err := workspace.Init(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 

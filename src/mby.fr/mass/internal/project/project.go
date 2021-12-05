@@ -12,6 +12,8 @@ const defaultTestDir = "test"
 const defaultVersionFile = "version.txt"
 const defaultInitialVersion = "0.0.1"
 
+var forbiddenNames = []string{defaultImageSourcesDir, defaultTestDir, "config"}
+
 func InitProject(name string) (projectPath string, err error) {
 	settingsService, err := workspace.GetSettingsService()
 	if err != nil {
@@ -44,7 +46,7 @@ func InitProject(name string) (projectPath string, err error) {
 	return
 }
 
-func InitImage(projectName, name string) (err error) {
+func InitImage(projectName, name string) (imagePath string, err error) {
 	return
 }
 
