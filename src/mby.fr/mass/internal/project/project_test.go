@@ -61,7 +61,7 @@ func TestListProjects(t *testing.T) {
 	assert.Len(t, projects, 2, "Should list one project")
 }
 
-func TestInitAlreadyExistingProject(t *testing.T) {
+func TestReInitProject(t *testing.T) {
 	tempDir := initTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
@@ -128,3 +128,98 @@ func TestGetExistingProject(t *testing.T) {
 	assert.Equal(t, name, p.Name, "bad project name")
 	assert.Equal(t, path, p.Dir, "bad project path")
 }
+
+func TestInitImage(t *testing.T) {
+	tempDir := initTempWorkspace(t)
+	defer os.RemoveAll(tempDir)
+	name, path := initRandProject(t)
+
+	p, _, _ := GetProject(name)
+	assert.Len(t, p.Images, 0, "No Image should be listed")
+	imageName := test.RandSeq(6)
+
+	// Init new image
+	imagePath, err := InitImage(p, imageName)
+	assert.NoError(t, err, "should not produce an error")
+
+	p, _, _ = GetProject(name)
+	assert.Len(t, p.Images, 1, "No Image should be listed")
+	image := p.Images[0]
+	assert.Equal(t, imageName, image.Name, "bad image name")
+	assert.Equal(t, path + "/" + imageName, image.Dir, "bad image dir")
+	assert.DirExists(t, image.Dir, "image dir does not exists")
+	assert.Equal(t, imagePath + "/src", image.SourceDir, "bad image source dir")
+	assert.DirExists(t, image.SourceDir, "image source dir does not exists")
+	assert.Equal(t, imagePath + "/test", image.TestDir, "bad image test dir")
+	assert.DirExists(t, image.TestDir, "image test dir does not exists")
+	assert.Equal(t, imagePath + "/Dockerfile", image.Buildfile, "bad image build file")
+	assert.FileExists(t, image.Buildfile, "image buildfile does not exists")
+	assert.Equal(t, defaultInitialVersion, image.Version, "bad image version")
+}
+
+func TestInitImages(t *testing.T) {
+	tempDir := initTempWorkspace(t)
+	defer os.RemoveAll(tempDir)
+	name1, _ := initRandProject(t)
+	name2, _ := initRandProject(t)
+
+	p1, _, _ := GetProject(name1)
+	assert.Len(t, p1.Images, 0, "No Image should be listed")
+
+	p2, _, _ := GetProject(name2)
+	assert.Len(t, p2.Images, 0, "No Image should be listed")
+
+	// Init new image in p1
+	image1 := test.RandSeq(6)
+	_, err := InitImage(p1, image1)
+	assert.NoError(t, err, "should not produce an error")
+
+	// Init new image in p1
+	image2 := test.RandSeq(6)
+	_, err = InitImage(p1, image2)
+	assert.NoError(t, err, "should not produce an error")
+
+	// Init new image in p1
+	image3 := test.RandSeq(6)
+	_, err = InitImage(p1, image3)
+	assert.NoError(t, err, "should not produce an error")
+
+	p1, _, _ = GetProject(name1)
+	assert.Len(t, p1.Images, 3, "Bad image count listed")
+
+	// Init new image in p2
+	image4 := test.RandSeq(6)
+	_, err = InitImage(p2, image4)
+	assert.NoError(t, err, "should not produce an error")
+
+	p2, _, _ = GetProject(name2)
+	assert.Len(t, p2.Images, 1, "Bad image count listed")
+
+}
+
+func TestReInitImage(t *testing.T) {
+	tempDir := initTempWorkspace(t)
+	defer os.RemoveAll(tempDir)
+	name1, _ := initRandProject(t)
+	p1, _, _ := GetProject(name1)
+	assert.Len(t, p1.Images, 0, "No Image should be listed")
+
+	// Init new image in p1
+	image1 := test.RandSeq(6)
+	image1Path, err := InitImage(p1, image1)
+	assert.NoError(t, err, "should not produce an error")
+
+	// editing image
+	newVersion := "0.3.2"
+	os.WriteFile(image1Path + "/version.txt", []byte(newVersion), 0644)
+
+	// re init image
+	image1Path, err = InitImage(p1, image1)
+	assert.NoError(t, err, "reinit should not produce an error")
+
+	p1, _, _ = GetProject(name1)
+	assert.Len(t, p1.Images, 1, "project should contain only 1 image")
+	i1 := p1.Images[0]
+	assert.Equal(t, newVersion, i1.Version, "reinit image should not change version")
+}
+
