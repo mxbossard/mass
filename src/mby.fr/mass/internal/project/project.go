@@ -264,3 +264,4 @@ func buildImage(path string) (i Image, err error) {
 	i = Image{Name: name, Dir: path, SourceDir: sourceDir, TestDir: testDir, Buildfile: buildfile, Version: version}
 	return
 }
+

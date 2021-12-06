@@ -10,42 +10,21 @@ import (
 	"mby.fr/mass/internal/workspace"
 )
 
-func initTempWorkspace(t *testing.T) (path string) {
-        path, _ = test.BuildRandTempPath()
-        os.Chdir(path)
-        err := workspace.Init(path)
-        assert.NoError(t, err, "Init should not return an error")
-        return
-}
-
-func assertProjectFileTree(t *testing.T, path string) {
-	assert.DirExists(t, path, "project dir file should exists")
-	assert.DirExists(t, path + "/test", "test dir should exists")
-	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
-}
-
-func initRandProject(t *testing.T) (name, path string) {
-	name = test.RandSeq(6)
-	path, _ = InitProject(name)
-	assertProjectFileTree(t, path)
-	return
-}
-
 func TestInitProject(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
-	initRandProject(t)
+	TestInitRandProject(t)
 }
 
 func TestListProjects(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
 	projects, _ := ListProjects()
 	assert.Len(t, projects, 0, "Should list no projects")
 
-	name, path := initRandProject(t)
+	name, path := TestInitRandProject(t)
 	projects, _ = ListProjects()
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 := projects[0]
@@ -56,16 +35,16 @@ func TestListProjects(t *testing.T) {
 	assert.Equal(t, defaultInitialVersion, p1.Version, "Bad project version")
 	assert.Len(t, p1.Images, 0, "Should have 0 images")
 
-	initRandProject(t)
+	TestInitRandProject(t)
 	projects, _ = ListProjects()
 	assert.Len(t, projects, 2, "Should list one project")
 }
 
 func TestReInitProject(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
-	name, path := initRandProject(t)
+	name, path := TestInitRandProject(t)
 	projects, _ := ListProjects()
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 := projects[0]
@@ -105,7 +84,7 @@ func TestReInitProject(t *testing.T) {
 }
 
 func TestGetNotExistingProject(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
 	_, ok, err := GetProject("foo")
@@ -114,12 +93,12 @@ func TestGetNotExistingProject(t *testing.T) {
 }
 
 func TestGetExistingProject(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
-	initRandProject(t)
-	name, path := initRandProject(t)
-	initRandProject(t)
+	TestInitRandProject(t)
+	name, path := TestInitRandProject(t)
+	TestInitRandProject(t)
 
 	p, ok, err := GetProject(name)
 	assert.True(t, ok, "should return ok")
@@ -130,9 +109,9 @@ func TestGetExistingProject(t *testing.T) {
 }
 
 func TestInitImage(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
-	name, path := initRandProject(t)
+	name, path := TestInitRandProject(t)
 
 	p, _, _ := GetProject(name)
 	assert.Len(t, p.Images, 0, "No Image should be listed")
@@ -158,10 +137,10 @@ func TestInitImage(t *testing.T) {
 }
 
 func TestInitImages(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
-	name1, _ := initRandProject(t)
-	name2, _ := initRandProject(t)
+	name1, _ := TestInitRandProject(t)
+	name2, _ := TestInitRandProject(t)
 
 	p1, _, _ := GetProject(name1)
 	assert.Len(t, p1.Images, 0, "No Image should be listed")
@@ -198,9 +177,9 @@ func TestInitImages(t *testing.T) {
 }
 
 func TestReInitImage(t *testing.T) {
-	tempDir := initTempWorkspace(t)
+	tempDir := workspace.TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
-	name1, _ := initRandProject(t)
+	name1, _ := TestInitRandProject(t)
 	p1, _, _ := GetProject(name1)
 	assert.Len(t, p1.Images, 0, "No Image should be listed")
 
