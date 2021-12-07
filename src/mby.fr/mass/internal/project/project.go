@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"mby.fr/mass/internal/settings"
+	"mby.fr/mass/internal/resources"
 	"mby.fr/utils/file"
 )
 
@@ -46,6 +47,11 @@ func InitProject(name string) (projectPath string, err error) {
 		return
 	}
 
+	err = resources.Init(projectPath, resources.ProjectKind)
+	if err != nil {
+		return
+	}
+
 	// Create test dir
 	testDir := testDirpath(projectPath)
 	err = file.CreateDirectory(testDir)
@@ -63,6 +69,11 @@ func InitProject(name string) (projectPath string, err error) {
 func InitImage(p Project, name string) (imagePath string, err error) {
 	// Create image dir
 	imagePath, err = file.CreateSubDirectory(p.Dir, name)
+	if err != nil {
+		return
+	}
+
+	err = resources.Init(imagePath, resources.ProjectKind)
 	if err != nil {
 		return
 	}

@@ -1,4 +1,4 @@
-package resource
+package resources
 
 import(
 	"fmt"
@@ -12,7 +12,7 @@ import(
 // project1/image2 project1/image3
 // project1 image2 image3
 // project1
-func ResolveExpression(expressions string) (resources []Resource, err error) {
+func ResolveExpression(expressions string) (resources []Resourcer, err error) {
 	settingsService, err := settings.GetSettingsService()
 	if err != nil {
                 return
@@ -55,6 +55,6 @@ func ResolveExpression(expressions string) (resources []Resource, err error) {
 
 // Resolve simple resource expression
 // project1/image2
-func resolveResource(expr string) (r Resource, ok bool) {
+func resolveResource(expr string) (r Resourcer, ok bool) {
 	return
 }

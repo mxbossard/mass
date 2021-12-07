@@ -115,11 +115,9 @@ func TestInitImage(t *testing.T) {
 
 	p, _, _ := GetProject(name)
 	assert.Len(t, p.Images, 0, "No Image should be listed")
-	imageName := test.RandSeq(6)
 
 	// Init new image
-	imagePath, err := InitImage(p, imageName)
-	assert.NoError(t, err, "should not produce an error")
+	imageName, imagePath := TestInitRandImage(t, p)
 
 	p, _, _ = GetProject(name)
 	assert.Len(t, p.Images, 1, "No Image should be listed")
@@ -149,27 +147,20 @@ func TestInitImages(t *testing.T) {
 	assert.Len(t, p2.Images, 0, "No Image should be listed")
 
 	// Init new image in p1
-	image1 := test.RandSeq(6)
-	_, err := InitImage(p1, image1)
-	assert.NoError(t, err, "should not produce an error")
+	// Init new image
+	TestInitRandImage(t, p1)
 
 	// Init new image in p1
-	image2 := test.RandSeq(6)
-	_, err = InitImage(p1, image2)
-	assert.NoError(t, err, "should not produce an error")
+	TestInitRandImage(t, p1)
 
 	// Init new image in p1
-	image3 := test.RandSeq(6)
-	_, err = InitImage(p1, image3)
-	assert.NoError(t, err, "should not produce an error")
+	TestInitRandImage(t, p1)
 
 	p1, _, _ = GetProject(name1)
 	assert.Len(t, p1.Images, 3, "Bad image count listed")
 
 	// Init new image in p2
-	image4 := test.RandSeq(6)
-	_, err = InitImage(p2, image4)
-	assert.NoError(t, err, "should not produce an error")
+	TestInitRandImage(t, p2)
 
 	p2, _, _ = GetProject(name2)
 	assert.Len(t, p2.Images, 1, "Bad image count listed")

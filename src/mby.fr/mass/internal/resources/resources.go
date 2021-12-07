@@ -1,4 +1,4 @@
-package resource
+package resources
 
 import(
 	"fmt"
@@ -15,81 +15,108 @@ const EnvKind = "Env"
 const ProjectKind = "Project"
 const ImageKind = "Image"
 
-type Resource interface {
+type Resourcer interface {
 	Kind() string
 	Name() string
 	Dir() string
 }
 
-type BaseResource struct {
+type Base struct {
 	ResourceKind, name, dir string
 }
 
-func (r BaseResource) Kind() string {
+func (r Base) Kind() string {
 	return r.ResourceKind
 }
 
-func (r BaseResource) Name() string {
+func (r Base) Name() string {
 	return r.name
 }
 
-func (r BaseResource) Dir() string {
+func (r Base) Dir() string {
 	return r.dir
 }
 
-type EnvResource struct {
-	BaseResource // Implicit composition: "golang inheritance"
+type Env struct {
+	Base // Implicit composition: "golang inheritance"
 }
 
-type ProjectResource struct {
-	BaseResource
+type Project struct {
+	Base
 }
 
-type ImageResource struct {
-	BaseResource
+type Image struct {
+	Base
 }
 
-func buildBase(kind, path string) (r BaseResource, err error) {
+func buildBase(kind, path string) (r Base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return
 	}
 	name := resourceName(path)
-	r = BaseResource{kind, name, absPath}
+	r = Base{kind, name, absPath}
 	return
 }
 
-func BuildEnv(path string) (r EnvResource, err error) {
+func Init(path, kind string) (err error) {
+	var b Base
+	switch kind {
+		case EnvKind:
+		var r Env
+		r, err = buildEnv(path)
+		b = r.Base
+		case ProjectKind:
+		var r Project
+		r, err = buildProject(path)
+		b = r.Base
+		case ImageKind:
+		var r Image
+		r, err = buildImage(path)
+		b = r.Base
+		default:
+		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
+	}
+
+	if err != nil {
+                return
+        }
+
+	err = Store(b)
+	return
+}
+
+func buildEnv(path string) (r Env, err error) {
 	base, err := buildBase(EnvKind, path)
 	if err != nil {
                 return
         }
 
-	r = EnvResource{base}
+	r = Env{base}
 	return
 }
 
-func BuildProject(path string) (r ProjectResource, err error) {
+func buildProject(path string) (r Project, err error) {
 	base, err := buildBase(ProjectKind, path)
 	if err != nil {
                 return
         }
 
-	r = ProjectResource{base}
+	r = Project{base}
 	return
 }
 
-func BuildImage(path string) (r ImageResource, err error) {
+func buildImage(path string) (r Image, err error) {
 	base, err := buildBase(ImageKind, path)
 	if err != nil {
                 return
         }
 
-	r = ImageResource{base}
+	r = Image{base}
 	return
 }
 
-func LoadResource(path string) (r Resource, err error) {
+func Load(path string) (r Resourcer, err error) {
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return
@@ -100,7 +127,7 @@ func LoadResource(path string) (r Resource, err error) {
 		return
 	}
 
-	base := BaseResource{}
+	base := Base{}
 	err = yaml.Unmarshal(content, &base)
 	if err != nil {
 		return
@@ -110,14 +137,14 @@ func LoadResource(path string) (r Resource, err error) {
 	base.dir = path
 
 	kind := base.Kind()
-	
+
 	switch kind {
 		case EnvKind:
-		r = &EnvResource{base}
+		r = Env{base}
 		case ProjectKind:
-		r = &ProjectResource{base}
+		r = Project{base}
 		case ImageKind:
-		r = &ImageResource{base}
+		r = Image{base}
 		default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
 		return
@@ -131,10 +158,10 @@ func LoadResource(path string) (r Resource, err error) {
 	return
 }
 
-var storeResourceLock = &sync.Mutex{}
-func StoreResource(r BaseResource) (err error) {
-	storeResourceLock.Lock()
-	defer storeResourceLock.Unlock()
+var storeLock = &sync.Mutex{}
+func Store(r Base) (err error) {
+	storeLock.Lock()
+	defer storeLock.Unlock()
 
 	content, err := yaml.Marshal(r)
         if err != nil {
