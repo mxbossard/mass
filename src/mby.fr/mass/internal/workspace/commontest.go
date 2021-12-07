@@ -7,6 +7,7 @@ import (
         "github.com/stretchr/testify/assert"
 
         "mby.fr/utils/test"
+        "mby.fr/mass/internal/settings"
 )
 
 
@@ -40,7 +41,7 @@ func assertWorkspaceFileTree(t *testing.T, wksPath string) {
 	assert.DirExists(t, configDir, "config dir should exists")
 	assertConfigFileTree(t, settingsDir)
 
-	for _, env := range defaultEnvs {
+	for _, env := range settings.Default().Environments {
 		envPath := wksPath + "/config/" + env
 		assert.DirExists(t, envPath, "%s config dir should exists", envPath)
 		assertEnvFileTree(t, envPath)

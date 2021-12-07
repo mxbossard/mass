@@ -5,7 +5,8 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"mby.fr/mass/internal/workspace"
+	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/file"
 )
 
 const defaultSourceDir = "src"
@@ -34,20 +35,20 @@ type Project struct {
 }
 
 func InitProject(name string) (projectPath string, err error) {
-	settingsService, err := workspace.GetSettingsService()
+	settingsService, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
 
 	// Create project dir
-	projectPath, err = workspace.CreateSubDirectory(settingsService.ProjectsDir(), name)
+	projectPath, err = file.CreateSubDirectory(settingsService.ProjectsDir(), name)
 	if err != nil {
 		return
 	}
 
 	// Create test dir
 	testDir := testDirpath(projectPath)
-	err = workspace.CreateDirectory(testDir)
+	err = file.CreateDirectory(testDir)
 	if err != nil {
 		return
 	}
@@ -61,21 +62,21 @@ func InitProject(name string) (projectPath string, err error) {
 
 func InitImage(p Project, name string) (imagePath string, err error) {
 	// Create image dir
-	imagePath, err = workspace.CreateSubDirectory(p.Dir, name)
+	imagePath, err = file.CreateSubDirectory(p.Dir, name)
 	if err != nil {
 		return
 	}
 
 	// Create image source dir
 	sourceDir := sourceDirpath(imagePath)
-	err = workspace.CreateDirectory(sourceDir)
+	err = file.CreateDirectory(sourceDir)
 	if err != nil {
 		return
 	}
 
 	// Create image test dir
 	testDir := testDirpath(imagePath)
-	err = workspace.CreateDirectory(testDir)
+	err = file.CreateDirectory(testDir)
 	if err != nil {
 		return
 	}
@@ -93,7 +94,7 @@ func InitImage(p Project, name string) (imagePath string, err error) {
 
 func ListProjects() (projects []Project, err error) {
 	// List directories with a version file to build project list
-        settingsService, err := workspace.GetSettingsService()
+        settingsService, err := settings.GetSettingsService()
         if err != nil {
                 return
         }

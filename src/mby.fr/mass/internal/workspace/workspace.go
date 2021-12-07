@@ -4,6 +4,9 @@ import (
 	//"os"
 	"fmt"
 	//"path/filepath"
+
+	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/file"
 )
 
 func init() {
@@ -19,22 +22,22 @@ func Init(path string) (err error) {
 		return
 	}
 
-	err = CreateDirectory(path)
+	err = file.CreateDirectory(path)
 	if err != nil {
 		return
 	}
 
-	err = Chdir(path)
+	err = file.Chdir(path)
 	if err != nil {
 		return
 	}
 
-	workspacePath, err := WorkDirPath()
+	workspacePath, err := file.WorkDirPath()
 	if err != nil {
 		return
 	}
 
-	err = InitSettings(workspacePath)
+	err = settings.InitSettings(workspacePath)
 	if err != nil {
 		return
 	}
@@ -44,7 +47,7 @@ func Init(path string) (err error) {
 		return
 	}
 
-	settingsService, err := GetSettingsService()
+	settingsService, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
@@ -64,7 +67,7 @@ func Init(path string) (err error) {
 
 func isPathInExistingWorkspace(path string) (ok bool, err error) {
 	// Search for settings already present in target path
-	settingsFilePath, err := seekSettingsFilePath(path)
+	settingsFilePath, err := settings.SeekSettingsFilePath(path)
 	if settingsFilePath != "" {
 		ok = true
 	}

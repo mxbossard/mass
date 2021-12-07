@@ -1,4 +1,4 @@
-package workspace
+package settings
 
 import (
 	"fmt"
@@ -29,6 +29,14 @@ type Settings struct {
 	ConfigDir string
 	CacheDir string
 	Environments []string
+}
+
+func Default() Settings {
+	return Settings{
+		ConfigDir: defaultConfigDir,
+		CacheDir: defaultCacheDir,
+		Environments: defaultEnvs,
+	}
 }
 
 func initViper(workspacePath string) {
@@ -124,7 +132,7 @@ func seekSettingsFilePathRecurse(dirPath string) (string, error) {
 	return seekSettingsFilePathRecurse(parentDirPath)
 }
 
-func seekSettingsFilePath(path string) (settingsPath string, err error) {
+func SeekSettingsFilePath(path string) (settingsPath string, err error) {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
 		return
@@ -142,11 +150,11 @@ type SettingsService struct {
 
 // constructor
 func newSettingsService() (service *SettingsService, err error) {
-	workDirPath, err := WorkDirPath()
+	workDirPath, err := os.Getwd()
 	if err != nil {
 		return
 	}
-	settingsFilePath, err := seekSettingsFilePath(workDirPath)
+	settingsFilePath, err := SeekSettingsFilePath(workDirPath)
 	if err != nil {
 		return
 	}
@@ -209,5 +217,4 @@ func GetSettingsService() (service *SettingsService, err error) {
 	}
 	return
 }
-
 

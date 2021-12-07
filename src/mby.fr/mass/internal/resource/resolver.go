@@ -4,7 +4,8 @@ import(
 	"fmt"
 	"strings"
 
-	"mby.fr/mass/internal/workspace"
+	"mby.fr/utils/file"
+	"mby.fr/mass/internal/settings"
 )
 
 // Resolve complex resource expression
@@ -12,13 +13,13 @@ import(
 // project1 image2 image3
 // project1
 func ResolveExpression(expressions string) (resources []Resource, err error) {
-	settingsService, err := workspace.GetSettingsService()
+	settingsService, err := settings.GetSettingsService()
 	if err != nil {
                 return
         }
 	workspaceDir := settingsService.WorkspaceDir()
 
-	workDir, err := workspace.WorkDirPath()
+	workDir, err := file.WorkDirPath()
 	if err != nil {
                 return
         }

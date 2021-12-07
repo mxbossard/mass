@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/workspace"
+	"mby.fr/mass/internal/settings"
 )
 
 // settingsCmd represents the settings command
@@ -30,12 +30,12 @@ var settingsCmd = &cobra.Command{
 	Short: "Configure MASS",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		settingsService, err := workspace.GetSettingsService()
+		settingsService, err := settings.GetSettingsService()
 		if err != nil {
 			log.Fatal(err)
 		}
-		settings := settingsService.Settings()
-		fmt.Println(settings)
+		s := settingsService.Settings()
+		fmt.Println(s)
 	},
 }
 
