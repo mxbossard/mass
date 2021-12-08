@@ -11,7 +11,7 @@ import(
 	"mby.fr/utils/test"
 )
 
-func TestBuild(t *testing.T) {
+func TestBuildResources(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
