@@ -26,7 +26,7 @@ ctDurationInSec=7200
 rootDir=$scriptDir
 rootDirInCt=/tmp/goid
 workDir=$PWD
-workDirInCt=$rootDirInCt/$( relpath $rootDir $workDir )
+workDirInCt=$rootDirInCt/$( relpath $rootDir $workDir/. )
 
 export GOBIN="$rootDirInCt/bin"
 export GOCACHE="$rootDirInCt/.cache/go-build"
@@ -43,7 +43,7 @@ ctName="goid_$( basename $scriptDir )"
 runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw golang:1.17"
 #echo $runCmd
 
-#>&2 echo "Executing go in a container on workspace: $rootDir with workdir: $workDirInCt ..."
+#>&2 echo "Executing go in a container on workspace: $rootDir within container workdir: $workDirInCt ..."
 #>&2 echo "GOMODCACHE: $hostModCacheDir ..."
 
 ctId=$( docker ps -f name=$ctName -q )
