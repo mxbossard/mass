@@ -21,7 +21,7 @@ type Resource interface {
 	Kind() string
 	Name() string
 	Dir() string
-	//Config() config.Config
+	Config() (config.Config, error)
 }
 
 type Base struct {
@@ -38,6 +38,11 @@ func (r Base) Name() string {
 
 func (r Base) Dir() string {
 	return r.dir
+}
+
+func (r Base) Config() (config.Config, error) {
+	c, err := config.Read(r.Dir())
+	return c, err
 }
 
 type Env struct {

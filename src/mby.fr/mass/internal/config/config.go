@@ -30,13 +30,21 @@ func Init(path string, data interface{}) (err error) {
 	return
 }
 
-// Read config file
+// Read config from dir or file
 func Read(path string) (c Config, err error) {
-	configFilepath, err := filepath.Abs(path)
+	path, err = filepath.Abs(path)
 	if err != nil {
 		return
 	}
-	content, err := os.ReadFile(configFilepath)
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return
+	}
+	if info.IsDir() {
+		path = filepath.Join(path, defaultConfigFile)
+	}
+
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
