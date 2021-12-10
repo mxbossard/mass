@@ -17,6 +17,7 @@ type Config struct {
 	Environment EnvConfig
 }
 
+// Init config in a directory path
 func Init(path string, data interface{}) (err error) {
 	configFilepath := filepath.Join(path, defaultConfigFile)
 	_, err = os.Stat(configFilepath)
@@ -29,6 +30,7 @@ func Init(path string, data interface{}) (err error) {
 	return
 }
 
+// Read config file
 func Read(path string) (c Config, err error) {
 	configFilepath, err := filepath.Abs(path)
 	if err != nil {
@@ -43,7 +45,7 @@ func Read(path string) (c Config, err error) {
 	if err != nil {
 		return
 	}
-	
+
 	return
 }
 
