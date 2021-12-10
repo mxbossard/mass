@@ -8,20 +8,20 @@ import(
 
 	"gopkg.in/yaml.v2"
 
-	"mby.fr/mass/internal/templates"
+	"mby.fr/mass/internal/config"
 )
 
 const defaultResourceFile = "resource.yaml"
-const defaultConfigFile = templates.ConfigFilename
 
 const EnvKind = "Env"
 const ProjectKind = "Project"
 const ImageKind = "Image"
 
-type Resourcer interface {
+type Resource interface {
 	Kind() string
 	Name() string
 	Dir() string
+	//Config() config.Config
 }
 
 type Base struct {
@@ -87,25 +87,8 @@ func Init(path, kind string) (err error) {
 
 	err = Store(b)
 
-	initConfig(path)
+	config.Init(path, b)
 
-	return
-}
-
-func initConfig(path string) (err error) {
-	configFilepath := filepath.Join(path, defaultConfigFile)
-	_, err = os.Stat(configFilepath)
-	if os.IsNotExist(err) {
-		file, err := os.Create(configFilepath)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		err = templates.Render(templates.ConfigFilename, file, nil)
-		if err != nil {
-			return err
-		}
-	}
 	return
 }
 
@@ -139,7 +122,7 @@ func buildImage(path string) (r Image, err error) {
 	return
 }
 
-func Load(path string) (r Resourcer, err error) {
+func Load(path string) (r Resource, err error) {
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return

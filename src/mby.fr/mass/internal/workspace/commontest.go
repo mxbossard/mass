@@ -54,6 +54,7 @@ func TestInitRandEnv(t *testing.T) (path string) {
 
 func assertEnvFileTree(t *testing.T, path string) {
         assert.DirExists(t, path, "env dir file should exists")
-        assert.FileExists(t, path + "/resource.yaml", "version.txt file should exists")
+        assert.FileExists(t, path + "/resource.yaml", "file should exists")
+        assert.FileExists(t, path + "/config.yaml", "file should exists")
 }
 

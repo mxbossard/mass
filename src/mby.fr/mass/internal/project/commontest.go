@@ -21,7 +21,8 @@ func assertProjectFileTree(t *testing.T, path string) {
 	assert.DirExists(t, path, "project dir file should exists")
 	assert.DirExists(t, path + "/test", "test dir should exists")
 	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
-	assert.FileExists(t, path + "/resource.yaml", "version.txt file should exists")
+	assert.FileExists(t, path + "/resource.yaml", "resource file should exists")
+	assert.FileExists(t, path + "/config.yaml", "config file should exists")
 }
 
 func TestInitRandImage(t *testing.T, p Project) (name, path string) {
@@ -38,5 +39,6 @@ func assertImageFileTree(t *testing.T, path string) {
 	assert.DirExists(t, path + "/test", "test dir should exists")
 	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
 	assert.FileExists(t, path + "/resource.yaml", "version.txt file should exists")
+	assert.FileExists(t, path + "/config.yaml", "config file should exists")
 }
 
