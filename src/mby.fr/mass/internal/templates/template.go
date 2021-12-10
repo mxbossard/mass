@@ -2,11 +2,13 @@ package templates
 
 import (
 	"io"
+	"os"
 	"embed"
+	"strings"
 	"text/template"
 )
 
-const ConfigFilename = "config.yaml"
+const ConfigTemplate = "config.yaml"
 
 ////go:embed image/* template/*
 //go:embed src/*
@@ -19,6 +21,8 @@ func read(name string) (data string, err error) {
 		return
 	}
 	data = string(content)
+	// Remove extra new ling added for no reason
+	data = strings.TrimSuffix(data, "\n")
 	return
 }
 
@@ -42,5 +46,17 @@ func Render(name string, target io.Writer, data interface{}) (err error) {
 	t = t.Option("missingkey=error")
 	//t = t.Delims("", "")
 	err = t.Execute(target, data)
+	return
+}
+
+func RenderToFile(name, path string, data interface{}) (err error) {
+	file, err := os.Create(path)
+	if err != nil {
+		return
+	}
+	err = Render(name, file, data)
+	if err != nil {
+		os.Remove(path)
+	}
 	return
 }
