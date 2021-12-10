@@ -7,9 +7,12 @@ import(
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
+
+	"mby.fr/mass/internal/templates"
 )
 
 const defaultResourceFile = "resource.yaml"
+const defaultConfigFile = templates.ConfigFilename
 
 const EnvKind = "Env"
 const ProjectKind = "Project"
@@ -83,6 +86,26 @@ func Init(path, kind string) (err error) {
         }
 
 	err = Store(b)
+
+	initConfig(path)
+
+	return
+}
+
+func initConfig(path string) (err error) {
+	configFilepath := filepath.Join(path, defaultConfigFile)
+	_, err = os.Stat(configFilepath)
+	if os.IsNotExist(err) {
+		file, err := os.Create(configFilepath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		err = templates.Render(templates.ConfigFilename, file, nil)
+		if err != nil {
+			return err
+		}
+	}
 	return
 }
 
