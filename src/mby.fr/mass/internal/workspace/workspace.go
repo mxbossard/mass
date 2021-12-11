@@ -42,23 +42,9 @@ func Init(path string) (err error) {
 		return
 	}
 
-	err = InitConfig()
+	err = InitEnvs()
 	if err != nil {
 		return
-	}
-
-	settingsService, err := settings.GetSettingsService()
-	if err != nil {
-		return
-	}
-
-	settings := settingsService.Settings()
-
-	for _, envName := range settings.Environments {
-		_, err = InitEnv(envName)
-		if err != nil {
-			return
-		}
 	}
 
 	fmt.Printf("New workspace initialized in %s\n", workspacePath)

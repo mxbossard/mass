@@ -51,10 +51,24 @@ type Env struct {
 
 type Project struct {
 	Base
+	images []Image
+}
+
+func (p *Project) GetImages() ([]Image, error) {
+	var err error = nil
+	if len(p.images) == 0 {
+		images, err := ScanImages(p.Dir())
+		if err != nil {
+			return []Image{}, err
+		}
+		p.images = images
+	}
+	return p.images, err
 }
 
 type Image struct {
 	Base
+	project Project
 }
 
 func buildBase(kind, path string) (r Base, err error) {
@@ -103,7 +117,7 @@ func buildEnv(path string) (r Env, err error) {
                 return
         }
 
-	r = Env{base}
+	r = Env{Base: base}
 	return
 }
 
@@ -113,7 +127,7 @@ func buildProject(path string) (r Project, err error) {
                 return
         }
 
-	r = Project{base}
+	r = Project{Base: base}
 	return
 }
 
@@ -123,7 +137,7 @@ func buildImage(path string) (r Image, err error) {
                 return
         }
 
-	r = Image{base}
+	r = Image{Base: base}
 	return
 }
 
@@ -151,11 +165,11 @@ func Load(path string) (r Resource, err error) {
 
 	switch kind {
 		case EnvKind:
-		r = Env{base}
+		r = Env{Base: base}
 		case ProjectKind:
-		r = Project{base}
+		r = Project{Base: base}
 		case ImageKind:
-		r = Image{base}
+		r = Image{Base: base}
 		default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
 		return

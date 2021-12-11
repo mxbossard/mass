@@ -12,7 +12,7 @@ func InitEnv(name string) (path string, err error) {
 		return
 	}
 
-	path, err = file.CreateSubDirectory(settingsService.ConfigDir(), name)
+	path, err = file.CreateSubDirectory(settingsService.EnvsDir(), name)
 	if err != nil {
 		return
 	}

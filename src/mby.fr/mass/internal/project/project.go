@@ -61,7 +61,7 @@ func InitProject(name string) (projectPath string, err error) {
 
 	// Init version file
 	versionFile := versionFilepath(projectPath)
-	_, err = softInitFile(versionFile, defaultInitialVersion)
+	_, err = file.SoftInitFile(versionFile, defaultInitialVersion)
 
 	return
 }
@@ -94,11 +94,11 @@ func InitImage(p Project, name string) (imagePath string, err error) {
 
 	// Init version file
 	versionFile := versionFilepath(imagePath)
-	_, err = softInitFile(versionFile, defaultInitialVersion)
+	_, err = file.SoftInitFile(versionFile, defaultInitialVersion)
 
 	// Init Build file
 	buildfile := buildfileFilepath(imagePath)
-	_, err = softInitFile(buildfile, "")
+	_, err = file.SoftInitFile(buildfile, "")
 
 	return
 }
@@ -176,15 +176,6 @@ func listImages(p Project) (images []Image, err error) {
         filepath.WalkDir(p.Dir, imageCollector)
 
         return
-}
-
-func softInitFile(filepath, content string) (path string, err error) {
-	_, err = os.Stat(filepath); 
-	if os.IsNotExist(err) {
-		// Do not overwrite file if it already exists
-		err = os.WriteFile(filepath, []byte(content), 0644)
-	}
-	return
 }
 
 func sourceDirpath(parentPath string) string {

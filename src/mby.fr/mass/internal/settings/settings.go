@@ -17,7 +17,8 @@ const settingsDir = ".mass"
 var settingsFile = filepath.Join(settingsDir, "settings.yaml")
 
 // Default settings
-const defaultConfigDir = "config"
+const defaultEnvsDir = "config"
+const defaultProjectsDir = "."
 const defaultCacheDir = ".cache"
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
@@ -26,14 +27,16 @@ var defaultEnvs = []string{"dev", "stage", "prod"}
 
 type Settings struct {
 	Name string
-	ConfigDir string
+	EnvsDir string
+	ProjectsDir string
 	CacheDir string
 	Environments []string
 }
 
 func Default() Settings {
 	return Settings{
-		ConfigDir: defaultConfigDir,
+		EnvsDir: defaultEnvsDir,
+		ProjectsDir: defaultProjectsDir,
 		CacheDir: defaultCacheDir,
 		Environments: defaultEnvs,
 	}
@@ -50,7 +53,8 @@ func initViper(workspacePath string) {
 	viper.SetConfigFile(settingsFilePath)
 
 	viper.SetDefault("Name", workspaceName)
-	viper.SetDefault("ConfigDir", defaultConfigDir)
+	viper.SetDefault("EnvsDir", defaultEnvsDir)
+	viper.SetDefault("ProjectsDir", defaultProjectsDir)
 	viper.SetDefault("CacheDir", defaultCacheDir)
 	viper.SetDefault("Environments", defaultEnvs)
 }
@@ -191,16 +195,16 @@ func (s SettingsService) SettingsFile() string {
 	return filepath.Join(s.workspacePath, settingsFile)
 }
 
-func (s SettingsService) ConfigDir() string {
-	return filepath.Join(s.workspacePath, s.settings.ConfigDir)
+func (s SettingsService) EnvsDir() string {
+	return filepath.Join(s.workspacePath, s.settings.EnvsDir)
+}
+
+func (s SettingsService) ProjectsDir() string {
+	return filepath.Join(s.workspacePath, s.settings.ProjectsDir)
 }
 
 func (s SettingsService) CacheDir() string {
 	return filepath.Join(s.workspacePath, s.settings.CacheDir)
-}
-
-func (s SettingsService) ProjectsDir() string {
-	return s.WorkspaceDir()
 }
 
 // singleton
