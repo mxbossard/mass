@@ -54,7 +54,7 @@ type Project struct {
 	images []Image
 }
 
-func (p *Project) GetImages() ([]Image, error) {
+func (p *Project) Images() ([]Image, error) {
 	var err error = nil
 	if len(p.images) == 0 {
 		images, err := ScanImages(p.Dir())
@@ -66,9 +66,24 @@ func (p *Project) GetImages() ([]Image, error) {
 	return p.images, err
 }
 
+func (p *Project) TestDir() (string) {
+	//var err error = nil
+	return ""
+}
+
 type Image struct {
 	Base
 	project Project
+}
+
+func (i *Image) TestDir() (string) {
+	//var err error = nil
+	return ""
+}
+
+func (i *Image) Version() (string) {
+	//var err error = nil
+	return ""
 }
 
 func buildBase(kind, path string) (r Base, err error) {

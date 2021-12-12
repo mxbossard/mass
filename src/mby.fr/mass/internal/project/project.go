@@ -10,13 +10,13 @@ import (
 	"mby.fr/utils/file"
 )
 
-const defaultSourceDir = "src"
-const defaultTestDir = "test"
-const defaultVersionFile = "version.txt"
-const defaultInitialVersion = "0.0.1"
-const defaultBuildFile = "Dockerfile"
+const DefaultSourceDir = "src"
+const DefaultTestDir = "test"
+const DefaultVersionFile = "version.txt"
+const DefaultInitialVersion = "0.0.1"
+const DefaultBuildFile = "Dockerfile"
 
-var forbiddenNames = []string{defaultSourceDir, defaultTestDir, "config"}
+var forbiddenNames = []string{DefaultSourceDir, DefaultTestDir, "envs"}
 
 type Image struct {
 	Name string
@@ -61,7 +61,7 @@ func InitProject(name string) (projectPath string, err error) {
 
 	// Init version file
 	versionFile := versionFilepath(projectPath)
-	_, err = file.SoftInitFile(versionFile, defaultInitialVersion)
+	_, err = file.SoftInitFile(versionFile, DefaultInitialVersion)
 
 	return
 }
@@ -94,7 +94,7 @@ func InitImage(p Project, name string) (imagePath string, err error) {
 
 	// Init version file
 	versionFile := versionFilepath(imagePath)
-	_, err = file.SoftInitFile(versionFile, defaultInitialVersion)
+	_, err = file.SoftInitFile(versionFile, DefaultInitialVersion)
 
 	// Init Build file
 	buildfile := buildfileFilepath(imagePath)
@@ -117,7 +117,7 @@ func ListProjects() (projects []Project, err error) {
 		if err != nil {
 			return err
 		}
-		if d.Name() == defaultVersionFile {
+		if d.Name() == DefaultVersionFile {
 			// Found a version file
 			parentDir := filepath.Dir(path)
 
@@ -156,7 +156,7 @@ func listImages(p Project) (images []Image, err error) {
                 if err != nil {
                         return err
                 }
-                if d.Name() == defaultBuildFile {
+                if d.Name() == DefaultBuildFile {
                         // Found a version file
                         parentDir := filepath.Dir(path)
 
@@ -179,19 +179,19 @@ func listImages(p Project) (images []Image, err error) {
 }
 
 func sourceDirpath(parentPath string) string {
-	return filepath.Join(parentPath, defaultSourceDir)
+	return filepath.Join(parentPath, DefaultSourceDir)
 }
 
 func testDirpath(parentPath string) string {
-	return filepath.Join(parentPath, defaultTestDir)
+	return filepath.Join(parentPath, DefaultTestDir)
 }
 
 func versionFilepath(parentPath string) string {
-	return filepath.Join(parentPath, defaultVersionFile)
+	return filepath.Join(parentPath, DefaultVersionFile)
 }
 
 func buildfileFilepath(parentPath string) string {
-	return filepath.Join(parentPath, defaultBuildFile)
+	return filepath.Join(parentPath, DefaultBuildFile)
 }
 
 func buildProject(path string) (p Project, err error) {

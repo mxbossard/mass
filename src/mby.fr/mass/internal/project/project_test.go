@@ -32,7 +32,7 @@ func TestListProjects(t *testing.T) {
 	assert.Equal(t, path, p1.Dir, "Bad project dir")
 	assert.Equal(t, path + "/test", p1.TestDir, "Bad project test dir")
 	assert.DirExists(t, p1.TestDir, "Project test dir does not exists")
-	assert.Equal(t, defaultInitialVersion, p1.Version, "Bad project version")
+	assert.Equal(t, DefaultInitialVersion, p1.Version, "Bad project version")
 	assert.Len(t, p1.Images, 0, "Should have 0 images")
 
 	TestInitRandProject(t)
@@ -52,7 +52,7 @@ func TestReInitProject(t *testing.T) {
 	assert.Equal(t, path, p1.Dir, "Bad project dir")
 	assert.Equal(t, path + "/test", p1.TestDir, "Bad project test dir")
 	assert.DirExists(t, p1.TestDir, "Project test dir does not exists")
-	assert.Equal(t, defaultInitialVersion, p1.Version, "Bad project version")
+	assert.Equal(t, DefaultInitialVersion, p1.Version, "Bad project version")
 
 	// reinit same project
 	_, err := InitProject(name)
@@ -64,7 +64,7 @@ func TestReInitProject(t *testing.T) {
 	assert.Equal(t, path, p1.Dir, "Bad project dir")
 	assert.Equal(t, path + "/test", p1.TestDir, "Bad project test dir")
 	assert.DirExists(t, p1.TestDir, "Project test dir does not exists")
-	assert.Equal(t, defaultInitialVersion, p1.Version, "Bad project version")
+	assert.Equal(t, DefaultInitialVersion, p1.Version, "Bad project version")
 
 	// editing project
 	newVersion := "0.2.1"
@@ -131,7 +131,7 @@ func TestInitImage(t *testing.T) {
 	assert.DirExists(t, image.TestDir, "image test dir does not exists")
 	assert.Equal(t, imagePath + "/Dockerfile", image.Buildfile, "bad image build file")
 	assert.FileExists(t, image.Buildfile, "image buildfile does not exists")
-	assert.Equal(t, defaultInitialVersion, image.Version, "bad image version")
+	assert.Equal(t, DefaultInitialVersion, image.Version, "bad image version")
 }
 
 func TestInitImages(t *testing.T) {
