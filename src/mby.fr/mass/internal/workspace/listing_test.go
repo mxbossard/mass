@@ -15,11 +15,13 @@ func TestListProjects(t *testing.T) {
 	tempDir := TestInitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
 
-	projects, _ := ListProjects()
+	projects, err := ListProjects()
+	require.NoError(t, err, "should not error")
 	assert.Len(t, projects, 0, "Should list 0 projects")
 
 	name, path := project.TestInitRandProject(t)
-	projects, _ = ListProjects()
+	projects, err = ListProjects()
+	require.NoError(t, err, "should not error")
 	assert.Len(t, projects, 1, "Should list 1 project")
 	p1 := projects[0]
 	assert.Equal(t, name, p1.Name(), "Bad project name")
@@ -27,6 +29,7 @@ func TestListProjects(t *testing.T) {
 	assert.Equal(t, path + "/test", p1.TestDir(), "Bad project test dir")
 	assert.DirExists(t, p1.TestDir(), "Project test dir does not exists")
 	//assert.Equal(t, DefaultInitialVersion, p1.Version(), "Bad project version")
+
 	images, err := p1.Images()
 	require.NoError(t, err, "should not error")
 	assert.Len(t, images, 0, "Should have 0 images")

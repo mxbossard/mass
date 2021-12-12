@@ -1,7 +1,7 @@
 package resources
 
 import(
-	"fmt"
+	//"fmt"
 	"io/fs"
 	"path/filepath"
 )
@@ -12,7 +12,7 @@ func buildScanner(resKind string, c chan<- interface{}) (fs.WalkDirFunc) {
 			return err
 		}
 		//fmt.Println("scanning", path)
-		if d.Name() == defaultResourceFile {
+		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
 			res, err := Load(parentDir)
 			if err != nil {
@@ -35,7 +35,7 @@ func ScanProjects(path string) (projects []Project, err error) {
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
-			fmt.Println("Consuming project")
+			//fmt.Println("Consuming project")
 			projects = append(projects, r.(Project))
 		}
 		finished <- true
@@ -58,7 +58,7 @@ func ScanImages(path string) (images []Image, err error) {
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
-			fmt.Println("Consuming image")
+			//fmt.Println("Consuming image")
 			images = append(images, r.(Image))
 		}
 		finished <- true
@@ -81,7 +81,7 @@ func ScanEnvs(path string) (envs []Env, err error) {
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
-			fmt.Println("Consuming env")
+			//fmt.Println("Consuming env")
 			envs = append(envs, r.(Env))
 		}
 		finished <- true

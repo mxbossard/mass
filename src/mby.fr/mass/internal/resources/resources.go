@@ -11,7 +11,12 @@ import(
 	"mby.fr/mass/internal/config"
 )
 
-const defaultResourceFile = "resource.yaml"
+const DefaultSourceDir = "src"
+const DefaultTestDir = "test"
+const DefaultVersionFile = "version.txt"
+const DefaultInitialVersion = "0.0.1"
+const DefaultBuildFile = "Dockerfile"
+const DefaultResourceFile = "resource.yaml"
 
 const EnvKind = "Env"
 const ProjectKind = "Project"
@@ -45,12 +50,22 @@ func (r Base) Config() (config.Config, error) {
 	return c, err
 }
 
+type Testable struct {
+	TestDirectory string
+}
+
+func (t *Testable) TestDir() (string) {
+	//var err error = nil
+	return t.TestDirectory
+}
+
 type Env struct {
 	Base // Implicit composition: "golang inheritance"
 }
 
 type Project struct {
 	Base
+	Testable
 	images []Image
 }
 
@@ -66,33 +81,31 @@ func (p *Project) Images() ([]Image, error) {
 	return p.images, err
 }
 
-func (p *Project) TestDir() (string) {
-	//var err error = nil
-	return ""
-}
-
 type Image struct {
 	Base
-	project Project
+	Testable
+	Project Project
+	Version string
+	Buildfile string
 }
 
-func (i *Image) TestDir() (string) {
-	//var err error = nil
-	return ""
-}
-
-func (i *Image) Version() (string) {
-	//var err error = nil
-	return ""
-}
-
-func buildBase(kind, path string) (r Base, err error) {
+func buildBase(kind, path string) (b Base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return
 	}
 	name := resourceName(path)
-	r = Base{kind, name, absPath}
+	b = Base{kind, name, absPath}
+	return
+}
+
+func buildTestable(path string) (t Testable, err error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return
+	}
+	testDir := filepath.Join(absPath, DefaultTestDir)
+	t = Testable{testDir}
 	return
 }
 
@@ -142,7 +155,12 @@ func buildProject(path string) (r Project, err error) {
                 return
         }
 
-	r = Project{Base: base}
+	testable, err := buildTestable(path)
+	if err != nil {
+                return
+        }
+
+	r = Project{Base: base, Testable: testable}
 	return
 }
 
@@ -152,7 +170,12 @@ func buildImage(path string) (r Image, err error) {
                 return
         }
 
-	r = Image{Base: base}
+	testable, err := buildTestable(path)
+	if err != nil {
+                return
+        }
+
+	r = Image{Base: base, Testable: testable}
 	return
 }
 
@@ -161,7 +184,7 @@ func Load(path string) (r Resource, err error) {
 	if err != nil {
 		return
 	}
-	resourceFilepath := filepath.Join(path, defaultResourceFile)
+	resourceFilepath := filepath.Join(path, DefaultResourceFile)
 	content, err := os.ReadFile(resourceFilepath)
 	if err != nil {
 		return
@@ -208,7 +231,7 @@ func Store(r Base) (err error) {
                 return
         }
 
-	resourceFilepath := filepath.Join(r.Dir(), defaultResourceFile)
+	resourceFilepath := filepath.Join(r.Dir(), DefaultResourceFile)
 	err = os.WriteFile(resourceFilepath, content, 0644)
 
 	return
