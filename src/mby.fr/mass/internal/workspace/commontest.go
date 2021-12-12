@@ -32,12 +32,12 @@ func assertWorkspaceFileTree(t *testing.T, wksPath string) {
 	assert.DirExists(t, settingsDir, ".mass/ dir should exists")
 	assertSettingsFileTree(t, settingsDir)
 
-	configDir := wksPath + "/config"
-	assert.DirExists(t, configDir, "config dir should exists")
-	//assertConfigFileTree(t, settingsDir)
+	envsDir := wksPath + "/envs"
+	assert.DirExists(t, envsDir, "config dir should exists")
+	assertSettingsFileTree(t, settingsDir)
 
 	for _, env := range settings.Default().Environments {
-		envPath := wksPath + "/config/" + env
+		envPath := envsDir + "/" + env
 		assert.DirExists(t, envPath, "%s config dir should exists", envPath)
 		assertEnvFileTree(t, envPath)
 	}

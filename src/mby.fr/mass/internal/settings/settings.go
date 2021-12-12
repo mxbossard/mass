@@ -17,7 +17,7 @@ const settingsDir = ".mass"
 var settingsFile = filepath.Join(settingsDir, "settings.yaml")
 
 // Default settings
-const defaultEnvsDir = "config"
+const defaultEnvsDir = "envs"
 const defaultProjectsDir = "."
 const defaultCacheDir = ".cache"
 var defaultEnvs = []string{"dev", "stage", "prod"}
