@@ -32,7 +32,9 @@ type Resource interface {
 }
 
 type Base struct {
-	ResourceKind, name, dir string
+	//Resource
+	ResourceKind string `yaml:"resourceKind"`
+	name, dir string
 }
 
 func (r Base) Kind() string {
@@ -69,7 +71,7 @@ func (r Base) Init() (err error) {
 }
 
 type Testable struct {
-	TestDirectory string
+	TestDirectory string `yaml:"testDirectory"`
 }
 
 func (t Testable) TestDir() (string) {
@@ -84,7 +86,7 @@ func (t Testable) Init() (err error) {
 }
 
 type Env struct {
-	Base // Implicit composition: "golang inheritance"
+	Base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
 }
 
 func (e Env) Init() (err error) {
@@ -97,8 +99,8 @@ func (e Env) Init() (err error) {
 }
 
 type Project struct {
-	Base
-	Testable
+	Base `yaml:"base,inline"`
+	Testable `yaml:"testable,inline"`
 	images []Image
 }
 
@@ -128,12 +130,12 @@ func (p *Project) Images() ([]Image, error) {
 }
 
 type Image struct {
-	Base
-	Testable
+	Base `yaml:"base,inline"`
+	Testable `yaml:"testable,inline"`
+	SourceDirectory string `yaml:"sourceDirectory"`
+	BuildFile string `yaml:"buildFile"`
+	Version string `yaml:"version"`
 	p Project
-	SourceDirectory string
-	Version string
-	BuildFile string
 }
 
 func (i Image) Init() (err error) {
@@ -265,6 +267,7 @@ func Read(path string) (r Resource, err error) {
 	if err != nil {
 		return
 	}
+	//fmt.Println("ResourceFile content:", string(content))
 
 	base := Base{}
 	err = yaml.Unmarshal(content, &base)
@@ -278,17 +281,22 @@ func Read(path string) (r Resource, err error) {
 	kind := base.Kind()
 	switch kind {
 		case EnvKind:
-		r = Env{Base: base}
+		res := Env{Base: base}
+		err = yaml.Unmarshal(content, &res)
+		r = res
 		case ProjectKind:
-		r = Project{Base: base}
+		res := Project{Base: base}
+		err = yaml.Unmarshal(content, &res)
+		r = res
 		case ImageKind:
-		r = Image{Base: base}
+		res := Image{Base: base}
+		err = yaml.Unmarshal(content, &res)
+		r = res
 		default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
 		return
 	}
 
-	err = yaml.Unmarshal(content, r)
 	if err != nil {
 		return
 	}
