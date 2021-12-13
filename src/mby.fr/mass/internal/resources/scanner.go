@@ -14,7 +14,7 @@ func buildScanner(resKind string, c chan<- interface{}) (fs.WalkDirFunc) {
 		//fmt.Println("scanning", path)
 		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
-			res, err := Load(parentDir)
+			res, err := Read(parentDir)
 			if err != nil {
 				return err
 			}

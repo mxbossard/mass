@@ -9,6 +9,7 @@ import(
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
+	"mby.fr/mass/internal/config"
 )
 
 func TestBuildResources(t *testing.T) {
@@ -18,7 +19,7 @@ func TestBuildResources(t *testing.T) {
 
 	expectedName := filepath.Base(path)
 
-	pr, err := buildProject(path)
+	pr, err := BuildProject(path)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Project{}, pr, "bad resource type")
 	assert.Equal(t, expectedName, pr.Name(), "bad resource name")
@@ -26,41 +27,150 @@ func TestBuildResources(t *testing.T) {
 	assert.Equal(t, ProjectKind, pr.Kind(), "bad resource kind")
 }
 
-func TestStore(t *testing.T) {
+func TestWrite(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	pr, err := buildProject(path)
+	pr, err := BuildProject(path)
 	require.NoError(t, err, "should not error")
 
-	err = Store(pr.Base)
+	err = Write(pr)
 	require.NoError(t, err, "should not error")
 
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 }
 
-func TestStoreThenLoad(t *testing.T) {
+func TestWriteThenRead(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
 	expectedName := filepath.Base(path)
 
-	pr, err := buildProject(path)
+	i, err := BuildImage(path)
 	require.NoError(t, err, "should not error")
 
-	err = Store(pr.Base)
+	err = Write(i)
 	require.NoError(t, err, "should not error")
 
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 
-	loadedPr, err := Load(path)
+	res, err := Read(path)
 	require.NoError(t, err, "should not error")
-	assert.Equal(t, expectedName, loadedPr.Name(), "bad resource name")
-	assert.Equal(t, path, loadedPr.Dir(), "bad resource dir")
-	assert.Equal(t, ProjectKind, loadedPr.Kind(), "bad resource kind")
+	loadedImage := res.(Image)
+	assert.Equal(t, expectedName, loadedImage.Name(), "bad resource name")
+	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
+	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
+	assert.Equal(t, path + "/" + DefaultSourceDir, loadedImage.SourceDir(), "bad source dir")
+	assert.Equal(t, path + "/" + DefaultBuildFile, loadedImage.BuildFile, "bad build file")
+	assert.Equal(t, DefaultInitialVersion, loadedImage.Version, "bad version")
 }
 
+func assertBaseContent(t *testing.T, path string, b Base) {
+	expectedName := filepath.Base(path)
+	assert.Equal(t, expectedName, b.Name(), "bad resource name")
+	assert.Equal(t, path, b.Dir(), "bad resource dir")
+}
+
+func assertBaseFs(t *testing.T, b Base) {
+	assert.DirExists(t, b.Dir(), "should exists")
+	assert.FileExists(t, b.Dir() + "/" + config.DefaultConfigFile, "should exists")
+	assert.FileExists(t, b.Dir() + "/" + DefaultResourceFile, "should exists")
+}
+
+func assertTestableContent(t *testing.T, path string, r Testable) {
+	assert.Equal(t, path + "/" + DefaultTestDir, r.TestDir(), "bad resource dir")
+}
+
+func assertTestableFs(t *testing.T, r Testable) {
+	assert.DirExists(t, r.TestDir(), "should exists")
+}
+
+func TestBuildEnv(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildEnv(path)
+	require.NoError(t, err, "should not error")
+	assert.NoFileExists(t, path, "should not exists")
+	assertBaseContent(t, path, r.Base)
+
+	assert.Equal(t, EnvKind, r.Kind(), "bad resource kind")
+}
+
+func TestInitEnv(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildEnv(path)
+	require.NoError(t, err, "should not error")
+
+	err = r.Init()
+	require.NoError(t, err, "should not error")
+
+	assertBaseFs(t, r.Base)
+}
+
+func TestBuildProject(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildProject(path)
+	require.NoError(t, err, "should not error")
+	assert.NoFileExists(t, path, "should not exists")
+	assertBaseContent(t, path, r.Base)
+	assertTestableContent(t, path, r.Testable)
+
+	assert.Equal(t, ProjectKind, r.Kind(), "bad resource kind")
+}
+
+func TestInitProject(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildProject(path)
+	require.NoError(t, err, "should not error")
+
+	err = r.Init()
+	require.NoError(t, err, "should not error")
+
+	assertBaseFs(t, r.Base)
+	assertTestableFs(t, r.Testable)
+}
+
+func TestBuildImage(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildImage(path)
+	require.NoError(t, err, "should not error")
+	assert.NoFileExists(t, path, "should not exists")
+
+	assertBaseContent(t, path, r.Base)
+	assertTestableContent(t, path, r.Testable)
+
+	assert.Equal(t, ImageKind, r.Kind(), "bad resource kind")
+	assert.Equal(t, path + "/" + DefaultSourceDir, r.SourceDir(), "bad source dir")
+	assert.Equal(t, path + "/" + DefaultBuildFile, r.BuildFile, "bad buildfile")
+	assert.Equal(t, DefaultInitialVersion, r.Version, "bad version")
+}
+
+func TestInitImage(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildImage(path)
+	require.NoError(t, err, "should not error")
+
+	err = r.Init()
+	require.NoError(t, err, "should not error")
+
+	assertBaseFs(t, r.Base)
+	assertTestableFs(t, r.Testable)
+
+	assert.DirExists(t, r.SourceDir(), "source dir should exists")
+	assert.FileExists(t, r.BuildFile, "source dir should exists")
+}

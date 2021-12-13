@@ -61,6 +61,9 @@ func (r Base) Init() (err error) {
 
 	// Init config
 	err = config.Init(r.Dir(), r)
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -84,6 +87,15 @@ type Env struct {
 	Base // Implicit composition: "golang inheritance"
 }
 
+func (e Env) Init() (err error) {
+	err = e.Base.Init()
+	if err != nil {
+		return
+	}
+	err = Write(e)
+	return
+}
+
 type Project struct {
 	Base
 	Testable
@@ -96,6 +108,10 @@ func (p Project) Init() (err error) {
 		return
 	}
 	err = p.Testable.Init()
+	if err != nil {
+		return
+	}
+	err = Write(p)
 	return
 }
 
@@ -117,7 +133,7 @@ type Image struct {
 	p Project
 	SourceDirectory string
 	Version string
-	Buildfile string
+	BuildFile string
 }
 
 func (i Image) Init() (err error) {
@@ -134,9 +150,16 @@ func (i Image) Init() (err error) {
         //versionFile := versionFilepath(projectPath)
         //_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
 
-	// Init Build file
-        _, err = file.SoftInitFile(i.Buildfile, "")
+	// Init source directory
+	err = os.MkdirAll(i.SourceDir(), 0755)
 
+	// Init Build file
+        _, err = file.SoftInitFile(i.BuildFile, "")
+
+	if err != nil {
+		return
+	}
+	err = Write(i)
 	return
 }
 
@@ -168,33 +191,27 @@ func Init(path, kind string) (b Base, err error) {
 	switch kind {
 		case EnvKind:
 		var r Env
-		r, err = buildEnv(path)
+		r, err = BuildEnv(path)
 		r.Init()
 		b = r.Base
 		case ProjectKind:
 		var p Project
-		p, err = buildProject(path)
+		p, err = BuildProject(path)
 		p.Init()
 		b = p.Base
 		case ImageKind:
 		var i Image
-		i, err = buildImage(path)
+		i, err = BuildImage(path)
 		i.Init()
 		b = i.Base
 		default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
 	}
 
-	if err != nil {
-                return
-        }
-
-	err = Store(b)
-
 	return
 }
 
-func buildEnv(path string) (r Env, err error) {
+func BuildEnv(path string) (r Env, err error) {
 	base, err := buildBase(EnvKind, path)
 	if err != nil {
                 return
@@ -204,7 +221,7 @@ func buildEnv(path string) (r Env, err error) {
 	return
 }
 
-func buildProject(path string) (r Project, err error) {
+func BuildProject(path string) (r Project, err error) {
 	base, err := buildBase(ProjectKind, path)
 	if err != nil {
                 return
@@ -219,7 +236,7 @@ func buildProject(path string) (r Project, err error) {
 	return
 }
 
-func buildImage(path string) (r Image, err error) {
+func BuildImage(path string) (r Image, err error) {
 	base, err := buildBase(ImageKind, path)
 	if err != nil {
                 return
@@ -232,12 +249,13 @@ func buildImage(path string) (r Image, err error) {
 
 	version := DefaultInitialVersion
         buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
+	sourceDir := filepath.Join(base.Dir(), DefaultSourceDir)
 
-	r = Image{Base: base, Testable: testable, Version: version, Buildfile: buildfile}
+	r = Image{Base: base, Testable: testable, Version: version, BuildFile: buildfile, SourceDirectory: sourceDir}
 	return
 }
 
-func Load(path string) (r Resource, err error) {
+func Read(path string) (r Resource, err error) {
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return
@@ -258,7 +276,6 @@ func Load(path string) (r Resource, err error) {
 	base.dir = path
 
 	kind := base.Kind()
-
 	switch kind {
 		case EnvKind:
 		r = Env{Base: base}
@@ -267,7 +284,7 @@ func Load(path string) (r Resource, err error) {
 		case ImageKind:
 		r = Image{Base: base}
 		default:
-		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
+		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
 		return
 	}
 
@@ -279,12 +296,24 @@ func Load(path string) (r Resource, err error) {
 	return
 }
 
-var storeLock = &sync.Mutex{}
-func Store(r Base) (err error) {
-	storeLock.Lock()
-	defer storeLock.Unlock()
+var writeLock = &sync.Mutex{}
+func Write(r Resource) (err error) {
+	writeLock.Lock()
+	defer writeLock.Unlock()
 
-	content, err := yaml.Marshal(r)
+	var content []byte
+	switch r.(type) {
+		case Env:
+		content, err = yaml.Marshal(r)
+		case Project:
+		content, err = yaml.Marshal(r)
+		case Image:
+		content, err = yaml.Marshal(r)
+		default:
+		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
+		return
+	}
+
         if err != nil {
                 return
         }

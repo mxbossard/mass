@@ -37,7 +37,11 @@ func InitEnv(name string) (envPath string, err error) {
 		return
 	}
 	envPath = filepath.Join(settingsService.EnvsDir(), name)
-	_, err = resources.Init(envPath, resources.EnvKind)
+	env, err := resources.BuildEnv(envPath)
+	if err != nil {
+		return
+	}
+	err = env.Init()
 	return
 }
 

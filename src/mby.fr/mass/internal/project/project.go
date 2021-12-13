@@ -43,7 +43,11 @@ func InitProject(name string) (projectPath string, err error) {
 
 	projectPath = filepath.Join(settingsService.ProjectsDir(), name)
 
-	_, err = resources.Init(projectPath, resources.ProjectKind)
+	project, err := resources.BuildProject(projectPath)
+	if err != nil {
+		return
+	}
+	err = project.Init()
 	return
 }
 
@@ -80,7 +84,11 @@ func InitProject(name string) (projectPath string, err error) {
 
 func InitImage(projectDir, name string) (imagePath string, err error) {
 	imagePath = filepath.Join(projectDir, name)
-	_, err = resources.Init(imagePath, resources.ProjectKind)
+	image, err := resources.BuildImage(imagePath)
+	if err != nil {
+		return
+	}
+	err = image.Init()
 	return
 }
 

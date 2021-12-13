@@ -9,7 +9,7 @@ import(
 	"mby.fr/mass/internal/templates"
 )
 
-const defaultConfigFile = templates.ConfigTemplate
+const DefaultConfigFile = templates.ConfigTemplate
 
 type EnvConfig map[string]string
 
@@ -19,7 +19,7 @@ type Config struct {
 
 // Init config in a directory path
 func Init(path string, data interface{}) (err error) {
-	configFilepath := filepath.Join(path, defaultConfigFile)
+	configFilepath := filepath.Join(path, DefaultConfigFile)
 	_, err = os.Stat(configFilepath)
 	if os.IsNotExist(err) {
 		err = templates.RenderToFile(templates.ConfigTemplate, configFilepath, data)
@@ -41,7 +41,7 @@ func Read(path string) (c Config, err error) {
 		return
 	}
 	if info.IsDir() {
-		path = filepath.Join(path, defaultConfigFile)
+		path = filepath.Join(path, DefaultConfigFile)
 	}
 
 	content, err := os.ReadFile(path)
