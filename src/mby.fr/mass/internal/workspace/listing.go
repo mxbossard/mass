@@ -23,3 +23,14 @@ func ListProjects() (projects []resources.Project, err error) {
 	return
 }
 
+func GetProject(name string) (p resources.Project, ok bool, err error) {
+	projects, err := ListProjects()
+	for _, p = range projects {
+		if p.Name() == name {
+			ok = true
+			return
+		}
+	}
+	return
+}
+

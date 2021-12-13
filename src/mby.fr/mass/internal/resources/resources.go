@@ -9,6 +9,7 @@ import(
 	"gopkg.in/yaml.v2"
 
 	"mby.fr/mass/internal/config"
+	"mby.fr/utils/file"
 )
 
 const DefaultSourceDir = "src"
@@ -27,6 +28,7 @@ type Resource interface {
 	Name() string
 	Dir() string
 	Config() (config.Config, error)
+	Init() error
 }
 
 type Base struct {
@@ -50,13 +52,32 @@ func (r Base) Config() (config.Config, error) {
 	return c, err
 }
 
+func (r Base) Init() (err error) {
+	// Create resource dir
+	err = os.MkdirAll(r.Dir(), 0755)
+	if err != nil {
+		return
+	}
+
+	// Init config
+	err = config.Init(r.Dir(), r)
+
+	return
+}
+
 type Testable struct {
 	TestDirectory string
 }
 
-func (t *Testable) TestDir() (string) {
+func (t Testable) TestDir() (string) {
 	//var err error = nil
 	return t.TestDirectory
+}
+
+func (t Testable) Init() (err error) {
+	// Create test dir
+	err = os.MkdirAll(t.TestDir(), 0755)
+	return
 }
 
 type Env struct {
@@ -67,6 +88,15 @@ type Project struct {
 	Base
 	Testable
 	images []Image
+}
+
+func (p Project) Init() (err error) {
+	err = p.Base.Init()
+	if err != nil {
+		return
+	}
+	err = p.Testable.Init()
+	return
 }
 
 func (p *Project) Images() ([]Image, error) {
@@ -84,9 +114,34 @@ func (p *Project) Images() ([]Image, error) {
 type Image struct {
 	Base
 	Testable
-	Project Project
+	p Project
+	SourceDirectory string
 	Version string
 	Buildfile string
+}
+
+func (i Image) Init() (err error) {
+	err = i.Base.Init()
+	if err != nil {
+		return
+	}
+	err = i.Testable.Init()
+	if err != nil {
+		return
+	}
+
+	// Init version file
+        //versionFile := versionFilepath(projectPath)
+        //_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
+
+	// Init Build file
+        _, err = file.SoftInitFile(i.Buildfile, "")
+
+	return
+}
+
+func (i Image) SourceDir() (string) {
+	return i.SourceDirectory
 }
 
 func buildBase(kind, path string) (b Base, err error) {
@@ -109,21 +164,23 @@ func buildTestable(path string) (t Testable, err error) {
 	return
 }
 
-func Init(path, kind string) (err error) {
-	var b Base
+func Init(path, kind string) (b Base, err error) {
 	switch kind {
 		case EnvKind:
 		var r Env
 		r, err = buildEnv(path)
+		r.Init()
 		b = r.Base
 		case ProjectKind:
-		var r Project
-		r, err = buildProject(path)
-		b = r.Base
+		var p Project
+		p, err = buildProject(path)
+		p.Init()
+		b = p.Base
 		case ImageKind:
-		var r Image
-		r, err = buildImage(path)
-		b = r.Base
+		var i Image
+		i, err = buildImage(path)
+		i.Init()
+		b = i.Base
 		default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
 	}
@@ -133,8 +190,6 @@ func Init(path, kind string) (err error) {
         }
 
 	err = Store(b)
-
-	config.Init(path, b)
 
 	return
 }
@@ -175,7 +230,10 @@ func buildImage(path string) (r Image, err error) {
                 return
         }
 
-	r = Image{Base: base, Testable: testable}
+	version := DefaultInitialVersion
+        buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
+
+	r = Image{Base: base, Testable: testable, Version: version, Buildfile: buildfile}
 	return
 }
 

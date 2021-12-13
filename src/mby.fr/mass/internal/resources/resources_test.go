@@ -37,7 +37,7 @@ func TestStore(t *testing.T) {
 	err = Store(pr.Base)
 	require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := filepath.Join(path, defaultResourceFile)
+	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 }
 
@@ -54,7 +54,7 @@ func TestStoreThenLoad(t *testing.T) {
 	err = Store(pr.Base)
 	require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := filepath.Join(path, defaultResourceFile)
+	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 
 	loadedPr, err := Load(path)

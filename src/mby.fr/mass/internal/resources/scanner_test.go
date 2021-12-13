@@ -14,8 +14,9 @@ import (
 func initRandResource(t *testing.T, parentPath, kind string) (path string) {
 	resDir, err := test.MkRandSubDir(parentPath)
 	require.NoError(t, err, "should not error")
-	err = Init(resDir, kind)
+	res, err := Init(resDir, kind)
 	require.NoError(t, err, "should not error")
+	path = res.Dir()
 	return
 }
 

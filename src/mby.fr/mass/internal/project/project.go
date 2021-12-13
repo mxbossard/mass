@@ -3,11 +3,11 @@ package project
 import (
 	//"os"
 	//"io/fs"
-	//"path/filepath"
+	"path/filepath"
 
 	"mby.fr/mass/internal/settings"
 	"mby.fr/mass/internal/resources"
-	"mby.fr/utils/file"
+	//"mby.fr/utils/file"
 )
 
 //const DefaultSourceDir = "src"
@@ -41,67 +41,85 @@ func InitProject(name string) (projectPath string, err error) {
 		return
 	}
 
-	// Create project dir
-	projectPath, err = file.CreateSubDirectory(settingsService.ProjectsDir(), name)
-	if err != nil {
-		return
-	}
+	projectPath = filepath.Join(settingsService.ProjectsDir(), name)
 
-	err = resources.Init(projectPath, resources.ProjectKind)
-	if err != nil {
-		return
-	}
-
-	// Create test dir
-	testDir := testDirpath(projectPath)
-	err = file.CreateDirectory(testDir)
-	if err != nil {
-		return
-	}
-
-	// Init version file
-	versionFile := versionFilepath(projectPath)
-	_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
-
+	_, err = resources.Init(projectPath, resources.ProjectKind)
 	return
 }
+
+//func InitProject0(name string) (projectPath string, err error) {
+//	settingsService, err := settings.GetSettingsService()
+//	if err != nil {
+//		return
+//	}
+//
+//	// Create project dir
+//	projectPath, err = file.CreateSubDirectory(settingsService.ProjectsDir(), name)
+//	if err != nil {
+//		return
+//	}
+//
+//	err = resources.Init(projectPath, resources.ProjectKind)
+//	if err != nil {
+//		return
+//	}
+//
+//	// Create test dir
+//	testDir := testDirpath(projectPath)
+//	err = file.CreateDirectory(testDir)
+//	if err != nil {
+//		return
+//	}
+//
+//	// Init version file
+//	versionFile := versionFilepath(projectPath)
+//	_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
+//
+//	return
+//}
 
 func InitImage(projectDir, name string) (imagePath string, err error) {
-	// Create image dir
-	imagePath, err = file.CreateSubDirectory(projectDir, name)
-	if err != nil {
-		return
-	}
-
-	err = resources.Init(imagePath, resources.ProjectKind)
-	if err != nil {
-		return
-	}
-
-	// Create image source dir
-	sourceDir := sourceDirpath(imagePath)
-	err = file.CreateDirectory(sourceDir)
-	if err != nil {
-		return
-	}
-
-	// Create image test dir
-	testDir := testDirpath(imagePath)
-	err = file.CreateDirectory(testDir)
-	if err != nil {
-		return
-	}
-
-	// Init version file
-	versionFile := versionFilepath(imagePath)
-	_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
-
-	// Init Build file
-	buildfile := buildfileFilepath(imagePath)
-	_, err = file.SoftInitFile(buildfile, "")
-
+	imagePath = filepath.Join(projectDir, name)
+	_, err = resources.Init(imagePath, resources.ProjectKind)
 	return
 }
+
+//func InitImage0(projectDir, name string) (imagePath string, err error) {
+//	// Create image dir
+//	imagePath, err = file.CreateSubDirectory(projectDir, name)
+//	if err != nil {
+//		return
+//	}
+//
+//	err = resources.Init(imagePath, resources.ProjectKind)
+//	if err != nil {
+//		return
+//	}
+//
+//	// Create image source dir
+//	sourceDir := sourceDirpath(imagePath)
+//	err = file.CreateDirectory(sourceDir)
+//	if err != nil {
+//		return
+//	}
+//
+//	// Create image test dir
+//	testDir := testDirpath(imagePath)
+//	err = file.CreateDirectory(testDir)
+//	if err != nil {
+//		return
+//	}
+//
+//	// Init version file
+//	versionFile := versionFilepath(imagePath)
+//	_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
+//
+//	// Init Build file
+//	buildfile := buildfileFilepath(imagePath)
+//	_, err = file.SoftInitFile(buildfile, "")
+//
+//	return
+//}
 
 //func ListProjects() (projects []Project, err error) {
 //	// List directories with a version file to build project list
@@ -138,18 +156,7 @@ func InitImage(projectDir, name string) (imagePath string, err error) {
 //
 //	return
 //}
-//
-//func GetProject(name string) (p Project, ok bool, err error) {
-//	projects, err := ListProjects()
-//	for _, p = range projects {
-//		if p.Name == name {
-//			ok = true
-//			return
-//		}
-//	}
-//	return
-//}
-//
+
 //func listImages(p Project) (images []Image, err error) {
 //        // Look for a Build file then stop walking the branch
 //        imageCollector := func(path string, d fs.DirEntry, err error) error {

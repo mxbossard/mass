@@ -20,14 +20,14 @@ func TestInitRandProject(t *testing.T) (name, path string) {
 func assertProjectFileTree(t *testing.T, path string) {
 	assert.DirExists(t, path, "project dir file should exists")
 	assert.DirExists(t, path + "/test", "test dir should exists")
-	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
+	//assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
 	assert.FileExists(t, path + "/resource.yaml", "resource file should exists")
 	assert.FileExists(t, path + "/config.yaml", "config file should exists")
 }
 
-func TestInitRandImage(t *testing.T, p Project) (name, path string) {
+func TestInitRandImage(t *testing.T, projectDir string) (name, path string) {
 	name = test.RandSeq(6)
-	path, err := InitImage(p, name)
+	path, err := InitImage(projectDir, name)
 	require.NoError(t, err, "should not error")
 	assertImageFileTree(t, path)
 	return
@@ -40,5 +40,6 @@ func assertImageFileTree(t *testing.T, path string) {
 	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
 	assert.FileExists(t, path + "/resource.yaml", "version.txt file should exists")
 	assert.FileExists(t, path + "/config.yaml", "config file should exists")
+	assert.FileExists(t, path + "/Dockerfile", "buildfile file should exists")
 }
 
