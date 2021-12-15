@@ -125,6 +125,9 @@ func TestBuildProject(t *testing.T) {
 	assertTestableContent(t, path, r.Testable)
 
 	assert.Equal(t, ProjectKind, r.Kind(), "bad resource kind")
+
+	_, err = r.Images()
+	require.Error(t, err, "should error")
 }
 
 func TestInitProject(t *testing.T) {
@@ -139,6 +142,10 @@ func TestInitProject(t *testing.T) {
 
 	assertBaseFs(t, r.Base)
 	assertTestableFs(t, r.Testable)
+
+	images, err := r.Images()
+	require.NoError(t, err, "should not error")
+	assert.Len(t, images, 0, "should not have any image")
 }
 
 func TestBuildImage(t *testing.T) {
@@ -174,3 +181,36 @@ func TestInitImage(t *testing.T) {
 	assert.DirExists(t, r.SourceDir(), "source dir should exists")
 	assert.FileExists(t, r.BuildFile, "source dir should exists")
 }
+
+func TestInitProjectWithImages(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	r, err := BuildProject(path)
+	require.NoError(t, err, "should not error")
+
+	err = r.Init()
+	require.NoError(t, err, "should not error")
+
+	assertBaseFs(t, r.Base)
+	assertTestableFs(t, r.Testable)
+
+	images, err := r.Images()
+	require.NoError(t, err, "should not error")
+	assert.Len(t, images, 0, "should not have any image")
+
+	// Init new images
+	image1Path := filepath.Join(path, "image1")
+	i1, err := BuildImage(image1Path)
+	i1.Init()
+
+	image2Path := filepath.Join(path, "image2")
+	i2, err := BuildImage(image2Path)
+	i2.Init()
+
+	images, err = r.Images()
+	require.NoError(t, err, "should not error")
+	assert.Len(t, images, 2, "should got 2 images")
+
+}
+

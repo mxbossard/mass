@@ -20,6 +20,30 @@ func initRandResource(t *testing.T, parentPath, kind string) (path string) {
 	return
 }
 
+func TestScanBlankPath(t *testing.T) {
+	path := ""
+	_, err := ScanProjects(path)
+	assert.Error(t, err, "should error")
+
+	_, err = ScanImages(path)
+	assert.Error(t, err, "should error")
+
+	_, err = ScanEnvs(path)
+	assert.Error(t, err, "should error")
+}
+
+func TestScanNotExistingDir(t *testing.T) {
+	path := "notExistingDirZzz"
+	_, err := ScanProjects(path)
+	assert.Error(t, err, "should error")
+
+	_, err = ScanImages(path)
+	assert.Error(t, err, "should error")
+
+	_, err = ScanEnvs(path)
+	assert.Error(t, err, "should error")
+}
+
 func TestScanProjects(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
         defer os.RemoveAll(parentPath)

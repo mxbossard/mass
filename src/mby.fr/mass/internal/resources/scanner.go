@@ -31,7 +31,6 @@ func buildScanner(resKind string, c chan<- interface{}) (fs.WalkDirFunc) {
 func ScanProjects(path string) (projects []Project, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
-	defer close(finished)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
@@ -39,6 +38,7 @@ func ScanProjects(path string) (projects []Project, err error) {
 			projects = append(projects, r.(Project))
 		}
 		finished <- true
+		close(finished)
 	}()
 	scanner := buildScanner(ProjectKind, c)
 	err = filepath.WalkDir(path, scanner)
@@ -54,7 +54,6 @@ func ScanProjects(path string) (projects []Project, err error) {
 func ScanImages(path string) (images []Image, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
-	defer close(finished)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
@@ -62,6 +61,7 @@ func ScanImages(path string) (images []Image, err error) {
 			images = append(images, r.(Image))
 		}
 		finished <- true
+		close(finished)
 	}()
 	scanner := buildScanner(ImageKind, c)
 	err = filepath.WalkDir(path, scanner)
@@ -77,7 +77,6 @@ func ScanImages(path string) (images []Image, err error) {
 func ScanEnvs(path string) (envs []Env, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
-	defer close(finished)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
@@ -85,6 +84,7 @@ func ScanEnvs(path string) (envs []Env, err error) {
 			envs = append(envs, r.(Env))
 		}
 		finished <- true
+		close(finished)
 	}()
 	scanner := buildScanner(EnvKind, c)
 	err = filepath.WalkDir(path, scanner)
