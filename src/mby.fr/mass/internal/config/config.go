@@ -7,6 +7,7 @@ import(
 	"gopkg.in/yaml.v2"
 
 	"mby.fr/mass/internal/templates"
+	"mby.fr/mass/internal/settings"
 )
 
 const DefaultConfigFile = templates.ConfigTemplate
@@ -22,7 +23,12 @@ func Init(path string, data interface{}) (err error) {
 	configFilepath := filepath.Join(path, DefaultConfigFile)
 	_, err = os.Stat(configFilepath)
 	if os.IsNotExist(err) {
-		err = templates.RenderToFile(templates.ConfigTemplate, configFilepath, data)
+		ss, err := settings.GetSettingsService()
+		if err != nil {
+			return err
+		}
+		renderer := ss.TemplatesRenderer()
+		err = renderer.RenderToFile(templates.ConfigTemplate, configFilepath, data)
 		if err != nil {
 			return err
 		}

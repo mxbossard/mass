@@ -37,7 +37,7 @@ func Init(path string) (err error) {
 		return
 	}
 
-	err = settings.InitSettings(workspacePath)
+	err = settings.Init(workspacePath)
 	if err != nil {
 		return
 	}

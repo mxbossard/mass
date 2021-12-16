@@ -2,17 +2,24 @@ package config
 
 import (
 	"testing"
+	"os"
 
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
+	"mby.fr/mass/internal/settings"
 )
 
 func TestInit(t *testing.T) {
 	tempDir, err := test.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	require.NoFileExists(t, tempDir, "should not exists")
+
+	// Init Settings for templates to work
+	err = settings.Init(tempDir)
+	require.NoError(t, err, "should not error")
+	os.Chdir(tempDir)
 
 	err = Init(tempDir, nil)
 	require.NoError(t, err, "should not error")

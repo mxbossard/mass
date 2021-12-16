@@ -10,16 +10,17 @@ import (
 
 	"github.com/spf13/viper"
 
-	//"mby.fr/mass/internal/logging"
+	"mby.fr/mass/internal/templates"
 )
 
-const settingsDir = ".mass"
-var settingsFile = filepath.Join(settingsDir, "settings.yaml")
+const defaultSettingsDir = ".mass"
+var settingsFile = filepath.Join(defaultSettingsDir, "settings.yaml")
 
 // Default settings
 const defaultEnvsDir = "envs"
 const defaultProjectsDir = "."
 const defaultCacheDir = ".cache"
+const defaultTemplatesDir = ".templates"
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
 
@@ -30,6 +31,7 @@ type Settings struct {
 	EnvsDir string
 	ProjectsDir string
 	CacheDir string
+	TemplatesDir string
 	Environments []string
 }
 
@@ -38,12 +40,13 @@ func Default() Settings {
 		EnvsDir: defaultEnvsDir,
 		ProjectsDir: defaultProjectsDir,
 		CacheDir: defaultCacheDir,
+		TemplatesDir: defaultTemplatesDir,
 		Environments: defaultEnvs,
 	}
 }
 
 func initViper(workspacePath string) {
-	//settingsDirPath := filepath.Join(workspacePath, settingsDir)
+	//settingsDirPath := filepath.Join(workspacePath, defaultSettingsDir)
 	settingsFilePath := filepath.Join(workspacePath, settingsFile)
 	workspaceName := filepath.Base(workspacePath)
 
@@ -56,6 +59,7 @@ func initViper(workspacePath string) {
 	viper.SetDefault("EnvsDir", defaultEnvsDir)
 	viper.SetDefault("ProjectsDir", defaultProjectsDir)
 	viper.SetDefault("CacheDir", defaultCacheDir)
+	viper.SetDefault("TemplatesDir", defaultTemplatesDir)
 	viper.SetDefault("Environments", defaultEnvs)
 }
 
@@ -93,10 +97,12 @@ func readSettings() (s *Settings, err error) {
 	return
 }
 
-func InitSettings(workspacePath string) (err error) {
+func Init(workspacePath string) (err error) {
+	// FIXME: use built Settings to init the settings FS ?
 	//log.Println("Initialize settings ...", viper.ConfigFileUsed())
 	initViper(workspacePath)
-	err = os.MkdirAll(filepath.Join(workspacePath, settingsDir), 0755)
+	newSettingsDir := filepath.Join(workspacePath, defaultSettingsDir)
+	err = os.MkdirAll(newSettingsDir, 0755)
 	if err != nil {
 		return
 	}
@@ -105,6 +111,18 @@ func InitSettings(workspacePath string) (err error) {
 		err = fmt.Errorf("Unable to initialize settings: %w", err)
 		return
 	}
+
+	newTemplatesDir := filepath.Join(newSettingsDir, defaultTemplatesDir)
+	err = os.MkdirAll(newTemplatesDir, 0755)
+	if err != nil {
+		return
+	}
+	err = templates.Init(newTemplatesDir)
+	if err != nil {
+		err = fmt.Errorf("Unable to initialize settings: %w", err)
+		return
+	}
+
 	fmt.Println("Initialized settings in:", viper.ConfigFileUsed())
 	return
 }
@@ -188,7 +206,16 @@ func (s SettingsService) Settings() *Settings {
 }
 
 func (s SettingsService) SettingsDir() string {
-	return filepath.Join(s.workspacePath, settingsDir)
+	return filepath.Join(s.workspacePath, defaultSettingsDir)
+}
+
+func (s SettingsService) TemplatesDir() string {
+	return filepath.Join(s.SettingsDir(), s.settings.TemplatesDir)
+}
+
+func (s SettingsService) TemplatesRenderer() templates.Renderer {
+	renderer := templates.New(s.TemplatesDir())
+	return renderer
 }
 
 func (s SettingsService) SettingsFile() string {

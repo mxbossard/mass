@@ -14,52 +14,98 @@ import (
 const testTemplate = "test.txt"
 const testNewlineTemplate = "testNewline.txt"
 
-func TestRead(t *testing.T) {
+func TestInit(t *testing.T) {
+	tempDir, err := test.MkRandTempDir()
+	require.NoError(t, err, "should not error")
+	err = Init(tempDir)
+	require.NoError(t, err, "should not error")
+	require.DirExists(t, tempDir + "/src", "should be copied")
+	require.FileExists(t, tempDir + "/src/" + testTemplate, "should be copied")
+	require.FileExists(t, tempDir + "/src/" + testNewlineTemplate, "should be copied")
+}
+
+func TestInitWithNotExistingDir(t *testing.T) {
+	tempFile, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+	err = Init(tempFile)
+	require.Error(t, err, "should error")
+}
+
+func TestReadFromEmbeded(t *testing.T) {
+	templatesDir := ""
+	err := Init(templatesDir)
+	require.NoError(t, err, "should not error")
+	
+	r := New(templatesDir)
 	expectedRendering := "foo: {{ .Bar }}."
-	data, err := read(testTemplate)
+	data, err := r.read(testTemplate)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, data, "bad reading")
 
 	// re-read
-	data, err = read(testTemplate)
+	data, err = r.read(testTemplate)
+	require.NoError(t, err, "should not error")
+	assert.Equal(t, expectedRendering, data, "bad reading")
+}
+
+func TestReadFromDir(t *testing.T) {
+	tempDir, err := test.MkRandTempDir()
+	require.NoError(t, err, "should not error")
+	err = Init(tempDir)
+	require.NoError(t, err, "should not error")
+
+	r := New(tempDir)
+	expectedRendering := "foo: {{ .Bar }}."
+	data, err := r.read(testTemplate)
+	require.NoError(t, err, "should not error")
+	assert.Equal(t, expectedRendering, data, "bad reading")
+
+	// re-read
+	data, err = r.read(testTemplate)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, data, "bad reading")
 }
 
 func TestReadNewline(t *testing.T) {
+	r := New("")
+
 	expectedRendering := "foo \nbar\nbaz\n"
-	data, err := read(testNewlineTemplate)
+	data, err := r.read(testNewlineTemplate)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, data, "bad reading")
 }
 
 func TestRender(t *testing.T) {
+	r := New("")
+
 	builder := strings.Builder{}
-	err := Render(testTemplate, &builder, nil)
+	err := r.Render(testTemplate, &builder, nil)
 	require.Error(t, err, "should error")
 
 	builder.Reset()
 	barValue := "baz"
 	expectedRendering := "foo: " + barValue + "."
 	data := struct{ Bar string } { Bar: barValue }
-	err = Render(testTemplate, &builder, data)
+	err = r.Render(testTemplate, &builder, data)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, builder.String(), "bad rendering")
 
 }
 
 func TestRenderToFile(t *testing.T) {
+	r := New("")
+
 	tempFile, err := test.BuildRandTempPath()
 	require.NoFileExists(t, tempFile, "should not exists")
 
-	err = RenderToFile(testTemplate, tempFile, nil)
+	err = r.RenderToFile(testTemplate, tempFile, nil)
 	require.Error(t, err, "should error")
 	require.NoFileExists(t, tempFile, "should not exists")
 
 	barValue := "baz"
 	expectedRendering := "foo: " + barValue + "."
 	data := struct{ Bar string } { Bar: barValue }
-	err = RenderToFile(testTemplate, tempFile, data)
+	err = r.RenderToFile(testTemplate, tempFile, data)
 	require.NoError(t, err, "should not error")
 	require.FileExists(t, tempFile, "should exists")
 	content, err := os.ReadFile(tempFile)
