@@ -23,6 +23,7 @@ func Init(path string, data interface{}) (err error) {
 	configFilepath := filepath.Join(path, DefaultConfigFile)
 	_, err = os.Stat(configFilepath)
 	if os.IsNotExist(err) {
+		err = nil
 		ss, err := settings.GetSettingsService()
 		if err != nil {
 			return err

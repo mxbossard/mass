@@ -10,6 +10,7 @@ import(
 
 	"mby.fr/utils/test"
 	"mby.fr/mass/internal/config"
+	"mby.fr/mass/internal/settings"
 )
 
 func TestBuildResources(t *testing.T) {
@@ -108,6 +109,11 @@ func TestInitEnv(t *testing.T) {
 	r, err := BuildEnv(path)
 	require.NoError(t, err, "should not error")
 
+	// Init Settings for templates to work
+	err = settings.Init(path)
+	require.NoError(t, err, "should not error")
+	os.Chdir(path)
+
 	err = r.Init()
 	require.NoError(t, err, "should not error")
 
@@ -136,6 +142,11 @@ func TestInitProject(t *testing.T) {
 
 	r, err := BuildProject(path)
 	require.NoError(t, err, "should not error")
+
+	// Init Settings for templates to work
+	err = settings.Init(path)
+	require.NoError(t, err, "should not error")
+	os.Chdir(path)
 
 	err = r.Init()
 	require.NoError(t, err, "should not error")
@@ -172,6 +183,11 @@ func TestInitImage(t *testing.T) {
 	r, err := BuildImage(path)
 	require.NoError(t, err, "should not error")
 
+	// Init Settings for templates to work
+	err = settings.Init(path)
+	require.NoError(t, err, "should not error")
+	os.Chdir(path)
+
 	err = r.Init()
 	require.NoError(t, err, "should not error")
 
@@ -188,6 +204,11 @@ func TestInitProjectWithImages(t *testing.T) {
 
 	r, err := BuildProject(path)
 	require.NoError(t, err, "should not error")
+
+	// Init Settings for templates to work
+	err = settings.Init(path)
+	require.NoError(t, err, "should not error")
+	os.Chdir(path)
 
 	err = r.Init()
 	require.NoError(t, err, "should not error")
