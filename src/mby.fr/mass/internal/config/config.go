@@ -13,9 +13,13 @@ import(
 const DefaultConfigFile = templates.ConfigTemplate
 
 type EnvConfig map[string]string
+type LabelsConfig map[string]string
+type TagsConfig map[string]string
 
 type Config struct {
 	Environment EnvConfig
+	Labels LabelsConfig
+	Tags TagsConfig
 }
 
 // Init config in a directory path

@@ -37,7 +37,7 @@ func TestReadFromEmbeded(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	
 	r := New(templatesDir)
-	expectedRendering := "foo: {{ .Bar }}."
+	expectedRendering := "foo: {{ .Bar }}.\n"
 	data, err := r.read(testTemplate)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, data, "bad reading")
@@ -55,7 +55,7 @@ func TestReadFromDir(t *testing.T) {
 	require.NoError(t, err, "should not error")
 
 	r := New(tempDir)
-	expectedRendering := "foo: {{ .Bar }}."
+	expectedRendering := "foo: {{ .Bar }}.\n"
 	data, err := r.read(testTemplate)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, data, "bad reading")
@@ -66,8 +66,22 @@ func TestReadFromDir(t *testing.T) {
 	assert.Equal(t, expectedRendering, data, "bad reading")
 }
 
-func TestReadNewline(t *testing.T) {
+func TestReadNewlineFromEmbeded(t *testing.T) {
 	r := New("")
+
+	expectedRendering := "foo \nbar\nbaz\n"
+	data, err := r.read(testNewlineTemplate)
+	require.NoError(t, err, "should not error")
+	assert.Equal(t, expectedRendering, data, "bad reading")
+}
+
+func TestReadNewlineFromDir(t *testing.T) {
+	tempDir, err := test.MkRandTempDir()
+	require.NoError(t, err, "should not error")
+	err = Init(tempDir)
+	require.NoError(t, err, "should not error")
+
+	r := New(tempDir)
 
 	expectedRendering := "foo \nbar\nbaz\n"
 	data, err := r.read(testNewlineTemplate)
@@ -84,7 +98,7 @@ func TestRender(t *testing.T) {
 
 	builder.Reset()
 	barValue := "baz"
-	expectedRendering := "foo: " + barValue + "."
+	expectedRendering := "foo: " + barValue + ".\n"
 	data := struct{ Bar string } { Bar: barValue }
 	err = r.Render(testTemplate, &builder, data)
 	require.NoError(t, err, "should not error")
@@ -103,7 +117,7 @@ func TestRenderToFile(t *testing.T) {
 	require.NoFileExists(t, tempFile, "should not exists")
 
 	barValue := "baz"
-	expectedRendering := "foo: " + barValue + "."
+	expectedRendering := "foo: " + barValue + ".\n"
 	data := struct{ Bar string } { Bar: barValue }
 	err = r.RenderToFile(testTemplate, tempFile, data)
 	require.NoError(t, err, "should not error")

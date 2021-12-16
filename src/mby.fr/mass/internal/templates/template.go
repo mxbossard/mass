@@ -82,10 +82,8 @@ func (r Renderer) read(name string) (data string, err error) {
 		return
 	}
 
-
 	builder := strings.Builder{}
 	const maxSz = 64
-
 	// create buffer
 	b := make([]byte, maxSz)
 
@@ -101,10 +99,7 @@ func (r Renderer) read(name string) (data string, err error) {
 		builder.Write(b[:readTotal])
 	}
 
-//	data = string(content)
 	data = builder.String()
-	// Remove extra new ling added for no reason
-	data = strings.TrimSuffix(data, "\n")
 	return
 }
 
