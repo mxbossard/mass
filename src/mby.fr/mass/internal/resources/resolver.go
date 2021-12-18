@@ -69,6 +69,11 @@ func resolveResource(expr, resourceKind string) (r Resource, err error) {
 	}
 	workspaceDir := ss.WorkspaceDir()
 
+	workDir, err := file.WorkDirPath()
+	if err != nil {
+		return
+	}
+
 	// dot or empty expr
 	if expr == "" || expr == "." {
 		return resolveDotResource(resourceKind)
@@ -76,62 +81,63 @@ func resolveResource(expr, resourceKind string) (r Resource, err error) {
 
 	// absolute expr
 	if strings.HasPrefix(expr, "/") {
-		expr = expr[1:] // Strip first /
+		//expr = expr[1:] // Strip first /
 		// Resolve resource from workspace dir only
 		return resolveResourceFrom(workspaceDir, expr, resourceKind)
 	}
 
+	fromDir := workDir
+
 	// env dedicated expr
 	if strings.HasPrefix(expr, EnvPrefix) {
-		if resourceKind != EnvKind {
+		if resourceKind != "" && resourceKind != EnvKind {
 			err = InconsistentResourceKind
 			return
 		}
 		// Resolve projects only
 		expr = expr[len(EnvPrefix):] // Strip prefix
 		// Resolve resource from workspace dir only
-		return resolveResourceFrom(workspaceDir, expr, EnvKind)
+		//return resolveResourceFrom(workspaceDir, expr, EnvKind)
 	}
 
 	// project dedicated expr
 	if strings.HasPrefix(expr, ProjectPrefix) {
-		if resourceKind != ProjectKind {
+		if resourceKind != "" && resourceKind != ProjectKind {
 			err = InconsistentResourceKind
 			return
 		}
 		// Resolve projects only
 		expr = expr[len(ProjectPrefix):] // Strip prefix
 		// Resolve resource from workspace dir only
-		return resolveResourceFrom(workspaceDir, expr, ProjectKind)
-	}
-
-	workDir, err := file.WorkDirPath()
-	if err != nil {
-		return
+		//return resolveResourceFrom(workspaceDir, expr, ProjectKind)
 	}
 
 	// image dedicated expr
 	if strings.HasPrefix(expr, ImagePrefix) {
-		if resourceKind != ProjectKind {
+		if resourceKind != "" && resourceKind != ImageKind {
 			err = InconsistentResourceKind
 			return
 		}
-		// Resolve projects only
+		// Resolve images only
 		expr = expr[len(ImagePrefix):] // Strip prefix
 		// Use default resolution
 	}
 
-	// Resolve resource from work dir
-	r, err = resolveResourceFrom(workDir, expr, resourceKind)
-	if err == ResourceNotFound {
-		// Continue resolving
-		err = nil
-	} else if err != nil {
-		return
+	if resourceKind == EnvKind || resourceKind == ProjectKind {
+		fromDir = workspaceDir
 	}
 
-	// Resolve resource from workspace dir
-	r, err = resolveResourceFrom(workspaceDir, expr, resourceKind)
+	// Resolve resource from work dir
+	r, err = resolveResourceFrom(fromDir, expr, resourceKind)
+	//if err == ResourceNotFound {
+	//	// Continue resolving
+	//	err = nil
+	//} else if err != nil {
+	//	return
+	//}
+
+	//// Resolve resource from workspace dir
+	//r, err = resolveResourceFrom(workspaceDir, expr, resourceKind)
 	return
 }
 
@@ -141,7 +147,7 @@ func resolveResourceFrom(fromDir, expr, resourceKind string) (r Resource, err er
 		return
 	}
 	for _, res := range resources {
-		if res.Name() == expr && (resourceKind == "" || res.Kind() == resourceKind) {
+		if res.MatchExpression(expr) && (resourceKind == "" || res.Kind() == resourceKind) {
 			r = res
 			return
 		}
@@ -195,6 +201,7 @@ func resolveDotResource(resourceKind string) (r Resource, err error) {
 		return
 	}
 	if resourceKind != "" && r.Kind() != resourceKind {
+		r = nil
 		err = ResourceNotFound
 		return
 	}

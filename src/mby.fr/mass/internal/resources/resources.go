@@ -32,6 +32,7 @@ type Resource interface {
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
+	MatchExpression(string) bool
 }
 
 type Base struct {
@@ -71,6 +72,10 @@ func (r Base) Init() (err error) {
 	}
 
 	return
+}
+
+func (r Base) MatchExpression(expr string) bool {
+	return r.name == expr || "/" + r.name == expr
 }
 
 type Testable struct {
@@ -138,7 +143,7 @@ type Image struct {
 	SourceDirectory string `yaml:"sourceDirectory"`
 	BuildFile string `yaml:"buildFile"`
 	Version string `yaml:"version"`
-	p Project
+	project Project
 }
 
 func (i Image) Init() (err error) {
@@ -170,6 +175,10 @@ func (i Image) Init() (err error) {
 
 func (i Image) SourceDir() (string) {
 	return i.SourceDirectory
+}
+
+func (i Image) MatchExpression(expr string) bool {
+	return i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
 }
 
 func buildBase(kind, path string) (b Base, err error) {
@@ -256,7 +265,20 @@ func BuildImage(path string) (r Image, err error) {
         buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
 	sourceDir := filepath.Join(base.Dir(), DefaultSourceDir)
 
-	r = Image{Base: base, Testable: testable, Version: version, BuildFile: buildfile, SourceDirectory: sourceDir}
+	projectPath := filepath.Dir(path)
+	project, err := BuildProject(projectPath)
+	if err != nil {
+                return
+        }
+
+	r = Image{
+		Base: base, 
+		Testable: testable, 
+		Version: version, 
+		BuildFile: buildfile, 
+		SourceDirectory: sourceDir,
+		project: project,
+	}
 	return
 }
 
