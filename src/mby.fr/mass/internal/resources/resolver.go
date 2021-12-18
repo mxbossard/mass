@@ -1,12 +1,16 @@
 package resources
 
 import(
-	"fmt"
+	//"fmt"
 	"strings"
 
 	"mby.fr/utils/file"
 	"mby.fr/mass/internal/settings"
 )
+
+const EnvPrefix = "env/"
+const ProjectPrefix = "project/"
+const ImagePrefix = "image/"
 
 // Resolve complex resource expression
 // project1/image2 project1/image3
@@ -40,7 +44,8 @@ func ResolveExpression(expressions string, resourceKind string) (resources []Res
 		firstRes, err = resolveResource(tryExpr, resourceKind)
 	}
 	if err != nil {
-		err = fmt.Errorf("Unable to found resource for expr: %s !", firstExpr)
+		//err = fmt.Errorf("Unable to found resource for expr: %s !", firstExpr)
+		err = ResourceNotFound
 		return
 	}
 
@@ -62,17 +67,138 @@ func resolveResource(expr, resourceKind string) (r Resource, err error) {
 	if err != nil {
 		return
 	}
-	wksDir := ss.WorkspaceDir()
-	projects, err := ScanProjects(wksDir)
+	workspaceDir := ss.WorkspaceDir()
+
+	// dot or empty expr
+	if expr == "" || expr == "." {
+		return resolveDotResource(resourceKind)
+	}
+
+	// absolute expr
+	if strings.HasPrefix(expr, "/") {
+		expr = expr[1:] // Strip first /
+		// Resolve resource from workspace dir only
+		return resolveResourceFrom(workspaceDir, expr, resourceKind)
+	}
+
+	// env dedicated expr
+	if strings.HasPrefix(expr, EnvPrefix) {
+		if resourceKind != EnvKind {
+			err = InconsistentResourceKind
+			return
+		}
+		// Resolve projects only
+		expr = expr[len(EnvPrefix):] // Strip prefix
+		// Resolve resource from workspace dir only
+		return resolveResourceFrom(workspaceDir, expr, EnvKind)
+	}
+
+	// project dedicated expr
+	if strings.HasPrefix(expr, ProjectPrefix) {
+		if resourceKind != ProjectKind {
+			err = InconsistentResourceKind
+			return
+		}
+		// Resolve projects only
+		expr = expr[len(ProjectPrefix):] // Strip prefix
+		// Resolve resource from workspace dir only
+		return resolveResourceFrom(workspaceDir, expr, ProjectKind)
+	}
+
+	workDir, err := file.WorkDirPath()
 	if err != nil {
 		return
 	}
-	for _, p := range projects {
-		if p.Name() == expr && p.Kind() == resourceKind {
-			r = p
+
+	// image dedicated expr
+	if strings.HasPrefix(expr, ImagePrefix) {
+		if resourceKind != ProjectKind {
+			err = InconsistentResourceKind
+			return
+		}
+		// Resolve projects only
+		expr = expr[len(ImagePrefix):] // Strip prefix
+		// Use default resolution
+	}
+
+	// Resolve resource from work dir
+	r, err = resolveResourceFrom(workDir, expr, resourceKind)
+	if err == ResourceNotFound {
+		// Continue resolving
+		err = nil
+	} else if err != nil {
+		return
+	}
+
+	// Resolve resource from workspace dir
+	r, err = resolveResourceFrom(workspaceDir, expr, resourceKind)
+	return
+}
+
+func resolveResourceFrom(fromDir, expr, resourceKind string) (r Resource, err error) {
+	resources, err := scanResourcesFrom(fromDir, resourceKind)
+	if err != nil {
+		return
+	}
+	for _, res := range resources {
+		if res.Name() == expr && (resourceKind == "" || res.Kind() == resourceKind) {
+			r = res
 			return
 		}
 	}
-	err = fmt.Errorf("Resource not found")
+	err = ResourceNotFound
 	return
 }
+
+func scanResourcesFrom(fromDir, resourceKind string) (r []Resource, err error) {
+	if resourceKind == "" || resourceKind == EnvKind {
+		envs, err := ScanEnvs(fromDir)
+		if err != nil {
+			return r, err
+		}
+		for _, e := range envs {
+			r = append(r, e)
+		}
+	}
+
+	if resourceKind == "" || resourceKind == ProjectKind {
+		projects, err := ScanProjects(fromDir)
+		if err != nil {
+			return r, err
+		}
+		for _, p := range projects {
+			r = append(r, p)
+		}
+	}
+
+	if resourceKind == "" || resourceKind == ImageKind {
+		images, err := ScanImages(fromDir)
+		if err != nil {
+			return r, err
+		}
+		for _, i := range images {
+			r = append(r, i)
+		}
+	}
+
+	return
+}
+
+// Resolve resource in working dir
+func resolveDotResource(resourceKind string) (r Resource, err error) {
+	workDir, err := file.WorkDirPath()
+	if err != nil {
+		return
+	}
+	r, err = Read(workDir)
+	if err != nil {
+		return
+	}
+	if resourceKind != "" && r.Kind() != resourceKind {
+		err = ResourceNotFound
+		return
+	}
+	return
+
+}
+

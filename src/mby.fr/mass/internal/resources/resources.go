@@ -23,6 +23,9 @@ const EnvKind = "Env"
 const ProjectKind = "Project"
 const ImageKind = "Image"
 
+var ResourceNotFound error = fmt.Errorf("Resource not found")
+var InconsistentResourceKind error = fmt.Errorf("Resource kind is not consistent")
+
 type Resource interface {
 	Kind() string
 	Name() string
@@ -265,6 +268,9 @@ func Read(path string) (r Resource, err error) {
 	resourceFilepath := filepath.Join(path, DefaultResourceFile)
 	content, err := os.ReadFile(resourceFilepath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			err = ResourceNotFound
+		}
 		return
 	}
 	//fmt.Println("ResourceFile content:", string(content))

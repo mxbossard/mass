@@ -84,23 +84,61 @@ func TestResolveResource(t *testing.T) {
 	cases := []struct {
 		fromPath, exprIn, kindIn, resNameWanted, errWanted string
 	} {
-		{".", project1, ProjectKind, project1, ""},
+		// Resolving relative resource name
+		{"/", project1, "", project1, ""}, // case 0
+		{"/", project1, ProjectKind, project1, ""}, 
 		{project1, project1, ProjectKind, project1, ""},
 		{project2, project1, ProjectKind, project1, ""},
-		{project1, project1, EnvKind, "", "Resource not found"},
 		{"..", project1, ProjectKind, "", "Unable to found settings path"},
+		{"/", env1, "", env1, ""}, // Case 5
+		{"/", env1, EnvKind, env1, ""},
+		{env1, env1, EnvKind, env1, ""},
+		{env2, env1, EnvKind, env1, ""},
+		{"..", env1, EnvKind, "", "Unable to found settings path"},
 
-		{".", "/" + project1, ProjectKind, project1, ""},
+		// Resolving dot resource
+		{"/", "", ProjectKind, "", ResourceNotFound.Error()}, // Case 5
+		{"/", ".", ProjectKind, "", ResourceNotFound.Error()},
+		{project1, "", ProjectKind, project1, ""},
+		{project1, ".", ProjectKind, project1, ""},
+		{"..", "", ProjectKind, "", "Unable to found settings path"},
+		{"..", ".", ProjectKind, "", "Unable to found settings path"}, // Case 10
+
+		// Resolving absolute resource
+		{"/", "/" + project1, ProjectKind, project1, ""},
 		{project1, "/" + project1, ProjectKind, project1, ""},
 		{project2, "/" + project1, ProjectKind, project1, ""},
-		{project1, "/" + project1, EnvKind, "", "Resource not found"},
-		{"..", "/" + project1, ProjectKind, "", "Unable to found settings path"},
+		{project2, "/" + project1, ProjectKind, project1, ""}, // duplicate
+		{"..", "/" + project1, ProjectKind, "", "Unable to found settings path"}, // Case 15
 
-		{".", "project/" + project1, ProjectKind, project1, ""},
+		// Resolving absolute project
+		{"/", "project/" + project1, ProjectKind, project1, ""},
 		{project1, "project/" + project1, ProjectKind, project1, ""},
 		{project2, "project/" + project1, ProjectKind, project1, ""},
-		{project2, "project/" + project1, EnvKind, "", "Resource not found"},
-		{"..", "project/" + project1, ProjectKind, "", "Unable to found settings path"},
+		{project2, "project/" + project1, ProjectKind, project1, ""}, // duplicate
+		{"..", "project/" + project1, ProjectKind, "", "Unable to found settings path"}, // Case 20
+
+		// Resolving not existing resources
+		{"/", "notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{"/", "/notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{"/", "project/notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{project1, "notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{project1, "/notExisting", ProjectKind, "", ResourceNotFound.Error()}, // case 25
+		{project1, "project/notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{"..", "notExisting", ProjectKind, "", "Unable to found settings path"},
+		{"..", "/notExisting", ProjectKind, "", "Unable to found settings path"},
+		{"..", "project/notExisting", ProjectKind, "", "Unable to found settings path"},
+
+		// Resolving bad kind resources
+		{"/", project1, EnvKind, "", ResourceNotFound.Error()}, // case 30
+		{"/", "/" + project1, EnvKind, "", ResourceNotFound.Error()},
+		{"/", "project/" + project1, EnvKind, "", InconsistentResourceKind.Error()},
+		{project1, project1, EnvKind, "", ResourceNotFound.Error()},
+		{project1, "/" + project1, EnvKind, "", ResourceNotFound.Error()},
+		{project1, "project/" + project1, EnvKind, "", InconsistentResourceKind.Error()},
+		{"/", "env/" + project1, ProjectKind, "", InconsistentResourceKind.Error()},
+		{"/", "env/" + project1, EnvKind, "", ResourceNotFound.Error()},
+		{"/", "env/" + project1, ImageKind, "", InconsistentResourceKind.Error()},
 
 	}
 
