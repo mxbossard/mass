@@ -41,6 +41,7 @@ func ResolveExpression(expressions string, resourceKind string) (resources []Res
 	firstExpr := splittedExpr[0]
 	tryExpr := relativeWorkPath + "/" + firstExpr
 	firstRes, err := resolveResource(tryExpr, resourceKind)
+	resources = append(resources, firstRes)
 	if err != nil {
 		err = nil
 		tryExpr = firstExpr
@@ -53,12 +54,12 @@ func ResolveExpression(expressions string, resourceKind string) (resources []Res
 	}
 
 	for _, expr := range splittedExpr[1:] {
-		res, ok := resolveResource(expr, resourceKind)
-		_ = res
-		_ = ok
+		res, err := resolveResource(expr, resourceKind)
+		if err != nil {
+			return resources, err
+		}
+		resources = append(resources, res)
 	}
-
-	_ = firstRes
 
 	return
 }

@@ -176,7 +176,6 @@ func TestResolveResource(t *testing.T) {
 		// Resolving absolute project
 		{"/", "project/" + project1, "", project1, ""},
 		{"/", "project/" + project1, ProjectKind, project1, ""},
-		{"/", "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
 		{project1, "project/" + project1, ProjectKind, project1, ""},
 		{project2, "project/" + project1, ProjectKind, project1, ""},
 		{envDir + env1, "project/" + project1, ProjectKind, project1, ""},
@@ -185,9 +184,8 @@ func TestResolveResource(t *testing.T) {
 
 		// Resolving absolute env 
 		{"/", "env/" + env1, "", env1, ""},
-		{"/", "env/" + env1, EnvKind, env1, ""}, // case 80
-		{"/", "env/" + env1, ProjectKind, "", InconsistentExpressionPrefix.Error()},
-		{project1, "env/" + env1, EnvKind, env1, ""},
+		{"/", "env/" + env1, EnvKind, env1, ""},
+		{project1, "env/" + env1, EnvKind, env1, ""}, // case 80
 		{project2, "env/" + env1, EnvKind, env1, ""},
 		{envDir + env1, "env/" + env2, EnvKind, env2, ""},
 		{project2 + "/" + image21, "env/" + env1, EnvKind, env1, ""},
@@ -196,11 +194,10 @@ func TestResolveResource(t *testing.T) {
 		// Resolving absolute image
 		{"/", "image/" + project1 + "/" + image11, "", image11, ""},
 		{project1, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{project1, "image/" + project1 + "/" + image11, ProjectKind, "", InconsistentExpressionPrefix.Error()},
-		{project1, "image/" + image11, ImageKind, "", InconsistentExpression.Error()}, // case 90
+		{project1, "image/" + image11, ImageKind, "", InconsistentExpression.Error()},
 		{project2, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
 		{envDir + env1, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{project2 + "/" + image21, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{project2 + "/" + image21, "image/" + project1 + "/" + image11, ImageKind, image11, ""}, // case 90
 		{"..", "image/" + project1 + "/" + image11, ImageKind, "", "Unable to found settings path"},
 
 		// Resolving not existing resources
@@ -212,7 +209,7 @@ func TestResolveResource(t *testing.T) {
 		{project1, "notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{project1, "/notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{project1, "project/notExisting", ProjectKind, "", ResourceNotFound.Error()},
-		{project1, "env/notExisting", EnvKind, "", ResourceNotFound.Error()},
+		{project1, "env/notExisting", EnvKind, "", ResourceNotFound.Error()}, // case 100
 		{project1, "image/notExisting/notExisting", ImageKind, "", ResourceNotFound.Error()},
 		{"..", "notExisting", ProjectKind, "", "Unable to found settings path"},
 		{"..", "/notExisting", ProjectKind, "", "Unable to found settings path"},
@@ -222,7 +219,9 @@ func TestResolveResource(t *testing.T) {
 		{"/", project1, EnvKind, "", ResourceNotFound.Error()},
 		{"/", "/" + project1, EnvKind, "", ResourceNotFound.Error()},
 		{"/", "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
-		{project1, project1, EnvKind, "", ResourceNotFound.Error()},
+		{"/", "env/" + env1, ProjectKind, "", InconsistentExpressionPrefix.Error()},
+		{"/", "image/" + project1 + "/" + image11, ProjectKind, "", InconsistentExpressionPrefix.Error()},
+		{project1, project1, EnvKind, "", ResourceNotFound.Error()}, // case 110
 		{project1, "/" + project1, EnvKind, "", ResourceNotFound.Error()},
 		{project1, "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
 		{"/", "env/" + project1, ProjectKind, "", InconsistentExpressionPrefix.Error()},
@@ -247,6 +246,42 @@ func TestResolveResource(t *testing.T) {
 		} else {
 			require.NotNil(t, r, "should found a resource for case %d", i)
 			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+		}
+	}
+}
+
+func TestResolveExpression(t *testing.T) {
+	fakeWorkspacePath := initWorkspace(t)
+
+	cases := []struct {
+		fromPath, exprIn, kindIn string
+		resNamesWanted []string
+		errWanted string
+	} {
+		// 
+		{"/", project1, "", []string{project1}, ""}, // case 0
+
+	}
+
+	for i, c := range cases {
+		path := filepath.Join(fakeWorkspacePath, c.fromPath)
+		err := os.Chdir(path)
+		require.NoError(t, err, "should not error for chdir on case %d", i)
+		resources, err := ResolveExpression(c.exprIn, c.kindIn)
+		if c.errWanted == "" {
+			require.NoError(t, err, "should not error on case %d", i)
+		} else {
+			assert.EqualError(t, err, c.errWanted, "bad error for case %d", i)
+		}
+
+		if len(c.resNamesWanted) == 0 {
+			assert.Nil(t, resources, "should not found a resource for case %d", i)
+		} else {
+			require.NotNil(t, resources, "should found some resources for case %d", i)
+			assert.Len(t, resources, len(c.resNamesWanted), "bad resources count returned for case %d", i)
+			for _, res := range resources {
+				assert.Contains(t, c.resNamesWanted, res.Name(), "Bad resource name [%s] for case %d", res.Name(), i)
+			}
 		}
 	}
 }
