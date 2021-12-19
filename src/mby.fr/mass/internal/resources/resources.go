@@ -24,7 +24,6 @@ const ProjectKind = "Project"
 const ImageKind = "Image"
 
 var ResourceNotFound error = fmt.Errorf("Resource not found")
-var InconsistentResourceKind error = fmt.Errorf("Resource kind is not consistent")
 
 type Resource interface {
 	Kind() string
@@ -178,7 +177,9 @@ func (i Image) SourceDir() (string) {
 }
 
 func (i Image) MatchExpression(expr string) bool {
-	return i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
+	test := i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
+	//fmt.Println("Is expr matching ?", i.project, i, expr, test)
+	return test
 }
 
 func buildBase(kind, path string) (b Base, err error) {
@@ -309,15 +310,27 @@ func Read(path string) (r Resource, err error) {
 	kind := base.Kind()
 	switch kind {
 		case EnvKind:
-		res := Env{Base: base}
+		res, err := BuildEnv(base.Dir())
+		if err != nil {
+			return r, err
+		}
+		//res.Base = base
 		err = yaml.Unmarshal(content, &res)
 		r = res
 		case ProjectKind:
-		res := Project{Base: base}
+		res, err := BuildProject(base.Dir())
+		if err != nil {
+			return r, err
+		}
+		//res := Project{Base: base}
 		err = yaml.Unmarshal(content, &res)
 		r = res
 		case ImageKind:
-		res := Image{Base: base}
+		res, err := BuildImage(base.Dir())
+		if err != nil {
+			return r, err
+		}
+		//res := Image{Base: base}
 		err = yaml.Unmarshal(content, &res)
 		r = res
 		default:

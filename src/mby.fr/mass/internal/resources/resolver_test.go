@@ -12,6 +12,8 @@ import(
 	"mby.fr/mass/internal/settings"
 )
 
+const envDir = "env/"
+
 const env1 = "env1"
 const env2 = "env2"
 const env3 = "env3"
@@ -52,8 +54,9 @@ func initWorkspace(t *testing.T) (path string) {
         os.Chdir(path)
 
 	// Init envs
+	os.MkdirAll(filepath.Join(path, envDir), 0755)
 	for _, e := range envs {
-		r, err := BuildEnv(e)
+		r, err := BuildEnv("env/" + e)
 		require.NoError(t, err, "should not error")
 		err = r.Init()
 		require.NoError(t, err, "should not error")
@@ -90,13 +93,13 @@ func TestResolveResource(t *testing.T) {
 		{"/", project1, ProjectKind, project1, ""},
 		{project1, project1, ProjectKind, project1, ""},
 		{project2, project1, ProjectKind, project1, ""},
-		{env1, project1, ProjectKind, project1, ""},
+		{envDir + env1, project1, ProjectKind, project1, ""},
 		{"..", project1, ProjectKind, "", "Unable to found settings path"},
 		// Env
 		{"/", env1, "", env1, ""},
 		{"/", env1, EnvKind, env1, ""},
-		{env1, env1, EnvKind, env1, ""},
-		{env2, env1, EnvKind, env1, ""},
+		{envDir + env1, env1, EnvKind, env1, ""},
+		{envDir + env2, env1, EnvKind, env1, ""},
 		{project1, env1, EnvKind, env1, ""}, // case 10
 		{"..", env1, EnvKind, "", "Unable to found settings path"},
 		// Image
@@ -104,7 +107,7 @@ func TestResolveResource(t *testing.T) {
 		{"/", image11, ImageKind, image11, ""},
 		{project1, image11, ImageKind, image11, ""},
 		{project2, image11, ImageKind, "", ResourceNotFound.Error()},
-		{env1, image11, ImageKind, "", ResourceNotFound.Error()},
+		{envDir + env1, image11, ImageKind, "", ResourceNotFound.Error()},
 		{project1, image11, EnvKind, "", ResourceNotFound.Error()},
 		{"..", image11, ImageKind, "", "Unable to found settings path"},
 
@@ -117,16 +120,16 @@ func TestResolveResource(t *testing.T) {
 		{project1, ".", "", project1, ""},
 		{project1, "", ProjectKind, project1, ""},
 		{project1, ".", ProjectKind, project1, ""},
-		{env1, ".", ProjectKind, "", ResourceNotFound.Error()},
+		{envDir + env1, ".", ProjectKind, "", ResourceNotFound.Error()},
 		{"..", "", ProjectKind, "", "Unable to found settings path"},
 		{"..", ".", ProjectKind, "", "Unable to found settings path"},
 		// Env
 		{"/", "", EnvKind, "", ResourceNotFound.Error()},
 		{"/", ".", EnvKind, "", ResourceNotFound.Error()}, // case 30
-		{env1, "", "", env1, ""},
-		{env1, ".", "", env1, ""},
-		{env1, "", EnvKind, env1, ""},
-		{env1, ".", EnvKind, env1, ""},
+		{envDir + env1, "", "", env1, ""},
+		{envDir + env1, ".", "", env1, ""},
+		{envDir + env1, "", EnvKind, env1, ""},
+		{envDir + env1, ".", EnvKind, env1, ""},
 		{project1, ".", EnvKind, "", ResourceNotFound.Error()},
 		{"..", "", EnvKind, "", "Unable to found settings path"},
 		{"..", ".", EnvKind, "", "Unable to found settings path"},
@@ -148,42 +151,69 @@ func TestResolveResource(t *testing.T) {
 		{"/", "/" + project1, ProjectKind, project1, ""},
 		{project1, "/" + project1, ProjectKind, project1, ""}, // case 50
 		{project2, "/" + project1, ProjectKind, project1, ""},
-		{env1, "/" + project1, ProjectKind, project1, ""},
+		{envDir + env1, "/" + project1, ProjectKind, project1, ""},
 		{"..", "/" + project1, ProjectKind, "", "Unable to found settings path"},
 		// Env 
 		{"/", "/" + env1, "", env1, ""},
 		{"/", "/" + env1, EnvKind, env1, ""},
 		{project1, "/" + env1, EnvKind, env1, ""},
 		{project2, "/" + env1, EnvKind, env1, ""},
-		{env1, "/" + env1, EnvKind, env1, ""},
+		{envDir + env1, "/" + env1, EnvKind, env1, ""},
 		{"..", "/" + env1, EnvKind, "", "Unable to found settings path"},
 		// Image 
-		{"/", "/" + image11, "", "", "futur error"}, // case 60
+		{"/", "/" + image11, "", "", ResourceNotFound.Error()}, // case 60
 		{"/", "/" + project1 + "/" + image11, "", image11, ""},
-		{"/", "/" + image11, ImageKind, "", "futur error"},
+		{"/", "/" + image11, ImageKind, "", InconsistentExpression.Error()},
 		{"/", "/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{project1, "/" + image11, ImageKind, "", "futur error"},
+		{project1, "/" + image11, ImageKind, "", InconsistentExpression.Error()},
 		{project1, "/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{project2, "/" + image11, ImageKind, "", "futur error"},
+		{project2, "/" + image11, ImageKind, "", InconsistentExpression.Error()},
 		{project2, "/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{env1, "/" + image11, ImageKind, "", "futur error"},
-		{env1, "/" + project1 + "/" + image11, ImageKind, image11, ""},
-		{"..", "/" + image11, ImageKind, "", "Unable to found settings path"},
+		{envDir + env1, "/" + image11, ImageKind, "", InconsistentExpression.Error()},
+		{envDir + env1, "/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{"..", "/" + image11, ImageKind, "", "Unable to found settings path"}, // case 70
 
 		// Resolving absolute project
 		{"/", "project/" + project1, "", project1, ""},
 		{"/", "project/" + project1, ProjectKind, project1, ""},
+		{"/", "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
 		{project1, "project/" + project1, ProjectKind, project1, ""},
 		{project2, "project/" + project1, ProjectKind, project1, ""},
+		{envDir + env1, "project/" + project1, ProjectKind, project1, ""},
+		{project2 + "/" + image21, "project/" + project1, ProjectKind, project1, ""},
 		{"..", "project/" + project1, ProjectKind, "", "Unable to found settings path"},
+
+		// Resolving absolute env 
+		{"/", "env/" + env1, "", env1, ""},
+		{"/", "env/" + env1, EnvKind, env1, ""}, // case 80
+		{"/", "env/" + env1, ProjectKind, "", InconsistentExpressionPrefix.Error()},
+		{project1, "env/" + env1, EnvKind, env1, ""},
+		{project2, "env/" + env1, EnvKind, env1, ""},
+		{envDir + env1, "env/" + env2, EnvKind, env2, ""},
+		{project2 + "/" + image21, "env/" + env1, EnvKind, env1, ""},
+		{"..", "env/" + env1, EnvKind, "", "Unable to found settings path"},
+
+		// Resolving absolute image
+		{"/", "image/" + project1 + "/" + image11, "", image11, ""},
+		{project1, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{project1, "image/" + project1 + "/" + image11, ProjectKind, "", InconsistentExpressionPrefix.Error()},
+		{project1, "image/" + image11, ImageKind, "", InconsistentExpression.Error()}, // case 90
+		{project2, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{envDir + env1, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{project2 + "/" + image21, "image/" + project1 + "/" + image11, ImageKind, image11, ""},
+		{"..", "image/" + project1 + "/" + image11, ImageKind, "", "Unable to found settings path"},
 
 		// Resolving not existing resources
 		{"/", "notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{"/", "/notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{"/", "project/notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{"/", "env/notExisting", EnvKind, "", ResourceNotFound.Error()},
+		{"/", "image/notExisting/notExisting", ImageKind, "", ResourceNotFound.Error()},
 		{project1, "notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{project1, "/notExisting", ProjectKind, "", ResourceNotFound.Error()},
 		{project1, "project/notExisting", ProjectKind, "", ResourceNotFound.Error()},
+		{project1, "env/notExisting", EnvKind, "", ResourceNotFound.Error()},
+		{project1, "image/notExisting/notExisting", ImageKind, "", ResourceNotFound.Error()},
 		{"..", "notExisting", ProjectKind, "", "Unable to found settings path"},
 		{"..", "/notExisting", ProjectKind, "", "Unable to found settings path"},
 		{"..", "project/notExisting", ProjectKind, "", "Unable to found settings path"},
@@ -191,13 +221,13 @@ func TestResolveResource(t *testing.T) {
 		// Resolving bad kind resources
 		{"/", project1, EnvKind, "", ResourceNotFound.Error()},
 		{"/", "/" + project1, EnvKind, "", ResourceNotFound.Error()},
-		{"/", "project/" + project1, EnvKind, "", InconsistentResourceKind.Error()},
+		{"/", "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
 		{project1, project1, EnvKind, "", ResourceNotFound.Error()},
 		{project1, "/" + project1, EnvKind, "", ResourceNotFound.Error()},
-		{project1, "project/" + project1, EnvKind, "", InconsistentResourceKind.Error()},
-		{"/", "env/" + project1, ProjectKind, "", InconsistentResourceKind.Error()},
+		{project1, "project/" + project1, EnvKind, "", InconsistentExpressionPrefix.Error()},
+		{"/", "env/" + project1, ProjectKind, "", InconsistentExpressionPrefix.Error()},
 		{"/", "env/" + project1, EnvKind, "", ResourceNotFound.Error()},
-		{"/", "env/" + project1, ImageKind, "", InconsistentResourceKind.Error()},
+		{"/", "env/" + project1, ImageKind, "", InconsistentExpressionPrefix.Error()},
 
 	}
 

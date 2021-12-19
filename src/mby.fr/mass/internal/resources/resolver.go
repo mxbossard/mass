@@ -1,7 +1,7 @@
 package resources
 
 import(
-	//"fmt"
+	"fmt"
 	"strings"
 
 	"mby.fr/utils/file"
@@ -11,6 +11,9 @@ import(
 const EnvPrefix = "env/"
 const ProjectPrefix = "project/"
 const ImagePrefix = "image/"
+
+var InconsistentExpressionPrefix error = fmt.Errorf("Expression prefix and kind are not consistent")
+var InconsistentExpression error = fmt.Errorf("Expression and kind are not consistent")
 
 // Resolve complex resource expression
 // project1/image2 project1/image3
@@ -60,6 +63,42 @@ func ResolveExpression(expressions string, resourceKind string) (resources []Res
 	return
 }
 
+func checkConsistency(expr, resourceKind string) (err error) {
+	if resourceKind == ImageKind {
+		// Image kind cannot be resolved with absolute expr if not referencing a project.
+		if strings.HasPrefix(expr, "/") || strings.HasPrefix(expr, ImagePrefix) {
+		       slashCount := strings.Count(expr, "/")
+			if slashCount != 2 {
+				err = InconsistentExpression
+				return
+			}
+		}
+	}
+
+	if strings.HasPrefix(expr, EnvPrefix) {
+                if resourceKind != "" && resourceKind != EnvKind {
+                        err = InconsistentExpressionPrefix
+                        return
+                }
+	}
+
+	if strings.HasPrefix(expr, ProjectPrefix) {
+		if resourceKind != "" && resourceKind != ProjectKind {
+			err = InconsistentExpressionPrefix
+			return
+		}
+	}
+
+	if strings.HasPrefix(expr, ImagePrefix) {
+		if resourceKind != "" && resourceKind != ImageKind {
+			err = InconsistentExpressionPrefix
+			return
+		}
+	}
+
+	return
+}
+
 // Resolve simple resource expression
 // project1/image2
 func resolveResource(expr, resourceKind string) (r Resource, err error) {
@@ -70,6 +109,11 @@ func resolveResource(expr, resourceKind string) (r Resource, err error) {
 	workspaceDir := ss.WorkspaceDir()
 
 	workDir, err := file.WorkDirPath()
+	if err != nil {
+		return
+	}
+
+	err = checkConsistency(expr, resourceKind)
 	if err != nil {
 		return
 	}
@@ -90,37 +134,24 @@ func resolveResource(expr, resourceKind string) (r Resource, err error) {
 
 	// env dedicated expr
 	if strings.HasPrefix(expr, EnvPrefix) {
-		if resourceKind != "" && resourceKind != EnvKind {
-			err = InconsistentResourceKind
-			return
-		}
-		// Resolve projects only
+		// Resolve env only
 		expr = expr[len(EnvPrefix):] // Strip prefix
-		// Resolve resource from workspace dir only
-		//return resolveResourceFrom(workspaceDir, expr, EnvKind)
+		resourceKind = EnvKind
 	}
 
 	// project dedicated expr
 	if strings.HasPrefix(expr, ProjectPrefix) {
-		if resourceKind != "" && resourceKind != ProjectKind {
-			err = InconsistentResourceKind
-			return
-		}
-		// Resolve projects only
+		// Resolve project only
 		expr = expr[len(ProjectPrefix):] // Strip prefix
-		// Resolve resource from workspace dir only
-		//return resolveResourceFrom(workspaceDir, expr, ProjectKind)
+		resourceKind = ProjectKind
 	}
 
 	// image dedicated expr
 	if strings.HasPrefix(expr, ImagePrefix) {
-		if resourceKind != "" && resourceKind != ImageKind {
-			err = InconsistentResourceKind
-			return
-		}
-		// Resolve images only
+		// Resolve image only
 		expr = expr[len(ImagePrefix):] // Strip prefix
-		// Use default resolution
+		resourceKind = ImageKind
+		fromDir = workspaceDir
 	}
 
 	if resourceKind == EnvKind || resourceKind == ProjectKind {
