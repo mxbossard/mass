@@ -166,7 +166,7 @@ type Image struct {
 	SourceDirectory string `yaml:"sourceDirectory"`
 	BuildFile string `yaml:"buildFile"`
 	Version string `yaml:"version"`
-	project Project
+	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) Init() (err error) {
@@ -201,9 +201,7 @@ func (i Image) SourceDir() (string) {
 }
 
 func (i Image) Name() string {
-	//test := i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
-	//fmt.Println("Is expr matching ?", i.project, i, expr, test)
-	return i.project.Name() + "/" + i.name
+	return i.Project.Name() + "/" + i.name
 }
 
 func buildBase(kind Kind, path string) (b Base, err error) {
@@ -302,7 +300,7 @@ func BuildImage(path string) (r Image, err error) {
 		Version: version, 
 		BuildFile: buildfile, 
 		SourceDirectory: sourceDir,
-		project: project,
+		Project: project,
 	}
 	return
 }

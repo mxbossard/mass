@@ -67,9 +67,9 @@ func TestWriteThenRead(t *testing.T) {
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
-	assert.NotNil(t, loadedImage.project, "bad parent project")
-	assert.Equal(t, ProjectKind, loadedImage.project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, loadedImage.project.Dir(), "bad parent project dir")
+	assert.NotNil(t, loadedImage.Project, "bad parent project")
+	assert.Equal(t, ProjectKind, loadedImage.Project.Kind(), "bad parent project kind")
+	assert.Equal(t, parentDir, loadedImage.Project.Dir(), "bad parent project dir")
 }
 
 func assertBaseContent(t *testing.T, path string, b Base) {
@@ -178,9 +178,9 @@ func TestBuildImage(t *testing.T) {
 	assert.Equal(t, DefaultInitialVersion, r.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
-	assert.NotNil(t, r.project, "bad parent project")
-	assert.Equal(t, ProjectKind, r.project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, r.project.Dir(), "bad parent project dir")
+	assert.NotNil(t, r.Project, "bad parent project")
+	assert.Equal(t, ProjectKind, r.Project.Kind(), "bad parent project kind")
+	assert.Equal(t, parentDir, r.Project.Dir(), "bad parent project dir")
 }
 
 func TestInitImage(t *testing.T) {

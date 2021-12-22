@@ -17,22 +17,27 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"mby.fr/mass/internal/resources"
 )
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "config <resourceExpr>",
+	Short: "Display resource config",
+	Long: ``,
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("config called")
+		resourceExpr := strings.Join(args, " ")
+		configs, err := resources.MergedConfig(resourceExpr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(configs)
 	},
 }
 

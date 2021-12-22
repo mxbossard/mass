@@ -17,24 +17,28 @@ const defaultSettingsDir = ".mass"
 var settingsFile = filepath.Join(defaultSettingsDir, "settings.yaml")
 
 var PathNotFound = fmt.Errorf("Unable to found settings path")
+var NotExistingEnv = fmt.Errorf("Env don't exists")
 
 // Default settings
 const defaultEnvsDir = "envs"
 const defaultProjectsDir = "."
 const defaultCacheDir = ".cache"
 const defaultTemplatesDir = ".templates"
+const defaultEnvToUse = "dev"
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
+var SelectedEnvironment string = ""
 
 // --- Settings ---
 
 type Settings struct {
-	Name string
-	EnvsDir string
-	ProjectsDir string
-	CacheDir string
-	TemplatesDir string
-	Environments []string
+	Name string `yaml:"workspace"`
+	EnvsDir string `yaml:"envsDirectory"`
+	ProjectsDir string `yaml:"projectsDirectory"`
+	CacheDir string `yaml:"cacheDirectory"`
+	TemplatesDir string `yaml:"templatesDirectory"`
+	Environments []string `yaml:"environments"`
+	DefaultEnvironment string `yaml:"defaultEnvironment"`
 }
 
 func Default() Settings {
@@ -44,6 +48,7 @@ func Default() Settings {
 		CacheDir: defaultCacheDir,
 		TemplatesDir: defaultTemplatesDir,
 		Environments: defaultEnvs,
+		DefaultEnvironment: defaultEnvToUse,
 	}
 }
 
@@ -63,6 +68,7 @@ func initViper(workspacePath string) {
 	viper.SetDefault("CacheDir", defaultCacheDir)
 	viper.SetDefault("TemplatesDir", defaultTemplatesDir)
 	viper.SetDefault("Environments", defaultEnvs)
+	viper.SetDefault("DefaultEnvironment", defaultEnvToUse)
 }
 
 // Store settings erasing previous settings
@@ -234,6 +240,29 @@ func (s SettingsService) ProjectsDir() string {
 
 func (s SettingsService) CacheDir() string {
 	return filepath.Join(s.workspacePath, s.settings.CacheDir)
+}
+
+func (s SettingsService) WorkingEnv() (string, error) {
+	envToUse := s.settings.DefaultEnvironment
+	if SelectedEnvironment != "" {
+		// User specified an environment
+		envToUse = SelectedEnvironment
+	}
+
+	envExists := false
+	for _, e := range s.settings.Environments {
+		//fmt.Printf("testing env %s == %s\n", envToUse, e)
+		if e == envToUse {
+			envExists = true
+			break
+		}
+	}
+
+	if !envExists {
+		return "", NotExistingEnv
+	}
+
+	return envToUse, nil
 }
 
 // singleton
