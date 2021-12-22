@@ -364,58 +364,112 @@ func TestResolveResource(t *testing.T) {
 	}
 }
 
+func TestSplitExpressions(t *testing.T) {
+	cases := []struct {
+                exprIn string
+                strippedExprsWanted []string
+		kindsWanted []Kind
+                errWanted error
+        } {
+		{"p foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil}, // case 0
+		{"project foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil},
+		{"projects foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil},
+		{"p p/foo project/bar", []string{"p/foo", "project/bar"}, []Kind{ProjectKind}, nil},
+		{"p p/foo e/bar", []string{"p/foo", "e/bar"}, []Kind{ProjectKind}, nil},
+		{"p,e p/foo e/bar", []string{"p/foo", "e/bar"}, []Kind{ProjectKind, EnvKind}, nil}, // case 5
+		{"p,e,i foo bar", []string{"foo", "bar"}, []Kind{ProjectKind, EnvKind, ImageKind}, nil},
+
+		{"foo bar baz", []string{"foo", "bar", "baz"}, nil, nil},
+		{"a p/foo project/bar", []string{"a", "p/foo", "project/bar"}, nil, nil},
+		{"p,a p/foo project/bar", nil, nil, UnknownKind},
+		{"a,p p/foo project/bar", nil, nil, UnknownKind}, // case 10
+	}
+
+	for i, c := range cases {
+		exprs, kinds, err := splitExpressions(c.exprIn)
+		if c.errWanted == nil {
+			assert.NoError(t, err, "should not error on case %d", i)
+		} else {
+			assert.ErrorIs(t, err, c.errWanted, "bad error for case %d", i)
+		}
+
+		assert.Equal(t, c.strippedExprsWanted, exprs, "bad stripped expressions for case %d", i)
+		assert.Equal(t, c.kindsWanted, kinds, "bad kinds for case %d", i)
+	}
+}
+
 func TestResolveExpression(t *testing.T) {
 	fakeWorkspacePath := initWorkspace(t)
 
 	cases := []struct {
 		fromPath, exprIn string
-		kindIn Kind
+		kindsIn []Kind
 		resNamesWanted []string
 		errWanted error
 	} {
 		// Projects resolution
-		{"/", project1, AllKind, []string{}, InconsistentExpression}, // case 0
-		{"/", "p/" + project1, AllKind, []string{project1}, nil},
-		{"/", "p " + project1, AllKind, []string{project1}, nil},
-		{"/", project1, ProjectKind, []string{project1}, nil},
-		{"/", project1, EnvKind, []string{}, ResourceNotFound},
-		{"/", project1 + " " + project2, AllKind, []string{}, InconsistentExpression},
-		{"/", "p/" + project1 + " p/" + project2, AllKind, []string{project1, project2}, nil},
-		{"/", "p " + project1 + " " + project2, AllKind, []string{project1, project2}, nil},
-		{"/", project1 + " " + project2, ProjectKind, []string{project1, project2}, nil},
+		{"/", project1, []Kind{AllKind}, []string{}, InconsistentExpression}, // case 0
+		{"/", "p/" + project1, []Kind{AllKind}, []string{project1}, nil},
+		{"/", "p " + project1, []Kind{AllKind}, []string{project1}, nil},
+		{"/", project1, []Kind{ProjectKind}, []string{project1}, nil},
+		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound},
+		{"/", project1 + " " + project2, []Kind{AllKind}, []string{}, InconsistentExpression},
+		{"/", "p/" + project1 + " p/" + project2, []Kind{AllKind}, []string{project1, project2}, nil},
+		{"/", "p " + project1 + " " + project2, []Kind{AllKind}, []string{project1, project2}, nil},
+		{"/", project1 + " " + project2, []Kind{ProjectKind}, []string{project1, project2}, nil},
 
 		// Envs resolution
-		{"/", env1, AllKind, []string{}, InconsistentExpression},
-		{"/", "e/" + env1, AllKind, []string{env1}, nil}, // case 10
-		{"/", "e " + env1, AllKind, []string{env1}, nil},
-		{"/", env1, EnvKind, []string{env1}, nil},
-		{"/", env1 + " " + env2, AllKind, []string{}, InconsistentExpression},
-		{"/", "e/" + env1 + " e/" + env2, AllKind, []string{env1, env2}, nil},
-		{"/", "e " + env1 + " " + env2, AllKind, []string{env1, env2}, nil},
-		{"/", env1 + " " + env2, EnvKind, []string{env1, env2}, nil},
+		{"/", env1, []Kind{AllKind}, []string{}, InconsistentExpression},
+		{"/", "e/" + env1, []Kind{AllKind}, []string{env1}, nil}, // case 10
+		{"/", "e " + env1, []Kind{AllKind}, []string{env1}, nil},
+		{"/", env1, []Kind{EnvKind}, []string{env1}, nil},
+		{"/", env1 + " " + env2, []Kind{AllKind}, []string{}, InconsistentExpression},
+		{"/", "e/" + env1 + " e/" + env2, []Kind{AllKind}, []string{env1, env2}, nil},
+		{"/", "e " + env1 + " " + env2, []Kind{AllKind}, []string{env1, env2}, nil},
+		{"/", env1 + " " + env2, []Kind{EnvKind}, []string{env1, env2}, nil},
 
 		// Images resolution
-		{"/", project2 + "/" + image21, AllKind, []string{}, InconsistentExpression},
-		{"/", "i/" + project2 + "/" + image21, AllKind, []string{project2 + "/" + image21}, nil},
-		{"/", "i " + project2 + "/" + image21, AllKind, []string{project2 + "/" + image21}, nil},
-		{"/", project2 + "/" + image21, ImageKind, []string{project2 + "/" + image21}, nil}, // case 20
-		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, AllKind, []string{}, InconsistentExpression},
-		{"/", "i/" + project2 + "/" + image21 + " i/" + project1 + "/" + image12, AllKind, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
-		{"/", "i " + project2 + "/" + image21 + " " + project1 + "/" + image12, AllKind, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
-		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, ImageKind, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
+		{"/", project2 + "/" + image21, []Kind{AllKind}, []string{}, InconsistentExpression},
+		{"/", "i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
+		{"/", "i " + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
+		{"/", project2 + "/" + image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil}, // case 20
+		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{}, InconsistentExpression},
+		{"/", "i/" + project2 + "/" + image21 + " i/" + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
+		{"/", "i " + project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
+		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{ImageKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
 
-		// Mixed resolution
-		{"/", "p/" + project1 + " e/" + env2, AllKind, []string{project1, env2}, nil},
-		//FIXME {"/", "p " + project1 + " " + env2, ProjectKind, []string{project1}, nil},
-		{"/", "p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, AllKind, []string{project1, env2, project2 + "/" + image21}, nil},
+		// Mixed resolution "AllKind"
+		{"/", "p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1, env2}, nil},
+		{"/", "projects p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1}, InconsistentExpressionType},
+		{"/", "p " + project1 + " " + env2, []Kind{ProjectKind}, []string{project1}, ResourceNotFound},
+		{"/", "projects,envs " + project1 + " " + env2, []Kind{AllKind}, []string{project1, env2}, nil},
+		{"/", "projects,envs p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1, env2}, nil},
+		{"/", "p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2, project2 + "/" + image21}, nil}, // case 30
+		{"/", "p,e,i p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "all p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "p,e,i " + project1 + " " + env2 + " " + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "p,e " + project1 + " " + env2 + " " + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2}, ResourceNotFound},
+		{"/", "p,e " + project1 + " " + env2 + " i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project1, env2}, InconsistentExpressionType},
 
+		// Mixed resolution "Multiple kinds"
+		{"/", "p/" + project1 + " e/" + env2, []Kind{ProjectKind, EnvKind}, []string{project1, env2}, nil},
+		{"/", "projects p/" + project1 + " e/" + env2, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1}, InconsistentExpressionType},
+		{"/", "p " + project1 + " " + env2, []Kind{ProjectKind, EnvKind}, []string{project1}, ResourceNotFound},
+		{"/", "projects,envs " + project1 + " " + env2, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2}, nil},
+		{"/", "projects,envs p/" + project1 + " e/" + env2, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2}, nil},
+		{"/", "p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2, project2 + "/" + image21}, nil}, // case 30
+		{"/", "p,e,i p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "all p/" + project1 + " e/" + env2 + " i/" + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "p,e,i " + project1 + " " + env2 + " " + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2, project2 + "/" + image21}, nil},
+		{"/", "p,e " + project1 + " " + env2 + " " + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2}, ResourceNotFound},
+		{"/", "p,e " + project1 + " " + env2 + " i/" + project2 + "/" + image21, []Kind{ProjectKind, EnvKind, ImageKind}, []string{project1, env2}, InconsistentExpressionType},
 	}
 
 	for i, c := range cases {
 		path := filepath.Join(fakeWorkspacePath, c.fromPath)
 		err := os.Chdir(path)
 		require.NoError(t, err, "should not error for chdir on case %d", i)
-		resources, err := ResolveExpression(c.exprIn, c.kindIn)
+		resources, err := ResolveExpression(c.exprIn, c.kindsIn...)
 		if c.errWanted == nil {
 			assert.NoError(t, err, "should not error on case %d", i)
 		} else {
@@ -423,7 +477,7 @@ func TestResolveExpression(t *testing.T) {
 		}
 
 		if len(c.resNamesWanted) == 0 {
-			assert.Len(t, resources, 0, "should not found a resource for case %d", i)
+			assert.Nil(t, resources, "should not found a resource for case %d", i)
 		} else {
 			require.NotNil(t, resources, "should found some resources for case %d", i)
 			assert.Len(t, resources, len(c.resNamesWanted), "bad resources count returned for case %d", i)

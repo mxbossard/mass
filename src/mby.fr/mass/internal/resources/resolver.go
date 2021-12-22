@@ -33,51 +33,99 @@ var InconsistentExpression error = fmt.Errorf("Expression and kind are not consi
 // project1/image2 project1/image3
 // project1 image2 image3
 // project1
-func ResolveExpression(expressions string, expectedKind Kind) (resources []Resource, err error) {
-	//settingsService, err := settings.GetSettingsService()
-	//if err != nil {
-        //        return
-        //}
-	//workspaceDir := settingsService.WorkspaceDir()
+func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []Resource, err error) {
+	splittedExpr, exprKinds, err := splitExpressions(expressions)
+	if err != nil {
+		return
+	}
 
-	//workDir, err := file.WorkDirPath()
-	//if err != nil {
-        //        return
-        //}
+	// Check for expression kind consistency
+	var notExpectedKinds []Kind
+	expectAllKinds := false
+	exprAllKinds := false
+	for _, exprKind := range exprKinds {
+		kindFound := false
+		if exprKind == AllKind {
+			exprAllKinds = true
+		}
+		for _, kind := range expectedKinds {
+			if kind == AllKind {
+				expectAllKinds = true
+				break
+			}
+			if exprKind == kind || exprKind == AllKind {
+				kindFound = true
+				break
+			}
+		}
+		if !kindFound {
+			// An expression kind is not in expected kinds
+			notExpectedKinds = append(notExpectedKinds, exprKind)
+		}
+	}
 
-	//relativeWorkPath := strings.Replace(workDir, workspaceDir, "", 1)
+	if !expectAllKinds && len(notExpectedKinds) > 0 {
+		// Not expecting all kinds and found an expression kind not matching expectedKinds
+		err = InconsistentExpression
+		return
+	}
 
+	if len(exprKinds) == 0 || exprAllKinds {
+		// If no kind supplied in expr, use expectedKinds as hint
+		exprKinds = expectedKinds
+	}
+
+	// resolve all expressions versus all expr kinds
+	for _, exprKind := range exprKinds {
+		var res []Resource
+		res, err = resolveExpresionsForKind(splittedExpr, exprKind)
+		//fmt.Printf("Resolved exprs: %s with kind: %s and found: %s\n", splittedExpr, exprKind, res)
+		// FIXME keep only last error
+		for _, r := range res {
+			resources = append(resources, r)
+		}
+	}
+
+	return 
+}
+
+func splitExpressions(expressions string) (strippedExpressions []string, kinds []Kind, err error) {
 	splittedExpr := strings.Split(expressions, " ")
 
 	// First expr may specify type if different from others expr
 	// Attempt to resolve from work dir then from workspace dir
 	firstExpr := splittedExpr[0]
 	firstExprIndex := 1
-	exprKind, ok := KindFromAlias(firstExpr)
-	if ok {
-		if expectedKind != AllKind && exprKind != expectedKind {
-			err = InconsistentExpression
-			return
+
+	splittedFirstExpr := strings.Split(firstExpr, ",")
+
+	for _, firstExprPart := range splittedFirstExpr {
+		exprKind, ok := KindFromAlias(firstExprPart)
+		if ok {
+			kinds = append(kinds, exprKind)
+		} else {
+			// first keyword not a resource type
+			firstExprIndex = 0
+			if len(splittedFirstExpr) > 1 {
+				// Unable to determine kind but multiple kind supplied
+				return nil, nil, UnknownKind
+			}
 		}
-	} else {
-		// first keyword not a resource type we need to consume it as an expr
-		exprKind = expectedKind
-		firstExprIndex = 0
 	}
 
-	if exprKind == AllKind {
-		// If no kind supplied in expr, use expectedKind as hint
-		exprKind = expectedKind
-	}
+	strippedExpressions = strings.Split(expressions, " ")[firstExprIndex:]
+	return
+}
 
-	for _, expr := range splittedExpr[firstExprIndex:] {
-		res, err := resolveResource(expr, exprKind)
-		if err != nil {
-			return resources, err
+func resolveExpresionsForKind(expressions []string, kind Kind) (resources []Resource, err error) {
+	for _, expr := range expressions {
+		var res Resource
+		res, err = resolveResource(expr, kind)
+		if err == nil {
+			resources = append(resources, res)
 		}
-		resources = append(resources, res)
 	}
-
+	// FIXME: return only last error
 	return
 }
 

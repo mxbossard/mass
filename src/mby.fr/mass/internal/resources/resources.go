@@ -37,6 +37,7 @@ var kindAlias = map[Kind][]string {
 }
 
 var ResourceNotFound error = fmt.Errorf("Resource not found")
+var UnknownKind error = fmt.Errorf("Unknown kind")
 
 type Resource interface {
 	Kind() Kind
