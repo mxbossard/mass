@@ -3,6 +3,7 @@ package resources
 import(
 	"fmt"
 	"strings"
+	"path/filepath"
 
 	"mby.fr/utils/file"
 	"mby.fr/mass/internal/settings"
@@ -12,49 +13,65 @@ const EnvPrefix = "env/"
 const ProjectPrefix = "project/"
 const ImagePrefix = "image/"
 
-var InconsistentExpressionPrefix error = fmt.Errorf("Expression prefix and kind are not consistent")
+var InvalidArgument error = fmt.Errorf("Invalid argument error")
+var InconsistentExpressionType error = fmt.Errorf("Expression type and kind are not consistent")
 var InconsistentExpression error = fmt.Errorf("Expression and kind are not consistent")
 
 // Resolve complex resource expression
+// type
+// type name1 name2 name3
+// type1/name1 type2/name2 type3/name3
+// all
+// 
+// projects
+// projects p1 p2
+// p p1 p2
+// envs
+// env e1 e2
+// images
+// image p1/i1 p2
 // project1/image2 project1/image3
 // project1 image2 image3
 // project1
-// .
-func ResolveExpression(expressions string, resourceKind string) (resources []Resource, err error) {
-	settingsService, err := settings.GetSettingsService()
-	if err != nil {
-                return
-        }
-	workspaceDir := settingsService.WorkspaceDir()
+func ResolveExpression(expressions string, expectedKind Kind) (resources []Resource, err error) {
+	//settingsService, err := settings.GetSettingsService()
+	//if err != nil {
+        //        return
+        //}
+	//workspaceDir := settingsService.WorkspaceDir()
 
-	workDir, err := file.WorkDirPath()
-	if err != nil {
-                return
-        }
+	//workDir, err := file.WorkDirPath()
+	//if err != nil {
+        //        return
+        //}
 
-	relativeWorkPath := strings.Replace(workDir, workspaceDir, "", 1)
+	//relativeWorkPath := strings.Replace(workDir, workspaceDir, "", 1)
 
 	splittedExpr := strings.Split(expressions, " ")
 
-	// First expr may specify context if different from others expr
+	// First expr may specify type if different from others expr
 	// Attempt to resolve from work dir then from workspace dir
 	firstExpr := splittedExpr[0]
-	tryExpr := relativeWorkPath + "/" + firstExpr
-	firstRes, err := resolveResource(tryExpr, resourceKind)
-	resources = append(resources, firstRes)
-	if err != nil {
-		err = nil
-		tryExpr = firstExpr
-		firstRes, err = resolveResource(tryExpr, resourceKind)
-	}
-	if err != nil {
-		//err = fmt.Errorf("Unable to found resource for expr: %s !", firstExpr)
-		err = ResourceNotFound
-		return
+	firstExprIndex := 1
+	exprKind, ok := KindFromAlias(firstExpr)
+	if ok {
+		if expectedKind != AllKind && exprKind != expectedKind {
+			err = InconsistentExpression
+			return
+		}
+	} else {
+		// first keyword not a resource type we need to consume it as an expr
+		exprKind = expectedKind
+		firstExprIndex = 0
 	}
 
-	for _, expr := range splittedExpr[1:] {
-		res, err := resolveResource(expr, resourceKind)
+	if exprKind == AllKind {
+		// If no kind supplied in expr, use expectedKind as hint
+		exprKind = expectedKind
+	}
+
+	for _, expr := range splittedExpr[firstExprIndex:] {
+		res, err := resolveResource(expr, exprKind)
 		if err != nil {
 			return resources, err
 		}
@@ -64,122 +81,117 @@ func ResolveExpression(expressions string, resourceKind string) (resources []Res
 	return
 }
 
-func checkConsistency(expr, resourceKind string) (err error) {
-	if resourceKind == ImageKind {
-		// Image kind cannot be resolved with absolute expr if not referencing a project.
-		if strings.HasPrefix(expr, "/") || strings.HasPrefix(expr, ImagePrefix) {
-		       slashCount := strings.Count(expr, "/")
-			if slashCount != 2 {
-				err = InconsistentExpression
-				return
-			}
-		}
+// Resolve simple resource expression with an expected kind. Fail if kind missmatch
+// env1 env/env1 e/env1 envs/env1
+// project1 project/project1 projects/project1
+// project1/image2 image/project1/image2
+//
+func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
+	if expr == "" || ! KindExists(expectedKind) {
+		err = InvalidArgument
+		return
 	}
 
-	if strings.HasPrefix(expr, EnvPrefix) {
-                if resourceKind != "" && resourceKind != EnvKind {
-                        err = InconsistentExpressionPrefix
-                        return
-                }
+	kind, name := splitExpression(expr)
+	if kind != AllKind && expectedKind != AllKind && kind != expectedKind {
+		err = InconsistentExpressionType
+		return
+	}
+	if expectedKind == AllKind {
+		expectedKind = kind
+	}
+	if expectedKind == AllKind {
+		err = InconsistentExpression
+		return
 	}
 
-	if strings.HasPrefix(expr, ProjectPrefix) {
-		if resourceKind != "" && resourceKind != ProjectKind {
-			err = InconsistentExpressionPrefix
-			return
-		}
-	}
-
-	if strings.HasPrefix(expr, ImagePrefix) {
-		if resourceKind != "" && resourceKind != ImageKind {
-			err = InconsistentExpressionPrefix
-			return
-		}
-	}
+	// Resolve contextual resource
+	r, err = resolveContextualResource(name, expectedKind)
 
 	return
 }
 
-// Resolve simple resource expression
-// project1/image2
-func resolveResource(expr, resourceKind string) (r Resource, err error) {
+func splitExpression(expr string) (kind Kind, name string) {
+	kind = AllKind
+	name = expr
+	res := strings.Split(name, "/")
+	if len(res) > 1 {
+		switch res[0] {
+			case "p", "project", "projects":
+				kind = ProjectKind
+				name = strings.Join(res[1:], "/")
+			case "e", "env", "envs":
+				kind = EnvKind
+				name = strings.Join(res[1:], "/")
+			case "i", "image", "images":
+				kind = ImageKind
+				name = strings.Join(res[1:], "/")
+		}
+	}
+	return
+}
+
+func splitImageName(name string) (project, image string) {
+	res := strings.Split(name, "/")
+	if len(res) == 1 {
+		image = name
+	} else {
+		project = res[0]
+		image = strings.Join(res[1:], "/")
+	}
+	return
+}
+
+// Return one resource matching name and kind in context (context depends on user working dir)
+// project1 project2
+// env1 env2
+// project1/image1 image2
+func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
+	if name == "" || ! KindExists(kind) {
+		err = InvalidArgument
+		return
+	}
+
 	ss, err := settings.GetSettingsService()
-	if err != nil {
-		return
-	}
-	workspaceDir := ss.WorkspaceDir()
+        if err != nil {
+                return
+        }
+        workspaceDir := ss.WorkspaceDir()
 
-	workDir, err := file.WorkDirPath()
-	if err != nil {
-		return
-	}
+	switch kind {
+	case EnvKind, ProjectKind:
+		return resolveResourceFrom(workspaceDir, name, kind)
+	case ImageKind:
+		// Special case: if image name does not have project prefix, can be resolve from work dir
+		project, image := splitImageName(name)
+		if project == "" {
+			workDir, err := file.WorkDirPath()
+			if err != nil {
+				return r, err
+			}
+			image = filepath.Base(workDir) + "/" + image
+			return resolveResourceFrom(workDir, image, kind)
+		}
+		return resolveResourceFrom(workspaceDir, name, kind)
 
-	err = checkConsistency(expr, resourceKind)
-	if err != nil {
-		return
-	}
-
-	// dot or empty expr
-	if expr == "" || expr == "." {
-		return resolveDotResource(resourceKind)
-	}
-
-	// absolute expr
-	if strings.HasPrefix(expr, "/") {
-		//expr = expr[1:] // Strip first /
-		// Resolve resource from workspace dir only
-		return resolveResourceFrom(workspaceDir, expr, resourceKind)
 	}
 
-	fromDir := workDir
-
-	// env dedicated expr
-	if strings.HasPrefix(expr, EnvPrefix) {
-		// Resolve env only
-		expr = expr[len(EnvPrefix):] // Strip prefix
-		resourceKind = EnvKind
-	}
-
-	// project dedicated expr
-	if strings.HasPrefix(expr, ProjectPrefix) {
-		// Resolve project only
-		expr = expr[len(ProjectPrefix):] // Strip prefix
-		resourceKind = ProjectKind
-	}
-
-	// image dedicated expr
-	if strings.HasPrefix(expr, ImagePrefix) {
-		// Resolve image only
-		expr = expr[len(ImagePrefix):] // Strip prefix
-		resourceKind = ImageKind
-		fromDir = workspaceDir
-	}
-
-	if resourceKind == EnvKind || resourceKind == ProjectKind {
-		fromDir = workspaceDir
-	}
-
-	// Resolve resource from work dir
-	r, err = resolveResourceFrom(fromDir, expr, resourceKind)
-	//if err == ResourceNotFound {
-	//	// Continue resolving
-	//	err = nil
-	//} else if err != nil {
-	//	return
-	//}
-
-	//// Resolve resource from workspace dir
-	//r, err = resolveResourceFrom(workspaceDir, expr, resourceKind)
 	return
 }
 
-func resolveResourceFrom(fromDir, expr, resourceKind string) (r Resource, err error) {
-	resources, err := scanResourcesFrom(fromDir, resourceKind)
+// Return one resource matching name and kind in fromDir tree
+func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error) {
+	if name == "" || fromDir == "" || ! KindExists(kind) {
+		err = InvalidArgument
+		return
+	}
+
+	resources, err := scanResourcesFrom(fromDir, kind)
 	if err != nil {
 		return
 	}
 	for _, res := range resources {
-		if res.MatchExpression(expr) && (resourceKind == "" || res.Kind() == resourceKind) {
+		if res.Name() == name && res.Kind() == kind {
 			r = res
 			return
 		}
@@ -188,7 +200,11 @@ func resolveResourceFrom(fromDir, expr, resourceKind string) (r Resource, err er
 	return
 }
 
-func scanResourcesFrom(fromDir, resourceKind string) (r []Resource, err error) {
+func isResourceMatchingExpr(r Resource, expr string) bool {
+	return r.Name() == expr
+}
+
+func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err error) {
 	if resourceKind == "" || resourceKind == EnvKind {
 		envs, err := ScanEnvs(fromDir)
 		if err != nil {
@@ -220,24 +236,5 @@ func scanResourcesFrom(fromDir, resourceKind string) (r []Resource, err error) {
 	}
 
 	return
-}
-
-// Resolve resource in working dir
-func resolveDotResource(resourceKind string) (r Resource, err error) {
-	workDir, err := file.WorkDirPath()
-	if err != nil {
-		return
-	}
-	r, err = Read(workDir)
-	if err != nil {
-		return
-	}
-	if resourceKind != "" && r.Kind() != resourceKind {
-		r = nil
-		err = ResourceNotFound
-		return
-	}
-	return
-
 }
 

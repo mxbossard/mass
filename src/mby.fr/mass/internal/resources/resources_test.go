@@ -48,8 +48,6 @@ func TestWriteThenRead(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	expectedName := filepath.Base(path)
-
 	i, err := BuildImage(path)
 	require.NoError(t, err, "should not error")
 
@@ -62,7 +60,6 @@ func TestWriteThenRead(t *testing.T) {
 	res, err := Read(path)
 	require.NoError(t, err, "should not error")
 	loadedImage := res.(Image)
-	assert.Equal(t, expectedName, loadedImage.Name(), "bad resource name")
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
 	assert.Equal(t, path + "/" + DefaultSourceDir, loadedImage.SourceDir(), "bad source dir")

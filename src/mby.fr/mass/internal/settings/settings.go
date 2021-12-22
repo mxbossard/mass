@@ -16,6 +16,8 @@ import (
 const defaultSettingsDir = ".mass"
 var settingsFile = filepath.Join(defaultSettingsDir, "settings.yaml")
 
+var PathNotFound = fmt.Errorf("Unable to found settings path")
+
 // Default settings
 const defaultEnvsDir = "envs"
 const defaultProjectsDir = "."
@@ -181,7 +183,7 @@ func newSettingsService() (service *SettingsService, err error) {
 		return
 	}
 	if settingsFilePath == "" {
-		err = errors.New("Unable to found settings path")
+		err = PathNotFound
 		return
 	}
 	workspacePath := filepath.Dir(filepath.Dir(settingsFilePath))

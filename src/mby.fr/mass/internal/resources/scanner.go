@@ -6,7 +6,7 @@ import(
 	"path/filepath"
 )
 
-func buildScanner(resKind string, c chan<- interface{}) (fs.WalkDirFunc) {
+func buildScanner(resKind Kind, c chan<- interface{}) (fs.WalkDirFunc) {
 	scanner := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err

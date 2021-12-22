@@ -11,7 +11,7 @@ import (
 	"mby.fr/utils/test"
 )
 
-func initRandResource(t *testing.T, parentPath, kind string) (path string) {
+func initRandResource(t *testing.T, parentPath string, kind Kind) (path string) {
 	resDir, err := test.MkRandSubDir(parentPath)
 	require.NoError(t, err, "should not error")
 	res, err := Init(resDir, kind)

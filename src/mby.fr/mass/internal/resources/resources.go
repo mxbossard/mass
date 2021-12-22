@@ -19,28 +19,55 @@ const DefaultInitialVersion = "0.0.1"
 const DefaultBuildFile = "Dockerfile"
 const DefaultResourceFile = "resource.yaml"
 
-const EnvKind = "Env"
-const ProjectKind = "Project"
-const ImageKind = "Image"
+type Kind string
+func (k Kind) String() string {
+	return string(k)
+}
+
+const AllKind Kind = "all"
+const EnvKind Kind = "env"
+const ProjectKind Kind = "project"
+const ImageKind Kind = "image"
+
+var kindAlias = map[Kind][]string {
+	EnvKind: []string{EnvKind.String()[0:1], EnvKind.String(), EnvKind.String() + "s"},
+	ProjectKind: []string{ProjectKind.String()[0:1], ProjectKind.String(), ProjectKind.String() + "s"},
+	ImageKind: []string{ImageKind.String()[0:1], ImageKind.String(), ImageKind.String() + "s"},
+	AllKind: []string{AllKind.String()},
+}
 
 var ResourceNotFound error = fmt.Errorf("Resource not found")
 
 type Resource interface {
-	Kind() string
+	Kind() Kind
 	Name() string
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
-	MatchExpression(string) bool
+}
+
+func KindExists(k Kind) bool {
+	return k == EnvKind || k == ProjectKind || k == ImageKind || k == AllKind
+}
+
+func KindFromAlias(alias string) (Kind, bool) {
+	for k, v := range kindAlias {
+		for _, a := range v {
+			if alias == a {
+				return k, true
+			}
+		}
+	}
+	return "", false
 }
 
 type Base struct {
 	//Resource
-	ResourceKind string `yaml:"resourceKind"`
+	ResourceKind Kind `yaml:"resourceKind"`
 	name, dir string
 }
 
-func (r Base) Kind() string {
+func (r Base) Kind() Kind {
 	return r.ResourceKind
 }
 
@@ -71,10 +98,6 @@ func (r Base) Init() (err error) {
 	}
 
 	return
-}
-
-func (r Base) MatchExpression(expr string) bool {
-	return r.name == expr || "/" + r.name == expr
 }
 
 type Testable struct {
@@ -176,13 +199,13 @@ func (i Image) SourceDir() (string) {
 	return i.SourceDirectory
 }
 
-func (i Image) MatchExpression(expr string) bool {
-	test := i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
+func (i Image) Name() string {
+	//test := i.name == expr || "/" + i.project.name + "/" + i.name == expr || i.project.name + "/" + i.name == expr
 	//fmt.Println("Is expr matching ?", i.project, i, expr, test)
-	return test
+	return i.project.Name() + "/" + i.name
 }
 
-func buildBase(kind, path string) (b Base, err error) {
+func buildBase(kind Kind, path string) (b Base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return
@@ -202,7 +225,7 @@ func buildTestable(path string) (t Testable, err error) {
 	return
 }
 
-func Init(path, kind string) (b Base, err error) {
+func Init(path string, kind Kind) (b Base, err error) {
 	switch kind {
 		case EnvKind:
 		var r Env
