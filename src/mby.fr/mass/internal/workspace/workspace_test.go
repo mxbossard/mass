@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mby.fr/utils/test"
+	"mby.fr/mass/internal/commontest"
 )
 
 func TestInitInNotExistingAbsolutePath(t *testing.T) {
@@ -20,7 +21,7 @@ func TestInitInNotExistingAbsolutePath(t *testing.T) {
 
 	err := Init(wksPath)
 	assert.NoError(t, err, "Init should not return an error")
-	assertWorkspaceFileTree(t, wksPath)
+	commontest.AssertWorkspaceFileTree(t, wksPath)
 }
 
 func TestInitInNotExistingRelativePath(t *testing.T) {
@@ -34,7 +35,7 @@ func TestInitInNotExistingRelativePath(t *testing.T) {
 	os.Chdir(os.TempDir())
 	err := Init(wksDir)
 	assert.NoError(t, err, "Init should not return an error")
-	assertWorkspaceFileTree(t, wksPath)
+	commontest.AssertWorkspaceFileTree(t, wksPath)
 }
 
 func TestInitInExistingAbsolutePath(t *testing.T) {
@@ -48,7 +49,7 @@ func TestInitInExistingAbsolutePath(t *testing.T) {
 	os.Mkdir(wksPath, 0755)
 	err := Init(wksPath)
 	assert.NoError(t, err, "Init should not return an error")
-	assertWorkspaceFileTree(t, wksPath)
+	commontest.AssertWorkspaceFileTree(t, wksPath)
 }
 
 func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
@@ -64,7 +65,7 @@ func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
 
 	err := Init(wksPath)
 	assert.NoError(t, err, "Init should not return an error")
-	assertWorkspaceFileTree(t, wksPath)
+	commontest.AssertWorkspaceFileTree(t, wksPath)
 }
 
 func TestInitWithDotPath(t *testing.T) {
@@ -80,7 +81,7 @@ func TestInitWithDotPath(t *testing.T) {
 	dotPath := "."
 	err := Init(dotPath)
 	assert.NoError(t, err, "Init should not return an error")
-	assertWorkspaceFileTree(t, wksPath)
+	commontest.AssertWorkspaceFileTree(t, wksPath)
 }
 
 func TestInitWithEmptyPath(t *testing.T) {

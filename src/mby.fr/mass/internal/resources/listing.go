@@ -1,38 +1,37 @@
-package workspace
+package resources
 
 import (
-	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
 )
 
-func ListEnvs() (envs []resources.Env, err error) {
+func ListEnvs() (envs []Env, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	envs, err = resources.ScanEnvs(ss.EnvsDir())
+	envs, err = ScanEnvs(ss.EnvsDir())
 	return
 }
 
-func ListProjects() (projects []resources.Project, err error) {
+func ListProjects() (projects []Project, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	projects, err = resources.ScanProjects(ss.ProjectsDir())
+	projects, err = ScanProjects(ss.ProjectsDir())
 	return
 }
 
-func ListImages() (images []resources.Image, err error) {
+func ListImages() (images []Image, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	images, err = resources.ScanImages(ss.ProjectsDir())
+	images, err = ScanImages(ss.ProjectsDir())
 	return
 }
 
-func GetProject(name string) (p resources.Project, ok bool, err error) {
+func GetProject(name string) (p Project, ok bool, err error) {
 	projects, err := ListProjects()
 	for _, p = range projects {
 		if p.Name() == name {
@@ -43,7 +42,7 @@ func GetProject(name string) (p resources.Project, ok bool, err error) {
 	return
 }
 
-func GetEnv(name string) (r resources.Env, ok bool, err error) {
+func GetEnv(name string) (r Env, ok bool, err error) {
 	envs, err := ListEnvs()
 	for _, r = range envs {
 		if r.Name() == name {
@@ -54,7 +53,7 @@ func GetEnv(name string) (r resources.Env, ok bool, err error) {
 	return
 }
 
-func GetImage(projectName, imageName string) (r resources.Image, ok bool, err error) {
+func GetImage(projectName, imageName string) (r Image, ok bool, err error) {
 	images, err := ListImages()
 	for _, r = range images {
 		if r.Name() == projectName + "/" + imageName {
