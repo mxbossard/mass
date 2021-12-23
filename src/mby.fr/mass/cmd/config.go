@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"mby.fr/mass/internal/resources"
+	"mby.fr/mass/internal/display"
 )
 
 // configCmd represents the config command
@@ -37,7 +38,15 @@ var configCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(configs)
+
+		if len(configs) == 0 {
+			fmt.Printf("no config found\n")
+		}
+
+		display := display.Basic{}
+		for _, c := range configs {
+			display.Config(c)
+		}
 	},
 }
 

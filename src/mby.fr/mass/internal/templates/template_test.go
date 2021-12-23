@@ -18,24 +18,25 @@ func TestInit(t *testing.T) {
 	tempDir, err := test.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	err = Init(tempDir)
-	require.NoError(t, err, "should not error")
-	require.DirExists(t, tempDir + "/src", "should be copied")
-	require.FileExists(t, tempDir + "/src/" + testTemplate, "should be copied")
-	require.FileExists(t, tempDir + "/src/" + testNewlineTemplate, "should be copied")
+	assert.NoError(t, err, "should not error")
+	assert.DirExists(t, tempDir, "should be copied")
+	assert.FileExists(t, tempDir + "/" + testTemplate, "should be copied")
+	assert.FileExists(t, tempDir + "/" + testNewlineTemplate, "should be copied")
 }
 
 func TestInitWithNotExistingDir(t *testing.T) {
 	tempFile, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 	err = Init(tempFile)
-	require.Error(t, err, "should error")
+	assert.NoError(t, err, "should not error")
+	assert.DirExists(t, tempFile, "should be copied")
 }
 
 func TestReadFromEmbeded(t *testing.T) {
 	templatesDir := ""
 	err := Init(templatesDir)
 	require.NoError(t, err, "should not error")
-	
+
 	r := New(templatesDir)
 	expectedRendering := "foo: {{ .Bar }}.\n"
 	data, err := r.read(testTemplate)

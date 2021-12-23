@@ -4,7 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"fmt"
+	//"fmt"
 	"embed"
 	"strings"
 	"text/template"
@@ -14,22 +14,27 @@ import (
 const ConfigTemplate = "config.yaml"
 
 ////go:embed image/* template/*
-//go:embed src/*
+//go:embed templates/*
 var templates embed.FS
+const templatesRootDir = "templates"
 
 type Renderer struct {
 	templatesDir string
 	templatesFs fs.FS
+	rootDir string
 }
 
 func New(templatesDir string) Renderer {
 	var templatesFs fs.FS
+	var rootDir string
 	if templatesDir == "" {
 		templatesFs = templates
+		rootDir = templatesRootDir
 	} else {
 		templatesFs = os.DirFS(templatesDir)
+		rootDir = "."
 	}
-	r := Renderer{templatesDir, templatesFs}
+	r := Renderer{templatesDir, templatesFs, rootDir}
 	return r
 }
 
@@ -45,42 +50,52 @@ func Init(templatesDir string) (err error) {
 		return
 	}
 
-	// Copy embeded src dir in settings dir
-	dirPath := "src"
-	dirEntries, err := templates.ReadDir(dirPath)
-	if err != nil {
-		return
-	}
+	// Copy templates FS into targetDir ignoring root dir
+	targetDir := templatesDir
+	rootDir := templatesRootDir // do not copy this directory
 
-	targetDir := filepath.Join(templatesDir, dirPath)
-	err = os.Mkdir(targetDir, 0755)
-	if err != nil {
-		return
-	}
+	copyFunc := func(path string, d fs.DirEntry, err error) error {
+		//fmt.Printf("Walking path: %s\n", path)
+		targetPath := strings.TrimPrefix(path, rootDir)
+		if d == nil {
+			return nil
+		} else if d.IsDir() {
+			// Create dir
+			dest := filepath.Join(targetDir, targetPath)
+			//fmt.Printf("Creating dir %s ...\n", dest)
+			err = os.MkdirAll(dest, 0755)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Copy file from FS/path into targetDir/targetPath
+			//fileName := d.Name()
+			filePath := filepath.Join(targetDir, targetPath)
+			//fmt.Printf("Copying template %s into dir %s ...\n", fileName, filePath)
 
-	for _, dirEntry := range dirEntries {
-		fileName := dirEntry.Name()
-		fileContent, err := templates.ReadFile(fmt.Sprintf("%s/%s", dirPath, fileName))
-		if err != nil {
-			return err
+			fileContent, err := templates.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			if err := os.WriteFile(filePath, fileContent, 0644); err != nil {
+				return err
+			}
 		}
-
-		filePath := filepath.Join(targetDir, fileName)
-		if err := os.WriteFile(filePath, fileContent, 0644); err != nil {
-			return err
-		}
-		//fmt.Printf("Copied template %s into dir %s ...\n", fileName, filePath)
+		return nil
 	}
+
+	err = fs.WalkDir(templates, rootDir, copyFunc)
 	return
 }
 
 func (r Renderer) read(name string) (data string, err error) {
-	name = "src/" + name
+	name = filepath.Join(r.rootDir, name)
 	file, err := r.templatesFs.Open(name)
-	defer file.Close()
 	if err != nil {
 		return
 	}
+	defer file.Close()
 
 	builder := strings.Builder{}
 	const maxSz = 64

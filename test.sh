@@ -87,6 +87,6 @@ EOF
 tree -Ca $workspaceDir
 
 # Display config for env
-mass config dev
+mass config e/dev
 mass config e/stage
 

@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"fmt"
 
 	"mby.fr/mass/internal/settings"
 	"mby.fr/mass/internal/config"
@@ -17,17 +18,20 @@ func MergedConfig(resourceExpr string) (configs []config.Config, err error) {
                 return nil, err
         }
 
-        resources, err := ResolveExpression(resourceExpr)
+        resources, err := ResolveExpression(resourceExpr, AllKind)
         if err != nil {
                 return nil, err
         }
 
-        envResources, err := ResolveExpression(workingEnv, EnvKind)
+        workingEnvRes, ok, err := GetEnv(workingEnv)
         if err != nil {
                 return nil, err
         }
+	if !ok {
+		return nil, fmt.Errorf("working env %s not found", workingEnv)
+	}
 
-	envConfig, err := envResources[0].Config()
+	envConfig, err := workingEnvRes.Config()
         if err != nil {
                 return nil, err
         }
