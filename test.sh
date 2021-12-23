@@ -13,22 +13,10 @@ mass init workspace $workspaceDir
 cd $workspaceDir
 
 # Init some projects
-mass init project p1
-mass init project p2
-mass init project p3
+mass init project p1 p2 p3
 
 # Init some images
-mass init image p1/i11
-mass init image p1/i12
-mass init image p1/i13
-
-mass init image p2/i21
-mass init image p2/i22
-mass init image p2/i23
-
-mass init image p3/i31
-mass init image p3/i32
-mass init image p3/i33
+mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
 # Init env configs
 
@@ -96,9 +84,9 @@ environment:
   ctx: image
 EOF
 
+tree -Ca $workspaceDir
 
 # Display config for env
 mass config dev
 mass config e/stage
-
 
