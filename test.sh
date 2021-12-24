@@ -38,11 +38,11 @@ labels:
 tags:
   tkey2: tproject1
 environment:
-  ekey2: eproject2
+  ekey2: eproject1
   ctx: project
 EOF
 
-cat <<EOF > p1/config.yaml
+cat <<EOF > p2/config.yaml
 labels:
   lkey2: lproject2
 tags:
@@ -88,5 +88,7 @@ tree -Ca $workspaceDir
 
 # Display config for env
 mass config e/dev
-mass config e/stage
+mass config p/p1 i/p1/i11
+mass config -e stage p/p1 i/p1/i11
+mass config p1 p1/i11 # this should works.
 
