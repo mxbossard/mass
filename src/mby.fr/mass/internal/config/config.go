@@ -69,7 +69,12 @@ func Read(path string) (c Config, err error) {
 }
 
 func mergeStringMaps(base, replace map[string]string) map[string]string {
-	merged := base
+	var merged map[string]string
+	if base == nil {
+		merged = map[string]string{}
+	} else {
+		merged = base
+	}
 	for k, v := range replace {
 		merged[k] = v
 	}

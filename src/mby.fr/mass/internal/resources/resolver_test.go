@@ -408,6 +408,7 @@ func TestResolveExpression(t *testing.T) {
 		errWanted error
 	} {
 		// Projects resolution
+		{"/", project1, []Kind{}, []string{}, InconsistentExpression}, // case 0
 		{"/", project1, []Kind{AllKind}, []string{}, InconsistentExpression}, // case 0
 		{"/", "p/" + project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", "p " + project1, []Kind{AllKind}, []string{project1}, nil},
@@ -419,6 +420,7 @@ func TestResolveExpression(t *testing.T) {
 		{"/", project1 + " " + project2, []Kind{ProjectKind}, []string{project1, project2}, nil},
 
 		// Envs resolution
+		{"/", env1, []Kind{}, []string{}, InconsistentExpression},
 		{"/", env1, []Kind{AllKind}, []string{}, InconsistentExpression},
 		{"/", "e/" + env1, []Kind{AllKind}, []string{env1}, nil}, // case 10
 		{"/", "e " + env1, []Kind{AllKind}, []string{env1}, nil},
@@ -429,6 +431,7 @@ func TestResolveExpression(t *testing.T) {
 		{"/", env1 + " " + env2, []Kind{EnvKind}, []string{env1, env2}, nil},
 
 		// Images resolution
+		{"/", project2 + "/" + image21, []Kind{}, []string{}, InconsistentExpression},
 		{"/", project2 + "/" + image21, []Kind{AllKind}, []string{}, InconsistentExpression},
 		{"/", "i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
@@ -439,6 +442,7 @@ func TestResolveExpression(t *testing.T) {
 		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{ImageKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
 
 		// Mixed resolution "AllKind"
+		{"/", "p/" + project1 + " e/" + env2, []Kind{}, []string{project1, env2}, nil},
 		{"/", "p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1, env2}, nil},
 		{"/", "projects p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1}, InconsistentExpressionType},
 		{"/", "p " + project1 + " " + env2, []Kind{ProjectKind}, []string{project1}, ResourceNotFound},

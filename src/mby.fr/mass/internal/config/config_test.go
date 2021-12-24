@@ -43,6 +43,21 @@ func TestRead(t *testing.T) {
 	assert.Len(t, c.Environment, 0, "should be empty")
 }
 
+func TestMergeNilStringMaps(t *testing.T) {
+	mapA := map[string]string{
+		"key1": "val1",
+		"key2": "val2",
+		"key3": "val3",
+	}
+	mergedMap := mergeStringMaps(nil, mapA)
+	require.NotNil(t, mergedMap, "should not be nil")
+	assert.Equal(t, mapA, mergedMap, "bad merged map")
+
+	mergedMap = mergeStringMaps(mapA, nil)
+	require.NotNil(t, mergedMap, "should not be nil")
+	assert.Equal(t, mapA, mergedMap, "bad merged map")
+}
+
 func TestMergeStringMaps(t *testing.T) {
 	mapA := map[string]string{
 		"key1": "val1",

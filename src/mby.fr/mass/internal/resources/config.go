@@ -18,7 +18,7 @@ func MergedConfig(resourceExpr string) (configs []config.Config, err error) {
                 return nil, err
         }
 
-        resources, err := ResolveExpression(resourceExpr, AllKind)
+        resources, err := ResolveExpression(resourceExpr)
         if err != nil {
                 return nil, err
         }

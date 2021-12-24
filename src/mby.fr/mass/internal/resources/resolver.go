@@ -39,6 +39,11 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 		return
 	}
 
+	// If no expectedKinds, assume expected AllKind
+	if len(expectedKinds) == 0 {
+		expectedKinds = append(expectedKinds, AllKind)
+	}
+
 	// Check for expression kind consistency
 	var notExpectedKinds []Kind
 	expectAllKinds := false
