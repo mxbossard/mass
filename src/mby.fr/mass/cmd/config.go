@@ -34,16 +34,17 @@ var configCmd = &cobra.Command{
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceExpr := strings.Join(args, " ")
-		configs, err := resources.MergedConfig(resourceExpr)
-		if err != nil {
-			log.Fatal(err)
+		configs, errors := resources.MergedConfig(resourceExpr)
+		display := display.Basic{}
+
+		if errors.GotError() {
+			log.Fatal(errors)
 		}
 
 		if len(configs) == 0 {
 			fmt.Printf("no config found\n")
 		}
 
-		display := display.Basic{}
 		for _, c := range configs {
 			display.Config(c)
 		}

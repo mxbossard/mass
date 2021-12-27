@@ -6,6 +6,7 @@ import(
 	"path/filepath"
 
 	"mby.fr/utils/file"
+	"mby.fr/utils/errorz"
 	"mby.fr/mass/internal/settings"
 )
 
@@ -33,9 +34,10 @@ var InconsistentExpression error = fmt.Errorf("Expression and kind are not consi
 // project1/image2 project1/image3
 // project1 image2 image3
 // project1
-func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []Resource, err error) {
+func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []Resource, aggErr errorz.Aggregated) {
 	splittedExpr, exprKinds, err := splitExpressions(expressions)
 	if err != nil {
+		aggErr.Add(err)
 		return
 	}
 
@@ -72,6 +74,7 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 	if !expectAllKinds && len(notExpectedKinds) > 0 {
 		// Not expecting all kinds and found an expression kind not matching expectedKinds
 		err = InconsistentExpression
+		aggErr.Add(err)
 		return
 	}
 
@@ -81,17 +84,17 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 	}
 
 	// resolve all expressions versus all expr kinds
-	for _, exprKind := range exprKinds {
-		var res []Resource
-		res, err = resolveExpresionsForKind(splittedExpr, exprKind)
-		//fmt.Printf("Resolved exprs: %s with kind: %s and found: %s\n", splittedExpr, exprKind, res)
-		// FIXME keep only last error
-		for _, r := range res {
-			resources = append(resources, r)
+	for _, expr := range splittedExpr {
+		res, errors := resolveExpresionForKinds(expr, exprKinds)
+		//fmt.Printf("Resolved exprs: %s with kind: %s and found: %s\n", expr, exprKind, res)
+		if errors.GotError() {
+			aggErr.Concat(errors)
+			continue
 		}
+		resources = append(resources, res)
 	}
 
-	return 
+	return
 }
 
 func splitExpressions(expressions string) (strippedExpressions []string, kinds []Kind, err error) {
@@ -122,15 +125,50 @@ func splitExpressions(expressions string) (strippedExpressions []string, kinds [
 	return
 }
 
-func resolveExpresionsForKind(expressions []string, kind Kind) (resources []Resource, err error) {
-	for _, expr := range expressions {
-		var res Resource
-		res, err = resolveResource(expr, kind)
+// How merge errors ?
+// If unkown errors return them
+// If a NotFoundError for a kind return it
+// If InconsistentExpressionType for all kinds it wins
+// Else return all errors
+func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr errorz.Aggregated) {
+	errorByKind := map[Kind]error{}
+	for _, kind := range kinds {
+		res, err := resolveResource(expr, kind)
 		if err == nil {
-			resources = append(resources, res)
+			return res, aggErr
+		} else {
+			errorByKind[kind] = err
 		}
 	}
-	// FIXME: return only last error
+
+	var notFound error
+	var inconsistentExpressionTypeCount = 0
+	var unknownErrors errorz.Aggregated
+	var knownErrors errorz.Aggregated
+	for _, e := range errorByKind {
+		switch e {
+		case ResourceNotFound:
+			notFound = e
+			knownErrors.Add(e)
+			break
+		case InconsistentExpressionType:
+			inconsistentExpressionTypeCount ++
+			knownErrors.Add(e)
+		default:
+			unknownErrors.Add(e)
+		}
+	}
+
+	if unknownErrors.GotError() {
+		aggErr = unknownErrors
+	} else if notFound != nil {
+		aggErr.Add(notFound)
+	} else if len(kinds) == inconsistentExpressionTypeCount {
+		// FIXME; return new InconsistentExpressionType for all kinds
+		aggErr.Add(InconsistentExpressionType)
+	} else {
+		aggErr = knownErrors
+	}
 	return
 }
 
