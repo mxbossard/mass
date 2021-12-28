@@ -16,8 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	"log"
+	//"fmt"
+	//"log"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,19 +35,20 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceExpr := strings.Join(args, " ")
 		configs, errors := resources.MergedConfig(resourceExpr)
-		display := display.Basic{}
+		display := display.New()
+		display.Display(configs, errors)
 
-		if errors.GotError() {
-			log.Fatal(errors)
-		}
+		//if errors.GotError() {
+		//	log.Fatal(errors)
+		//}
 
-		if len(configs) == 0 {
-			fmt.Printf("no config found\n")
-		}
+		//if len(configs) == 0 {
+		//	fmt.Printf("no config found\n")
+		//}
 
-		for _, c := range configs {
-			display.Config(c)
-		}
+		//for _, c := range configs {
+		//	display.Config(c)
+		//}
 	},
 }
 

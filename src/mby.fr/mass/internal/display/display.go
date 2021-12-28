@@ -1,24 +1,32 @@
 package display
 
 import (
-	"os"
+	//"os"
 	//"fmt"
 	//"strings"
+	"log"
 
-	"mby.fr/mass/internal/config"
-	"mby.fr/mass/internal/templates"
+	//"mby.fr/mass/internal/config"
+	//"mby.fr/mass/internal/templates"
 )
 
-type Display interface {
-	Config(config.Config)
+type Displayer interface {
+	Display(...interface{})
 }
 
-type Basic struct {
-
+type StandarDisplay struct {
+	printer Printer
 }
 
-func (d Basic) Config(c config.Config) {
-	renderer := templates.New("")
-	renderer.Render("display/basic/config.tpl", os.Stdout, c)
+func (d StandarDisplay) Display(objects ...interface{}) {
+	err := d.printer.Print(objects...)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func New() Displayer {
+	printer := Basic{}
+	return StandarDisplay{printer}
 }
 
