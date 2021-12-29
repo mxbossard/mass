@@ -3,6 +3,7 @@ package display
 import (
 	"os"
 	"fmt"
+	"reflect"
 	//"strings"
 
 	"mby.fr/mass/internal/config"
@@ -41,6 +42,21 @@ func (p Basic) AggregatedError(errors errorz.Aggregated) {
 
 func (p Basic) Print(objects ...interface{}) (err error) {
 	for _, obj := range objects {
+
+		// Recursive call if obj is an array or a slice
+		t := reflect.TypeOf(obj)
+		if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
+			array := reflect.ValueOf(obj)
+			for i := 0; i < array.Len(); i++ {
+				value := array.Index(i).Interface()
+				err = p.Print(value)
+				if err != nil {
+					return
+				}
+			}
+			continue
+		}
+
 		switch o:= obj.(type) {
 		case errorz.Aggregated:
 			p.AggregatedError(o)
@@ -48,11 +64,6 @@ func (p Basic) Print(objects ...interface{}) (err error) {
 			p.Error(o)
 		case config.Config:
 			p.Config(o)
-		case []config.Config:
-			//p.Print(o...)
-			for _, c:= range o {
-				p.Print(c)
-			}
 		default:
 			err = fmt.Errorf("Unable to Print object of type: %T", obj)
 			return
