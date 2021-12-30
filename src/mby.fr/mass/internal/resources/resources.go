@@ -36,9 +36,6 @@ var kindAlias = map[Kind][]string {
 	AllKind: []string{AllKind.String()},
 }
 
-var ResourceNotFound error = fmt.Errorf("Resource not found")
-var UnknownKind error = fmt.Errorf("Unknown kind")
-
 type Resource interface {
 	Kind() Kind
 	Name() string
@@ -60,6 +57,15 @@ func KindFromAlias(alias string) (Kind, bool) {
 		}
 	}
 	return "", false
+}
+
+func IsKindIn(kind Kind, kinds []Kind) bool {
+	for _, k := range kinds {
+		if k == AllKind || k == kind {
+			return true
+		}
+	}
+	return false
 }
 
 type Base struct {
@@ -314,7 +320,7 @@ func Read(path string) (r Resource, err error) {
 	content, err := os.ReadFile(resourceFilepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = ResourceNotFound
+			err = ResourceNotFound{path, &[]Kind{AllKind}}
 		}
 		return
 	}

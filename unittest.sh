@@ -1,7 +1,7 @@
 #! /bin/bash -e
 scriptDir=$( dirname $( readlink -f $0 ) )
 
-packages="src/mby.fr/mass/cmd src/mby.fr/mass/internal src/mby.fr/utils"
+packages="src/mby.fr/utils src/mby.fr/mass/cmd src/mby.fr/mass/internal"
 
 for pkg in $packages; do
 	>&2 echo ""

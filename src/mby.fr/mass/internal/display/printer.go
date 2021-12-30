@@ -46,9 +46,9 @@ func (p Basic) Print(objects ...interface{}) (err error) {
 		// Recursive call if obj is an array or a slice
 		t := reflect.TypeOf(obj)
 		if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
-			array := reflect.ValueOf(obj)
-			for i := 0; i < array.Len(); i++ {
-				value := array.Index(i).Interface()
+			arrayValue := reflect.ValueOf(obj)
+			for i := 0; i < arrayValue.Len(); i++ {
+				value := arrayValue.Index(i).Interface()
 				err = p.Print(value)
 				if err != nil {
 					return

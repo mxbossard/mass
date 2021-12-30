@@ -15,8 +15,6 @@ const ProjectPrefix = "project/"
 const ImagePrefix = "image/"
 
 var InvalidArgument error = fmt.Errorf("Invalid argument error")
-var InconsistentExpressionType error = fmt.Errorf("Expression type and kind are not consistent")
-var InconsistentExpression error = fmt.Errorf("Expression and kind are not consistent")
 
 // Resolve complex resource expression
 // type
@@ -73,7 +71,7 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 
 	if !expectAllKinds && len(notExpectedKinds) > 0 {
 		// Not expecting all kinds and found an expression kind not matching expectedKinds
-		err = InconsistentExpression
+		err = InconsistentExpression{expressions, &expectedKinds}
 		aggErr.Add(err)
 		return
 	}
@@ -97,6 +95,7 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 	return
 }
 
+// Split exprssion into a list of kinds and a list of expressions
 func splitExpressions(expressions string) (strippedExpressions []string, kinds []Kind, err error) {
 	splittedExpr := strings.Split(expressions, " ")
 
@@ -116,7 +115,7 @@ func splitExpressions(expressions string) (strippedExpressions []string, kinds [
 			firstExprIndex = 0
 			if len(splittedFirstExpr) > 1 {
 				// Unable to determine kind but multiple kind supplied
-				return nil, nil, UnknownKind
+				return nil, nil, UnknownKind{firstExprPart}
 			}
 		}
 	}
@@ -131,9 +130,24 @@ func splitExpressions(expressions string) (strippedExpressions []string, kinds [
 // If InconsistentExpressionType for all kinds it wins
 // Else return all errors
 func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr errorz.Aggregated) {
+	kindInExpr, name := splitExpression(expr)
+	if kindInExpr != AllKind {
+		// Expr contains a kind
+		found := IsKindIn(kindInExpr, kinds)
+		if !found {
+			// Kind in expr is not in kinds => Inconsistent
+			err := InconsistentExpressionType{expr, &kinds}
+			aggErr.Add(err)
+			return
+		} else {
+			// Restrict kinds to kind in expr
+			kinds = []Kind{kindInExpr}
+		}
+	}
+
 	errorByKind := map[Kind]error{}
 	for _, kind := range kinds {
-		res, err := resolveResource(expr, kind)
+		res, err := resolveResource(name, kind)
 		if err == nil {
 			return res, aggErr
 		} else {
@@ -141,16 +155,15 @@ func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr e
 		}
 	}
 
-	var notFound error
+	var notFoundKinds []Kind
 	var inconsistentExpressionTypeCount = 0
 	var unknownErrors errorz.Aggregated
 	var knownErrors errorz.Aggregated
-	for _, e := range errorByKind {
-		switch e {
+	for _, kind := range kinds {
+		e := errorByKind[kind]
+		switch e := e.(type) {
 		case ResourceNotFound:
-			notFound = e
-			knownErrors.Add(e)
-			break
+			notFoundKinds = append(notFoundKinds, kind)
 		case InconsistentExpressionType:
 			inconsistentExpressionTypeCount ++
 			knownErrors.Add(e)
@@ -161,11 +174,11 @@ func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr e
 
 	if unknownErrors.GotError() {
 		aggErr = unknownErrors
-	} else if notFound != nil {
+	} else if len(notFoundKinds) > 0 {
+		notFound := ResourceNotFound{name, &notFoundKinds}
 		aggErr.Add(notFound)
 	} else if len(kinds) == inconsistentExpressionTypeCount {
-		// FIXME; return new InconsistentExpressionType for all kinds
-		aggErr.Add(InconsistentExpressionType)
+		aggErr.Add(InconsistentExpressionType{expr, &kinds})
 	} else {
 		aggErr = knownErrors
 	}
@@ -185,14 +198,14 @@ func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
 
 	kind, name := splitExpression(expr)
 	if kind != AllKind && expectedKind != AllKind && kind != expectedKind {
-		err = InconsistentExpressionType
+		err = InconsistentExpressionType{expr, &[]Kind{expectedKind}}
 		return
 	}
 	if expectedKind == AllKind {
 		expectedKind = kind
 	}
 	if expectedKind == AllKind {
-		err = InconsistentExpression
+		err = InconsistentExpression{expr, &[]Kind{expectedKind}}
 		return
 	}
 
@@ -251,20 +264,24 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 
 	switch kind {
 	case EnvKind, ProjectKind:
-		return resolveResourceFrom(workspaceDir, name, kind)
+		r, err = resolveResourceFrom(workspaceDir, name, kind)
 	case ImageKind:
 		// Special case: if image name does not have project prefix, can be resolve from work dir
 		project, image := splitImageName(name)
 		if project == "" {
-			workDir, err := file.WorkDirPath()
-			if err != nil {
-				return r, err
+			workDir, err2 := file.WorkDirPath()
+			if err2 != nil {
+				return r, err2
 			}
 			image = filepath.Base(workDir) + "/" + image
-			return resolveResourceFrom(workDir, image, kind)
+			r, err = resolveResourceFrom(workDir, image, kind)
+		} else {
+			r, err = resolveResourceFrom(workspaceDir, name, kind)
 		}
-		return resolveResourceFrom(workspaceDir, name, kind)
+	}
 
+	if _, ok := err.(ResourceNotFound); err != nil && ok {
+		err = ResourceNotFound{name, &[]Kind{kind}}
 	}
 
 	return
@@ -287,7 +304,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 			return
 		}
 	}
-	err = ResourceNotFound
+	err = ResourceNotFound{name, &[]Kind{kind}}
 	return
 }
 
