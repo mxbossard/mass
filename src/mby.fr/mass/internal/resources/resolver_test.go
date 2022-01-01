@@ -140,7 +140,7 @@ func TestResolveResourceFrom(t *testing.T) {
 	} {
 		// --- Resolving relative resource name
 		// Project
-		{fakeWorkspacePath, project1, "", "", InvalidArgument}, // case 0
+		{fakeWorkspacePath, project1, -1, "", InvalidArgument}, // case 0
 		{fakeWorkspacePath, "", ProjectKind, "", InvalidArgument},
 		{"", project1, ProjectKind, "", InvalidArgument},
 		{fakeWorkspacePath, project1, ProjectKind, project1, nil},
@@ -151,7 +151,7 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath + "/" + envDir + env1, project1, ProjectKind, "", ResourceNotFound{project1, &[]Kind{ProjectKind}}},
 
 		// Env
-		{fakeWorkspacePath, env1, "", "", InvalidArgument},
+		{fakeWorkspacePath, env1, -1, "", InvalidArgument},
 		{fakeWorkspacePath, env1, EnvKind, env1, nil}, // case 10
 		{fakeWorkspacePath, env1, ProjectKind, "", ResourceNotFound{env1, &[]Kind{ProjectKind}}},
 		{fakeWorkspacePath, env1, ImageKind, "", ResourceNotFound{env1, &[]Kind{ImageKind}}},
@@ -160,7 +160,7 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath + "/" + project2, env1, EnvKind, "", ResourceNotFound{env1, &[]Kind{EnvKind}}},
 
 		// Image
-		{fakeWorkspacePath, image11, "", "", InvalidArgument},
+		{fakeWorkspacePath, image11, -1, "", InvalidArgument},
 		{fakeWorkspacePath, image11, ImageKind, "", ResourceNotFound{image11, &[]Kind{ImageKind}}},
 		{fakeWorkspacePath, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{fakeWorkspacePath, project1 + "/" + image11, ProjectKind, "", ResourceNotFound{project1 + "/" + image11, &[]Kind{ProjectKind}}},
@@ -204,7 +204,7 @@ func TestResolveContextualResource(t *testing.T) {
 		errWanted error
 	} {
 		// Project
-		{"/", project1, "", "", InvalidArgument}, // case 0
+		{"/", project1, -1, "", InvalidArgument}, // case 0
 		{"/", "", ProjectKind, "", InvalidArgument},
 		{"/", project1, ProjectKind, project1, nil},
 		{"/", project1, EnvKind, "", ResourceNotFound{project1, &[]Kind{EnvKind}}},
@@ -214,7 +214,7 @@ func TestResolveContextualResource(t *testing.T) {
 		{"/" + envDir + env1, project1, ProjectKind, project1, nil},
 
 		// Env
-		{"/", env1, "", "", InvalidArgument},
+		{"/", env1, -1, "", InvalidArgument},
 		{"/", "", EnvKind, "", InvalidArgument},
 		{"/", env1, EnvKind, env1, nil}, // case 10
 		{"/", env1, ProjectKind, "", ResourceNotFound{env1, &[]Kind{ProjectKind}}},
@@ -224,7 +224,7 @@ func TestResolveContextualResource(t *testing.T) {
 		{"/" + project2, env1, EnvKind, env1, nil},
 
 		// Image absolute
-		{"/", image11, "", "", InvalidArgument},
+		{"/", image11, -1, "", InvalidArgument},
 		{"/", "", ImageKind, "", InvalidArgument},
 		{"/", image11, ImageKind, "", ResourceNotFound{image11, &[]Kind{ImageKind}}},
 		{"/", project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},

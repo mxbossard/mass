@@ -19,53 +19,12 @@ const DefaultInitialVersion = "0.0.1"
 const DefaultBuildFile = "Dockerfile"
 const DefaultResourceFile = "resource.yaml"
 
-type Kind string
-func (k Kind) String() string {
-	return string(k)
-}
-
-const AllKind Kind = "all"
-const EnvKind Kind = "env"
-const ProjectKind Kind = "project"
-const ImageKind Kind = "image"
-
-var kindAlias = map[Kind][]string {
-	EnvKind: []string{EnvKind.String()[0:1], EnvKind.String(), EnvKind.String() + "s"},
-	ProjectKind: []string{ProjectKind.String()[0:1], ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind: []string{ImageKind.String()[0:1], ImageKind.String(), ImageKind.String() + "s"},
-	AllKind: []string{AllKind.String()},
-}
-
 type Resource interface {
 	Kind() Kind
 	Name() string
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
-}
-
-func KindExists(k Kind) bool {
-	return k == EnvKind || k == ProjectKind || k == ImageKind || k == AllKind
-}
-
-func KindFromAlias(alias string) (Kind, bool) {
-	for k, v := range kindAlias {
-		for _, a := range v {
-			if alias == a {
-				return k, true
-			}
-		}
-	}
-	return "", false
-}
-
-func IsKindIn(kind Kind, kinds []Kind) bool {
-	for _, k := range kinds {
-		if k == AllKind || k == kind {
-			return true
-		}
-	}
-	return false
 }
 
 type Base struct {
@@ -379,13 +338,13 @@ func Write(r Resource) (err error) {
 	defer writeLock.Unlock()
 
 	var content []byte
-	switch r.(type) {
-		case Env:
+	switch r := r.(type) {
+		case Env, Project, Image:
 		content, err = yaml.Marshal(r)
-		case Project:
-		content, err = yaml.Marshal(r)
-		case Image:
-		content, err = yaml.Marshal(r)
+		//case Project:
+		//content, err = yaml.Marshal(r)
+		//case Image:
+		//content, err = yaml.Marshal(r)
 		default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
 		return

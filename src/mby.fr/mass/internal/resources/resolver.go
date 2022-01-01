@@ -313,7 +313,7 @@ func isResourceMatchingExpr(r Resource, expr string) bool {
 }
 
 func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err error) {
-	if resourceKind == "" || resourceKind == EnvKind {
+	if resourceKind == AllKind || resourceKind == EnvKind {
 		envs, err := ScanEnvs(fromDir)
 		if err != nil {
 			return r, err
@@ -323,7 +323,7 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err err
 		}
 	}
 
-	if resourceKind == "" || resourceKind == ProjectKind {
+	if resourceKind == AllKind || resourceKind == ProjectKind {
 		projects, err := ScanProjects(fromDir)
 		if err != nil {
 			return r, err
@@ -333,7 +333,7 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err err
 		}
 	}
 
-	if resourceKind == "" || resourceKind == ImageKind {
+	if resourceKind == AllKind || resourceKind == ImageKind {
 		images, err := ScanImages(fromDir)
 		if err != nil {
 			return r, err
