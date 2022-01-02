@@ -279,7 +279,7 @@ func Read(path string) (r Resource, err error) {
 	content, err := os.ReadFile(resourceFilepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = ResourceNotFound{path, &[]Kind{AllKind}}
+			err = ResourceNotFound{path, NewKindSet(AllKind)}
 		}
 		return
 	}

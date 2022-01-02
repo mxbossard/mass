@@ -7,7 +7,7 @@ import (
 
 type ResourceNotFound struct {
 	Expression string
-	Kinds *[]Kind
+	Kinds *KindSet
 }
 func (e ResourceNotFound) Error() string {
 	message := fmt.Sprintf("Resource not found: %s for kinds: %v", e.Expression, *e.Kinds)
@@ -23,7 +23,7 @@ func (e UnknownKind) Error() string {
 
 type InconsistentExpressionType struct {
 	Expression string
-	ExpectedTypes *[]Kind
+	ExpectedTypes *KindSet
 }
 func (e InconsistentExpressionType) Error() string {
 	return fmt.Sprintf("Expression type: %s is not consistent with expected kinds: %v", e.Expression, *e.ExpectedTypes)
@@ -31,7 +31,7 @@ func (e InconsistentExpressionType) Error() string {
 
 type InconsistentExpression struct {
 	Expression string
-	ExpectedTypes *[]Kind
+	ExpectedTypes *KindSet
 }
 func (e InconsistentExpression) Error() string {
         return fmt.Sprintf("Expression: %s is not consistent with expected kinds: %v", e.Expression, *e.ExpectedTypes)

@@ -71,7 +71,7 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 
 	if !expectAllKinds && len(notExpectedKinds) > 0 {
 		// Not expecting all kinds and found an expression kind not matching expectedKinds
-		err = InconsistentExpression{expressions, &expectedKinds}
+		err = InconsistentExpression{expressions, NewKindSet(expectedKinds...)}
 		aggErr.Add(err)
 		return
 	}
@@ -83,7 +83,7 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 
 	// resolve all expressions versus all expr kinds
 	for _, expr := range splittedExpr {
-		res, errors := resolveExpresionForKinds(expr, exprKinds)
+		res, errors := resolveExpresionForKinds(expr, *NewKindSet(exprKinds...))
 		//fmt.Printf("Resolved exprs: %s with kind: %s and found: %s\n", expr, exprKind, res)
 		if errors.GotError() {
 			aggErr.Concat(errors)
@@ -129,19 +129,17 @@ func splitExpressions(expressions string) (strippedExpressions []string, kinds [
 // If a NotFoundError for a kind return it
 // If InconsistentExpressionType for all kinds it wins
 // Else return all errors
-func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr errorz.Aggregated) {
+func resolveExpresionForKinds(expr string, kinds KindSet) (res Resource, aggErr errorz.Aggregated) {
 	kindInExpr, name := splitExpression(expr)
 	if kindInExpr != AllKind {
-		// Expr contains a kind
-		found := IsKindIn(kindInExpr, kinds)
-		if !found {
+		if !kinds.Contains(kindInExpr) {
 			// Kind in expr is not in kinds => Inconsistent
 			err := InconsistentExpressionType{expr, &kinds}
 			aggErr.Add(err)
 			return
 		} else {
 			// Restrict kinds to kind in expr
-			kinds = []Kind{kindInExpr}
+			kinds = *NewKindSet(kindInExpr)
 		}
 	}
 
@@ -175,7 +173,7 @@ func resolveExpresionForKinds(expr string, kinds []Kind) (res Resource, aggErr e
 	if unknownErrors.GotError() {
 		aggErr = unknownErrors
 	} else if len(notFoundKinds) > 0 {
-		notFound := ResourceNotFound{name, &notFoundKinds}
+		notFound := ResourceNotFound{name, NewKindSet(notFoundKinds...)}
 		aggErr.Add(notFound)
 	} else if len(kinds) == inconsistentExpressionTypeCount {
 		aggErr.Add(InconsistentExpressionType{expr, &kinds})
@@ -198,14 +196,14 @@ func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
 
 	kind, name := splitExpression(expr)
 	if kind != AllKind && expectedKind != AllKind && kind != expectedKind {
-		err = InconsistentExpressionType{expr, &[]Kind{expectedKind}}
+		err = InconsistentExpressionType{expr, NewKindSet(expectedKind)}
 		return
 	}
 	if expectedKind == AllKind {
 		expectedKind = kind
 	}
 	if expectedKind == AllKind {
-		err = InconsistentExpression{expr, &[]Kind{expectedKind}}
+		err = InconsistentExpression{expr, NewKindSet(expectedKind)}
 		return
 	}
 
@@ -281,7 +279,7 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 	}
 
 	if _, ok := err.(ResourceNotFound); err != nil && ok {
-		err = ResourceNotFound{name, &[]Kind{kind}}
+		err = ResourceNotFound{name, NewKindSet(kind)}
 	}
 
 	return
@@ -304,7 +302,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 			return
 		}
 	}
-	err = ResourceNotFound{name, &[]Kind{kind}}
+	err = ResourceNotFound{name, NewKindSet(kind)}
 	return
 }
 

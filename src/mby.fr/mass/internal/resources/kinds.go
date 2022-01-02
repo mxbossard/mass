@@ -2,21 +2,9 @@ package resources
 
 import(
 	"fmt"
-	//"os"
-	//"sync"
-	//"path/filepath"
-        //"gopkg.in/yaml.v2"
+	"strings"
+	"sort"
 )
-
-//type Kind string
-//func (k Kind) String() string {
-//	return string(k)
-//}
-//
-//const AllKind Kind = "all"
-//const EnvKind Kind = "env"
-//const ProjectKind Kind = "project"
-//const ImageKind Kind = "image"
 
 type Kind int
 const (
@@ -71,23 +59,49 @@ func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	return nil
 }
-type KindSet map[Kind]struct{}
-var exists = struct{}{}
-var allKindSet = map[Kind]struct{}{AllKind: exists}
+type KindSet map[Kind]Kind
 
-func Kinds(kinds ...Kind) KindSet {
+func (s KindSet) String() string {
+	kinds := make([]string, 0, len(s))
+	for _, k := range s.Kinds() {
+		kinds = append(kinds, k.String())
+	}
+	sort.Strings(kinds)
+	return strings.Join(kinds, ",")
+}
+
+func (s KindSet) Kinds() []Kind {
+	kinds := make([]Kind, 0, len(s))
+	for k := range s {
+		kinds = append(kinds, k)
+	}
+	return kinds
+}
+
+func (s KindSet) Contains(kind Kind) bool {
+	for _, k := range s.Kinds() {
+		if k == AllKind || k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+var allKindSet = &KindSet{AllKind: AllKind}
+
+func NewKindSet(kinds ...Kind) *KindSet {
 	set := KindSet{}
 	for _, k := range kinds {
 		if k == AllKind {
 			return allKindSet
 		}
-		set[k] = exists
+		set[k] = k
 	}
 
-	//if len(kinds) == 0 {
-	//	return allKindSet
-	//}
-	return set
+	if len(kinds) == 0 {
+		return allKindSet
+	}
+	return &set
 }
 
 var kindAlias = map[Kind][]string {
