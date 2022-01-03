@@ -1,7 +1,7 @@
 package display
 
 import (
-	"os"
+	"io"
 	"fmt"
 	"reflect"
 	//"strings"
@@ -14,31 +14,24 @@ import (
 // TODO: Pass a writer to the printer and unittest it with a string writer.
 
 type Printer interface {
-	//Error(error)
-	//Config(config.Config)
-	//AggregatedError(errorz.Aggregated)
+	Out(...interface{}) error
+	Err(...interface{}) error
 	Print(...interface{}) error
 }
 
 type Basic struct {
-
+	out, err io.Writer
 }
 
-func (p Basic) Error(err error) {
-	fmt.Printf("Error: %s !\n", err)
+func (p Basic) Out(objects ...interface{}) (err error) {
+	_, err = fmt.Fprint(p.out, objects...)
+	return
 }
 
-func (p Basic) Config(c config.Config) {
-	renderer := templates.New("")
-	renderer.Render("display/basic/config.tpl", os.Stdout, c)
+func (p Basic) Err(objects ...interface{}) (err error) {
+	_, err = fmt.Fprint(p.err, objects...)
+	return
 }
-
-func (p Basic) AggregatedError(errors errorz.Aggregated) {
-	for _, err := range errors.Errors() {
-		p.Error(err)
-	}
-}
-
 
 func (p Basic) Print(objects ...interface{}) (err error) {
 	for _, obj := range objects {
@@ -59,11 +52,14 @@ func (p Basic) Print(objects ...interface{}) (err error) {
 
 		switch o:= obj.(type) {
 		case errorz.Aggregated:
-			p.AggregatedError(o)
+			for _, err := range o.Errors() {
+				fmt.Fprintf(p.err, "Error: %s !\n", err)
+			}
 		case error:
-			p.Error(o)
+			fmt.Fprintf(p.err, "Error: %s !\n", err)
 		case config.Config:
-			p.Config(o)
+			renderer := templates.New("")
+			renderer.Render("display/basic/config.tpl", p.out, o)
 		default:
 			err = fmt.Errorf("Unable to Print object of type: %T", obj)
 			return
