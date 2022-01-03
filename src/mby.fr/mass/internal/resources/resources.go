@@ -22,6 +22,7 @@ const DefaultResourceFile = "resource.yaml"
 type Resource interface {
 	Kind() Kind
 	Name() string
+	AbsoluteName() string
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
@@ -39,6 +40,10 @@ func (r Base) Kind() Kind {
 
 func (r Base) Name() string {
 	return r.name
+}
+
+func (r Base) AbsoluteName() string {
+	return fmt.Sprintf("%s/%s", r.ResourceKind, r.Name())
 }
 
 func (r Base) Dir() string {
@@ -152,7 +157,9 @@ func (i Image) Init() (err error) {
 	err = os.MkdirAll(i.SourceDir(), 0755)
 
 	// Init Build file
-        _, err = file.SoftInitFile(i.BuildFile, "")
+	buildfileContent := ""
+	//buildfileContent := "FROM alpine\n"
+        _, err = file.SoftInitFile(i.BuildFile, buildfileContent)
 
 	if err != nil {
 		return
