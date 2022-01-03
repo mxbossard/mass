@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -e
 scriptDir=$( dirname $( readlink -f $0 ) )
 
 workspaceDir="/tmp/massWorkspace"
@@ -90,7 +90,7 @@ tree -Ca $workspaceDir
 mass config e/dev
 mass config p/p1 i/p1/i11
 mass config -e stage p/p1 i/p1/i11
-mass config p,i p1 p1/i11 notExist
+mass config p,i p1 p1/i11 notExist || true
 
-mass build e/dev p/p1
+mass build e/dev p/p1 || true
 mass build p/p1

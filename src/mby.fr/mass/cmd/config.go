@@ -18,12 +18,10 @@ package cmd
 import (
 	//"fmt"
 	//"log"
-	"strings"
 
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/resources"
-	"mby.fr/mass/internal/display"
+	"mby.fr/mass/internal/workspace"
 )
 
 // configCmd represents the config command
@@ -33,22 +31,7 @@ var configCmd = &cobra.Command{
 	Long: ``,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		resourceExpr := strings.Join(args, " ")
-		configs, errors := resources.MergedConfig(resourceExpr)
-		display := display.New()
-		display.Display(configs, errors)
-
-		//if errors.GotError() {
-		//	log.Fatal(errors)
-		//}
-
-		//if len(configs) == 0 {
-		//	fmt.Printf("no config found\n")
-		//}
-
-		//for _, c := range configs {
-		//	display.Config(c)
-		//}
+		workspace.GetResourcesConfig(args)
 	},
 }
 

@@ -16,16 +16,9 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	//"os"
-	"strings"
-	"log"
-
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/resources"
-	"mby.fr/mass/internal/display"
-	"mby.fr/mass/internal/build"
+	"mby.fr/mass/internal/workspace"
 )
 
 // buildCmd represents the build command
@@ -35,25 +28,7 @@ var buildCmd = &cobra.Command{
 	Long: ``,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		resourceExpr := strings.Join(args, " ")
-		resources, errorz := resources.ResolveExpression(resourceExpr)
-		if errorz.GotError() {
-			display := display.New()
-			display.Display(errorz)
-			//os.Exit(1)
-		}
-
-		for _, res := range resources {
-			builder, err := build.New(res)
-			if err != nil {
-				log.Fatal(err)
-			}
-			err = builder.Build()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		fmt.Println("Build finished")
+		workspace.BuildResources(args)
 	},
 }
 
