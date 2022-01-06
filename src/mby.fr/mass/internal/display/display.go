@@ -57,6 +57,8 @@ func tune(tuners *[]Tuner, msg interface{}) interface{} {
 type ansiFormatted struct {
 	format string
 	content interface{}
+	tab bool
+	leftPad, rightPad int
 }
 
 //func (f ansiFormatted) String() string {
@@ -64,7 +66,7 @@ type ansiFormatted struct {
 //}
 
 func Format(format string, object interface{}) ansiFormatted {
-	return ansiFormatted{format, object}
+	return ansiFormatted{format: format, content: object}
 }
 
 var colorCounter = 0
@@ -100,7 +102,10 @@ func (a ActionLogger) End() {
 }
 
 func formatLevel(format, level string) ansiFormatted {
-	return Format(format, fmt.Sprintf("[%s]", level))
+	f := Format(format, fmt.Sprintf("[%s]", level))
+	//f.leftPad = 7
+	f.rightPad = 8
+	return f
 }
 
 func printActionMessages(printerFunc func(...interface{}) error, actionLogger ActionLogger, level string, messages ...interface{}) {
@@ -108,12 +113,14 @@ func printActionMessages(printerFunc func(...interface{}) error, actionLogger Ac
 	tuners := append(*actionLogger.tuners, colorTuner)
 
 	// Log prefix
-	prefix := fmt.Sprintf("%s(%s)", actionLogger.action, actionLogger.subject)
+	prefix := Format("", fmt.Sprintf("%s(%s)", actionLogger.action, actionLogger.subject))
+	prefix.rightPad = 25
 
 	// Log level
 	var formattedLevel interface{}
 	switch level {
 	case "":
+		//formattedLevel = formatLevel("", "")
 		formattedLevel = ""
 	case "TRACE":
 		formattedLevel = formatLevel(traceAnsiColor, level)

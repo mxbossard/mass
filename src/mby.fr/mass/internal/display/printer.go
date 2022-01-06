@@ -76,11 +76,31 @@ func stringify(obj interface{}) (str string, err error) {
 	case string:
 		str = o
 	case ansiFormatted:
+		if o.content == "" {
+			return "", nil
+		}
 		content, err := stringify(o.content)
 		if err != nil {
 			return "", err
 		}
-		str = fmt.Sprintf("%s%s%s", o.format, content, ansiClear)
+		if o.format != "" {
+			str = fmt.Sprintf("%s%s%s", o.format, content, ansiClear)
+		} else {
+			str = content
+		}
+		if o.tab {
+			str += "\t"
+		} else if o.leftPad > 0 {
+			spaceCount := o.leftPad - len(content)
+			if spaceCount > 0 {
+				str = strings.Repeat(" ", spaceCount) + str
+			}
+		} else if o.rightPad > 0 {
+			spaceCount := o.rightPad - len(content)
+			if spaceCount > 0 {
+				str += strings.Repeat(" ", spaceCount)
+			}
+		}
 	case error:
 		str = fmt.Sprintf("Error: %s !\n", err)
 	case config.Config:
@@ -115,55 +135,29 @@ func expandObjects(objects ...interface{}) (allObjects []interface{}) {
 }
 
 func printTo(w io.Writer, objects ...interface{}) (err error) {
-	//p.Lock()
-	//defer p.Unlock()
-	//p.lastPrint = time.Now()
-	var k = 0
 	objects = expandObjects(objects)
-	for _, obj := range objects {
-		var toPrint string
+	var toPrint []string
 
+	for _, obj := range objects {
 		switch o:= obj.(type) {
-		//case string:
-		//	toPrint = o
-	        //case ansiFormatted:
-		//	fmt.Fprintf(w, o.format)
-	        //        printTo(w, o.content)
-		//	fmt.Fprintf(w, ansiClear)
 		case errorz.Aggregated:
 			for _, err := range o.Errors() {
 				//fmt.Fprintf(w, "Error: %s !\n", err)
 				printTo(w, err)
 			}
-		//case error:
-		//	toPrint = fmt.Sprintf("Error: %s !\n", err)
-		//case config.Config:
-		//	renderer := templates.New("")
-		//	renderer.Render("display/basic/config.tpl", w, o)
 		default:
-		//	err = fmt.Errorf("Unable to Print object of type: %T", obj)
-		//	return
-			toPrint, err = stringify(o)
+			str, err := stringify(o)
 			if err != nil {
 				return err
 			}
-		}
-
-		if toPrint != "" {
-			// k represent the printed objects count
-			spacer := ""
-			if k > 0 {
-				spacer = ""
-			}
-			k ++
-			//fmt.Printf("k: %d / obj(%T): %s / objects(%d): %T %s\n",  k, obj, obj, len(objects), objects)
-			// Print space between printable objects
-			_, err = fmt.Fprintf(w, "%s%s", toPrint, spacer)
-			if err != nil {
-				return
+			if len(str) > 0 {
+				//fmt.Printf("adding str: %d [%s](%T)\n", len(str), str, str)
+				toPrint = append(toPrint, str)
 			}
 		}
 	}
+	//fmt.Printf("toPrint: %d %s\n", len(toPrint), toPrint)
+	_, err = fmt.Fprintf(w, "%s", strings.Join(toPrint, " "))
 	return
 }
 
