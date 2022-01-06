@@ -37,6 +37,7 @@ func (o BasicOutputs) Err() io.Writer {
 }
 
 type Printer interface {
+	Outputs() Outputs
 	Out(...interface{}) error
 	Err(...interface{}) error
 	//Print(...interface{}) error
@@ -47,6 +48,10 @@ type BasicPrinter struct {
 	sync.Mutex
 	outputs Outputs
 	lastPrint time.Time
+}
+
+func (p *BasicPrinter) Outputs() Outputs {
+	return p.outputs
 }
 
 func (p *BasicPrinter) Out(objects ...interface{}) (err error) {

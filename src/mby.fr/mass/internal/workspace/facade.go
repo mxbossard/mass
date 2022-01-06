@@ -30,13 +30,14 @@ func buildResource(res resources.Resource) error {
 
 func printErrors(errors errorz.Aggregated) {
 	if errors.GotError() {
-		display := display.New()
+		display := display.Service()
 		display.Display(errors)
 	}
 }
 
 func BuildResources(args []string) {
 	res, errors := ResolveExpression(args)
+	//fmt.Println(res)
 	printErrors(errors)
 	for _, r := range res {
 		err := buildResource(r)
@@ -51,6 +52,6 @@ func GetResourcesConfig(args []string) {
 	res, errors := ResolveExpression(args)
 	printErrors(errors)
 	configs, errors := resources.MergedConfigs(res)
-	display := display.New()
+	display := display.Service()
 	display.Display(configs, errors)
 }

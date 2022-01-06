@@ -63,7 +63,7 @@ func actionLogger(d display.Displayer, action, subject string, logCount int) {
 }
 
 func main() {
-	d := display.New()
+	d := display.Service()
 	actionLoggerCount := 100
 	maxActiveActionLogger := 5
 	maxLogCount := 30

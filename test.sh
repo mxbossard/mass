@@ -63,6 +63,7 @@ environment:
   ekey3: eimage11
   ctx: image
 EOF
+echo "FROM alpine" > p1/i11/Dockerfile
 
 cat <<EOF > p2/i21/config.yaml
 labels:

@@ -2,9 +2,11 @@ package display
 
 import (
 	//"os"
+	"io"
 	"fmt"
 	//"strings"
 	"log"
+	"bytes"
 
 	//"mby.fr/mass/internal/config"
 	//"mby.fr/mass/internal/templates"
@@ -26,6 +28,7 @@ type Stringer interface {
 	String() string
 }
 
+// Tune objects converting them to other objects
 type Tuner func(interface{}) interface{}
 
 var (
@@ -54,6 +57,7 @@ func tune(tuners *[]Tuner, msg interface{}) interface{} {
 	return msg
 }
 
+// ANSI formatting for content
 type ansiFormatted struct {
 	format string
 	content interface{}
@@ -99,6 +103,46 @@ func (a ActionLogger) Progress(percent int8) {
 
 func (a ActionLogger) End() {
 
+}
+
+type CallbackLineWriter struct {
+	buffer bytes.Buffer
+	callback func(string)
+}
+
+func (w CallbackLineWriter) Write(p []byte) (n int, err error) {
+	n, err = w.buffer.Write(p)
+	if err != nil {
+		return
+	}
+	fmt.Println("avant:", w.buffer.String(), w.buffer.Len())
+	for line, err := w.buffer.ReadBytes(byte('\n')); err == nil ; {
+		fmt.Println("pendant:", w.buffer.String(), w.buffer.Len())
+		n := w.buffer.Len()
+		//fmt.Println("n", n, w.Len(), len(line))
+		w.buffer.Truncate(n)
+		//fmt.Println("apres:", w.String())
+		w.callback(string(line))
+		if w.buffer.Len() == 0 {
+			break
+		}
+	}
+	return
+}
+
+
+func (a ActionLogger) Out() io.Writer {
+	writer := CallbackLineWriter{callback: func(line string) {
+		a.Info(line)
+	}}
+	return writer
+}
+
+func (a ActionLogger) Err() io.Writer {
+	writer := CallbackLineWriter{callback: func(line string) {
+		a.Error(line)
+	}}
+	return writer
 }
 
 func formatLevel(format, level string) ansiFormatted {
@@ -211,9 +255,13 @@ func (d StandarDisplay) ActionLogger(action, subject string) ActionLogger {
 	return ActionLogger{0, action, subject, d.tuners, &printer, getOkAnsiColor()}
 }
 
-func New() Displayer {
+func newInstance() Displayer {
 	var printer Printer = NewPrinter(NewStandardOutputs())
 	tuners := []Tuner{}
 	return StandarDisplay{&printer, &tuners}
 }
 
+var service = newInstance()
+func Service() Displayer {
+	return service
+}

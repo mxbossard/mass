@@ -1,12 +1,12 @@
 package build
 
 import (
-	"bytes"
+	//"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 
 	"mby.fr/mass/internal/resources"
+	"mby.fr/mass/internal/display"
 )
 
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
@@ -48,15 +48,16 @@ func (b DockerBuilder) Build() (err error) {
 }
 
 func buildDockerImage(binary string, image resources.Image) (err error) {
-	fmt.Fprintf(os.Stdout, "Building image: %s ...\n", image.Name())
+	logger := display.Service().ActionLogger("build", image.Name())
+	logger.Log("Building image:", image.Name(), "...")
 	cmd := exec.Command(binary, "build", ".")
 	cmd.Dir = image.Dir()
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	//var stdout, stderr bytes.Buffer
+	cmd.Stdout = logger.Out()
+	cmd.Stderr = logger.Err()
 	err = cmd.Run()
-	fmt.Fprint(os.Stdout, stdout.String())
-	fmt.Fprint(os.Stderr, stderr.String())
+	//fmt.Fprint(os.Stdout, stdout.String())
+	//fmt.Fprint(os.Stderr, stderr.String())
 	if err != nil {
 		return fmt.Errorf("Error building image %s : %w", image.Name(), err)
 	}
