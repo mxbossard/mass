@@ -95,27 +95,32 @@ func stringify(obj interface{}) (str string, err error) {
 	return
 }
 
-func printTo(w io.Writer, objects ...interface{}) (err error) {
-	//p.Lock()
-	//defer p.Unlock()
-	//p.lastPrint = time.Now()
-	var k = 0
+func expandObjects(objects ...interface{}) (allObjects []interface{}) {
 	for _, obj := range objects {
-
 		// Recursive call if obj is an array or a slice
 		t := reflect.TypeOf(obj)
 		if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
 			arrayValue := reflect.ValueOf(obj)
 			for i := 0; i < arrayValue.Len(); i++ {
 				value := arrayValue.Index(i).Interface()
-				err = printTo(w, value)
-				if err != nil {
-					return
-				}
+				expanded := expandObjects(value)
+				allObjects = append(allObjects, expanded...)
 			}
 			continue
+		} else {
+			allObjects = append(allObjects, obj)
 		}
+	}
+	return
+}
 
+func printTo(w io.Writer, objects ...interface{}) (err error) {
+	//p.Lock()
+	//defer p.Unlock()
+	//p.lastPrint = time.Now()
+	var k = 0
+	objects = expandObjects(objects)
+	for _, obj := range objects {
 		var toPrint string
 
 		switch o:= obj.(type) {
