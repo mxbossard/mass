@@ -52,19 +52,28 @@ func infiniteActionLogger(d display.Displayer, action, subject string) {
 
 func actionLogger(d display.Displayer, action, subject string, logCount int) {
 	al := d.ActionLogger(action, subject)
-	funcs := []func(...interface{}){al.Log, al.Trace, al.Debug, al.Info, al.Warn, al.Error, al.Fatal}
-	for i := 0; i < logCount; i++ {
-		text := strconv.Itoa(i) + " " + produceText()
+	funcs := []func(...interface{}){al.Log, al.Trace, al.Debug, al.Warn, al.Error, al.Fatal}
+	al.Info("Will log", logCount, "line(s).")
+	var i = 0
+	Loop:
+	for {
 		for _, f := range funcs {
+			if i == logCount {
+				al.Info("End logging. Logged", logCount, "line(s).")
+				break Loop
+			}
+			text := strconv.Itoa(i) + " " + produceText()
 			f(text)
 			time.Sleep(logPeriodInMs * time.Millisecond)
+			i ++
 		}
 	}
+	al.Flush()
 }
 
 func main() {
 	d := display.Service()
-	actionLoggerCount := 100
+	actionLoggerCount := 20
 	maxActiveActionLogger := 5
 	maxLogCount := 30
 
@@ -80,13 +89,14 @@ func main() {
 		logCount := random.Intn(maxLogCount)
 		go func() {
 			defer wg.Done()
-			fmt.Printf("Launching ActionLoger: %s %s for %d lines ...\n", action, subject, logCount)
+			//fmt.Printf("Launching ActionLoger: %s %s for %d lines ...\n", action, subject, logCount)
 			actionLogger(d, action, subject, logCount)
-			fmt.Printf("Finished ActionLoger: %s %s printed %d lines.\n", action, subject, logCount)
+			//fmt.Printf("Finished ActionLoger: %s %s printed %d lines.\n", action, subject, logCount)
 			<- ch
 		}()
 	}
 
 	wg.Wait()
+	d.Flush()
 	fmt.Println("finished")
 }

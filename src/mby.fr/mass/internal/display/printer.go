@@ -10,6 +10,7 @@ import (
 	"sync"
 	"log"
 	"strings"
+	"strconv"
 
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/templates"
@@ -19,13 +20,32 @@ import (
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
 // Printer responsible for printing messages in outputs (example: print with colors, without colors, ...)
 
+type Flusher interface {
+	Flush() error
+}
+
 type Outputs interface {
+	Flusher
 	Out() io.Writer
 	Err() io.Writer
 }
 
 type BasicOutputs struct {
 	out, err io.Writer
+}
+
+func (o BasicOutputs) Flush() error {
+	outs := []io.Writer{o.out, o.err}
+	for _, out := range outs {
+		f, ok := out.(Flusher)
+		if ok {
+			err := f.Flush()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (o BasicOutputs) Out() io.Writer {
@@ -38,6 +58,7 @@ func (o BasicOutputs) Err() io.Writer {
 
 type Printer interface {
 	Outputs() Outputs
+	Flush() error
 	Out(...interface{}) error
 	Err(...interface{}) error
 	//Print(...interface{}) error
@@ -52,6 +73,12 @@ type BasicPrinter struct {
 
 func (p *BasicPrinter) Outputs() Outputs {
 	return p.outputs
+}
+
+func (o BasicPrinter) Flush() error {
+        o.Lock()
+        defer o.Unlock()
+	return o.outputs.Flush()
 }
 
 func (p *BasicPrinter) Out(objects ...interface{}) (err error) {
@@ -80,6 +107,11 @@ func stringify(obj interface{}) (str string, err error) {
 	switch o:= obj.(type) {
 	case string:
 		str = o
+	case int:
+                str = strconv.Itoa(o)
+        case float64:
+                str = strconv.FormatFloat(o, 'E', 3, 32)
+
 	case ansiFormatted:
 		if o.content == "" {
 			return "", nil
@@ -228,6 +260,7 @@ func flushMainPrinter() {
 
 func flushOtherPrinters() {
 	for {
+		time.Sleep(logPeriodInSeconds * time.Second)
 		globalMutex.Lock()
 		if len(flushablePrinters) > 0 {
 			for _, printer := range flushablePrinters {
@@ -237,7 +270,6 @@ func flushOtherPrinters() {
 			}
 		}
 		globalMutex.Unlock()
-		time.Sleep(logPeriodInSeconds * time.Second)
 	}
 }
 

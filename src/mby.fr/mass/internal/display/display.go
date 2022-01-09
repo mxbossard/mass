@@ -7,6 +7,7 @@ import (
 	//"strings"
 	"log"
 	"bytes"
+	"sync"
 
 	//"mby.fr/mass/internal/config"
 	//"mby.fr/mass/internal/templates"
@@ -22,7 +23,7 @@ const warnAnsiColor = "\033[0;31;43m"
 const errorAnsiColor = "\033[0;97;41m"
 const fatalAnsiColor = "\033[0;97;45m"
 
-var okAnsiColors []string = []string{ansiClear, "\033[0;91m", "\033[0;92m", "\033[0;93m", "\033[0;94m", "\033[0;95m", "\033[0;96m", "\033[0;31m", "\033[0;32m", "\033[0;33m", "\033[0;34m", "\033[0;35m", "\033[0;36m"}
+var okAnsiColors []string = []string{ansiClear, "\033[0;92m", "\033[0;93m", "\033[0;94m", "\033[0;95m", "\033[0;96m", "\033[0;32m", "\033[0;33m", "\033[0;34m", "\033[0;35m", "\033[0;36m"} // Remove red colors "\033[0;91m" "\033[0;31m"
 
 type Stringer interface {
 	String() string
@@ -80,37 +81,24 @@ func getOkAnsiColor() string {
 	return ansiColor
 }
 
-type ActionLogger struct {
-	level uint8
-	action, subject string
-	tuners *[]Tuner
-	printer *Printer
-	ansiColor string
-}
-
-func (a ActionLogger) Nested(action, subject string) ActionLogger {
-	var printer Printer = NewPrinter(NewStandardOutputs())
-	return ActionLogger{a.level + 1, action, subject, a.tuners, &printer, getOkAnsiColor()}
-}
-
-func (a ActionLogger) Start() {
-
-}
-
-func (a ActionLogger) Progress(percent int8) {
-
-}
-
-func (a ActionLogger) End() {
-
-}
-
 type CallbackLineWriter struct {
+	sync.Mutex
+	Flusher
 	buffer bytes.Buffer
 	callback func(string)
 }
 
+func (w CallbackLineWriter) Flush() error {
+	w.Lock()
+	defer w.Unlock()
+	w.callback(w.buffer.String())
+	w.buffer.Reset()
+	return nil
+}
+
 func (w CallbackLineWriter) Write(p []byte) (n int, err error) {
+	w.Lock()
+	defer w.Unlock()
 	n, err = w.buffer.Write(p)
 	if err != nil {
 		return
@@ -130,19 +118,65 @@ func (w CallbackLineWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
+func NewActionLogger(action, subject string) ActionLogger {
+	var printer Printer = NewPrinter(NewStandardOutputs())
+	var tuners []Tuner
+	al := ActionLogger{action: action, subject: subject, tuners: &tuners, printer: &printer, ansiColor: getOkAnsiColor()}
+	al.out = CallbackLineWriter{callback: func(line string) {
+                al.Info(line)
+        }}
+	al.err = CallbackLineWriter{callback: func(line string) {
+                al.Error(line)
+        }}
+	return al
+}
+
+type ActionLogger struct {
+	//Outputs
+	level uint8
+	action, subject string
+	tuners *[]Tuner
+	printer *Printer
+	ansiColor string
+	out, err CallbackLineWriter
+}
+
+func (a ActionLogger) Nested(action, subject string) ActionLogger {
+	return NewActionLogger(action, subject)
+}
+
+func (a ActionLogger) Start() {
+
+}
+
+func (a ActionLogger) Progress(percent int8) {
+
+}
+
+func (a ActionLogger) End() {
+
+}
+
+
+func (a ActionLogger) Flush() error {
+	err := a.out.Flush()
+	if err != nil {
+		return err
+	}
+	err = a.err.Flush()
+	if err != nil {
+		return err
+	}
+	err = (*a.printer).Flush()
+	return err
+}
 
 func (a ActionLogger) Out() io.Writer {
-	writer := CallbackLineWriter{callback: func(line string) {
-		a.Info(line)
-	}}
-	return writer
+	return a.out
 }
 
 func (a ActionLogger) Err() io.Writer {
-	writer := CallbackLineWriter{callback: func(line string) {
-		a.Error(line)
-	}}
-	return writer
+	return a.err
 }
 
 func formatLevel(format, level string) ansiFormatted {
@@ -236,6 +270,7 @@ func (a ActionLogger) Fatal(messages ...interface{}) {
 type Displayer interface {
 	Display(...interface{})
 	ActionLogger(string, string) ActionLogger
+	Flush() error
 }
 
 type StandarDisplay struct {
@@ -251,8 +286,11 @@ func (d StandarDisplay) Display(objects ...interface{}) {
 }
 
 func (d StandarDisplay) ActionLogger(action, subject string) ActionLogger {
-	var printer Printer = NewPrinter(NewStandardOutputs())
-	return ActionLogger{0, action, subject, d.tuners, &printer, getOkAnsiColor()}
+	return NewActionLogger(action, subject)
+}
+
+func (d StandarDisplay) Flush() (err error) {
+	return (*d.printer).Flush()
 }
 
 func newInstance() Displayer {
