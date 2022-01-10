@@ -32,7 +32,6 @@ func (l ActionLogger) Progress() {
 
 func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	loggerName := fmt.Sprintf("%s(%s)", action, subject)
-	logger := logger.New(outs.Out(), loggerName, true, true)
 
 	// Decorate outputs
 	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
@@ -41,16 +40,19 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	outPrefixedFormatter := inout.PrefixFormatter{Prefix: ">O "}
 	errPrefixedFormatter := inout.PrefixFormatter{Prefix: ">E "}
 
+	log := outs.Log()
+	log = inout.NewFormattingWriter(log, outColorFormatter)
 	out := outs.Out()
-	out = inout.NewFormattingWriter(outs.Out(), outColorFormatter)
+	out = inout.NewFormattingWriter(out, outColorFormatter)
 	out = inout.NewFormattingWriter(out, outPrefixedFormatter)
 	out = inout.NewFormattingWriter(out, prefixedFormatter)
 	err := outs.Err()
-	err = inout.NewFormattingWriter(outs.Err(), errColorFormatter)
+	err = inout.NewFormattingWriter(err, errColorFormatter)
 	err = inout.NewFormattingWriter(err, errPrefixedFormatter)
 	err = inout.NewFormattingWriter(err, prefixedFormatter)
-	decoratedOuts := output.New(out, err)
+	decoratedOuts := output.New(log, out, err)
 
+	logger := logger.New(log, loggerName, true, true)
 	al := ActionLogger{logger, decoratedOuts}
 	return al
 }

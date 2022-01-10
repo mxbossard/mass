@@ -6,6 +6,8 @@ import (
 	"bufio"
 	"time"
 	//"fmt"
+
+	"mby.fr/utils/datetime"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -16,13 +18,14 @@ type Flusher interface {
 
 type Outputs interface {
 	Flusher
+	Log() io.Writer
 	Out() io.Writer
 	Err() io.Writer
 	LastWriteTime() time.Time
 }
 
 type BasicOutputs struct {
-	out, err *ActivityWriter
+	log, out, err *ActivityWriter
 }
 
 func (o BasicOutputs) Flush() error {
@@ -30,10 +33,12 @@ func (o BasicOutputs) Flush() error {
 }
 
 func (o BasicOutputs) LastWriteTime() time.Time {
-	if o.out.activity.Before(o.err.activity) {
-		return o.err.activity
-	}
-	return o.out.activity
+	lastTime := datetime.Max(o.log.activity, o.out.activity, o.err.activity)
+	return lastTime
+}
+
+func (o BasicOutputs) Log() io.Writer {
+	return o.log
 }
 
 func (o BasicOutputs) Out() io.Writer {
@@ -46,10 +51,10 @@ func (o BasicOutputs) Err() io.Writer {
 
 type BufferedOutputs struct {
 	BasicOutputs
-	bufferedOut, bufferedErr *bufio.Writer
+	bufferedLog, bufferedOut, bufferedErr *bufio.Writer
 }
 func (o BufferedOutputs) Flush() error {
-	outs := []io.Writer{o.bufferedOut, o.bufferedErr}
+	outs := []io.Writer{o.bufferedLog, o.bufferedOut, o.bufferedErr}
 	for _, out := range outs {
 		f, ok := out.(Flusher)
 		if ok {
@@ -73,22 +78,24 @@ func (w *ActivityWriter) Write(b []byte) (int, error) {
 	return w.nested.Write(b)
 }
 
-func New(out, err io.Writer) BasicOutputs {
+func New(log, out, err io.Writer) BasicOutputs {
 	t := time.Time{}
-	activityOut := ActivityWriter{out, t}
-	activityErr := ActivityWriter{err, t}
-	return BasicOutputs{&activityOut, &activityErr}
+	aLog := ActivityWriter{log, t}
+	aOut := ActivityWriter{out, t}
+	aErr := ActivityWriter{err, t}
+	return BasicOutputs{&aLog, &aOut, &aErr}
 }
 
 func NewStandardOutputs() Outputs {
-	return New(os.Stdout, os.Stderr)
+	return New(os.Stdout, os.Stdout, os.Stderr)
 }
 
 func NewBufferedOutputs(outputs Outputs) Outputs {
-	buffOut := bufio.NewWriter(outputs.Out())
-	buffErr := bufio.NewWriter(outputs.Err())
-	basic := New(buffOut, buffErr)
-	buffered := BufferedOutputs{basic, buffOut, buffErr}
+	log := bufio.NewWriter(outputs.Log())
+	out := bufio.NewWriter(outputs.Out())
+	err := bufio.NewWriter(outputs.Err())
+	basic := New(log, out, err)
+	buffered := BufferedOutputs{basic, log, out, err}
 	return buffered
 }
 
