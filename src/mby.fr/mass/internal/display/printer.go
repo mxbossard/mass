@@ -15,6 +15,7 @@ import (
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/templates"
 	"mby.fr/utils/errorz"
+	"mby.fr/utils/ansi"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -121,7 +122,7 @@ func stringify(obj interface{}) (str string, err error) {
 			return "", err
 		}
 		if o.format != "" {
-			str = fmt.Sprintf("%s%s%s", o.format, content, ansiClear)
+			str = fmt.Sprintf("%s%s%s", o.format, content, ansi.Reset)
 		} else {
 			str = content
 		}
@@ -209,8 +210,6 @@ func NewBufferedOutputs(outputs Outputs) Outputs {
 	return buffered
 }
 
-const logPeriodInSeconds = 5
-
 var mainPrinter *BasicPrinter
 var lastMainPrint time.Time
 var flushablePrinters []*BasicPrinter
@@ -227,49 +226,6 @@ func flush(printer *BasicPrinter) {
 	err = printer.outputs.Err().(*bufio.Writer).Flush()
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-func init() {
-	go flushMainPrinter()
-	go flushOtherPrinters()
-}
-
-func flushMainPrinter() {
-	for {
-		globalMutex.Lock()
-		if time.Now().Sub(lastMainPrint).Seconds() > logPeriodInSeconds {
-			// If main printer did not print for 5 seconds select new main printer
-			for _, printer := range flushablePrinters {
-				//fmt.Println("printer last print:", printer.LastPrint(), time.Now().Sub(lastMainPrint).Seconds(), time.Now().Sub(printer.LastPrint()).Seconds())
-				if time.Now().Sub(printer.LastPrint()).Seconds() < logPeriodInSeconds {
-					mainPrinter = printer
-					lastMainPrint = printer.LastPrint()
-				}
-			}
-		}
-		if mainPrinter != nil {
-			//fmt.Println("Flushing main printer")
-			flush(mainPrinter)
-			lastMainPrint = mainPrinter.LastPrint()
-		}
-		globalMutex.Unlock()
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
-func flushOtherPrinters() {
-	for {
-		time.Sleep(logPeriodInSeconds * time.Second)
-		globalMutex.Lock()
-		if len(flushablePrinters) > 0 {
-			for _, printer := range flushablePrinters {
-				if printer != mainPrinter {
-					flush(printer)
-				}
-			}
-		}
-		globalMutex.Unlock()
 	}
 }
 
@@ -290,5 +246,13 @@ func NewPrinter(outputs Outputs) Printer {
 	//}()
 
 	return &printer
+}
+
+// ANSI formatting for content
+type ansiFormatted struct {
+	format string
+	content interface{}
+	tab bool
+	leftPad, rightPad int
 }
 

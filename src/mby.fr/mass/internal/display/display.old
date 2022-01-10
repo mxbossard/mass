@@ -1,0 +1,111 @@
+package display
+
+import (
+	//"os"
+	"io"
+	"fmt"
+	//"strings"
+	"log"
+	"bytes"
+	"sync"
+
+	//"mby.fr/mass/internal/config"
+	//"mby.fr/mass/internal/templates"
+)
+
+// Display should display data to user.
+// Displayed data types :
+// Logs
+// Stdout & Stderr
+// Errors
+// Printed objects
+
+type Stringer interface {
+	String() string
+}
+
+var (
+	logTuner Tuner = func(msg interface{}) interface{} {
+		return msg
+	}
+	warnTuner = logTuner
+	infoTuner = logTuner
+	debugTuner = logTuner
+	traceTuner = logTuner
+)
+
+func formatTuner(format string) Tuner {
+	return func(msg interface{}) interface{} {
+                return Format(format, msg)
+        }
+}
+
+func tune(tuners *[]Tuner, msg interface{}) interface{} {
+	if msg == nil {
+		return nil
+	}
+	for _, tuner := range *tuners {
+		msg = tuner(msg)
+	}
+	return msg
+}
+
+//func (f ansiFormatted) String() string {
+//	return fmt.Sprintf("%s%s%s", f.format, f.content, ansiClear)
+//}
+
+func Format(format string, object interface{}) ansiFormatted {
+	return ansiFormatted{format: format, content: object}
+}
+
+// TODO: what to keep in this function ?
+func printActionMessages(printerFunc func(...interface{}) error, actionLogger ActionLogger, level string, messages ...interface{}) {
+	colorTuner := formatTuner(actionLogger.ansiColor)
+	tuners := append(*actionLogger.tuners, colorTuner)
+
+	// Log prefix
+	prefix := Format("", fmt.Sprintf("%s(%s)", actionLogger.action, actionLogger.subject))
+	prefix.rightPad = 25
+
+	// Log level
+	var formattedLevel interface{}
+	switch level {
+	case "":
+		//formattedLevel = formatLevel("", "")
+		formattedLevel = ""
+	case "TRACE":
+		formattedLevel = formatLevel(traceAnsiColor, level)
+	case "DEBUG":
+		formattedLevel = formatLevel(debugAnsiColor, level)
+	case "INFO":
+		formattedLevel = formatLevel(infoAnsiColor, level)
+	case "WARN":
+		formattedLevel = formatLevel(warnAnsiColor, level)
+	case "ERROR":
+		formattedLevel = formatLevel(errorAnsiColor, level)
+	case "FATAL":
+		formattedLevel = formatLevel(fatalAnsiColor, level)
+	default:
+		log.Fatalf("Unknown log level: %s", level)
+	}
+
+	allMessages := make([]interface{}, 0)
+	allMessages = append(allMessages, prefix, formattedLevel)
+	allMessages = append(allMessages, messages...)
+	tunedMessages := make([]interface{}, 0)
+
+	for _, msg := range allMessages {
+		tuned := tune(&tuners, msg)
+		if tuned != nil {
+			tunedMessages = append(tunedMessages, tuned)
+		} else {
+			tunedMessages = append(tunedMessages, msg)
+		}
+	}
+	tunedMessages = append(tunedMessages, "\n")
+	err := printerFunc(tunedMessages...)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+

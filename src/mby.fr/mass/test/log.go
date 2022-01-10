@@ -12,6 +12,8 @@ import(
 	"log"
 
 	"mby.fr/mass/internal/display"
+	//"mby.fr/mass/internal/logger"
+	//"mby.fr/mass/internal/output"
 )
 
 const loremString = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin facilisis mi sapien, vitae accumsan libero malesuada in. Suspendisse sodales finibus sagittis. Proin et augue vitae dui scelerisque imperdiet. Suspendisse et pulvinar libero. Vestibulum id porttitor augue. Vivamus lobortis lacus et libero ultricies accumsan. Donec non feugiat enim, nec tempus nunc. Mauris rutrum, diam euismod elementum ultricies, purus tellus faucibus augue, sit amet tristique diam purus eu arcu. Integer elementum urna non justo fringilla fermentum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Quisque sollicitudin elit in metus imperdiet, et gravida tortor hendrerit. In volutpat tellus quis sapien rutrum, sit amet cursus augue ultricies. Morbi tincidunt arcu id commodo mollis. Aliquam laoreet purus sed justo pulvinar, quis porta risus lobortis. In commodo leo id porta mattis.`
@@ -52,30 +54,43 @@ func infiniteActionLogger(d display.Displayer, action, subject string) {
 
 func actionLogger(d display.Displayer, action, subject string, logCount int) {
 	al := d.ActionLogger(action, subject)
-	funcs := []func(...interface{}){al.Log, al.Trace, al.Debug, al.Warn, al.Error, al.Fatal}
-	al.Info("Will log", logCount, "line(s).")
+	//outs := output.NewStandardOutputs()
+	//al := logger.NewAction(outs, action, subject)
+	//funcs := []func(string, ...interface{}){al.Trace, al.Debug, al.Warn, al.Error, al.Fatal}
+	outputs := []io.Writer{al.Out(), al.Err()}
+	loggingFuncs := []func(string, ...interface{}){al.Trace, al.Debug, al.Warn, al.Error}
+	al.Info("Will log %d line(s).", logCount)
 	var i = 0
 	Loop:
 	for {
-		for _, f := range funcs {
+		// Use logging functions
+		for _, lf := range loggingFuncs {
+			// Use outputs
+			for _, o := range outputs {
+				text := strconv.Itoa(i) + " " + produceText()
+				fmt.Fprintf(o, "%s\n", text)
+				time.Sleep(logPeriodInMs * time.Millisecond)
+			}
+
 			if i == logCount {
-				al.Info("End logging. Logged", logCount, "line(s).")
+				al.Info("End logging. Logged %d line(s).", logCount)
 				break Loop
 			}
 			text := strconv.Itoa(i) + " " + produceText()
-			f(text)
+			lf(text)
 			time.Sleep(logPeriodInMs * time.Millisecond)
 			i ++
 		}
 	}
-	al.Flush()
+	//al.Flush()
+	//outs.Flush()
 }
 
 func main() {
 	d := display.Service()
 	actionLoggerCount := 20
 	maxActiveActionLogger := 5
-	maxLogCount := 30
+	maxLogCount := 10
 
 	ch := make(chan int, maxActiveActionLogger)
 	defer close(ch)
