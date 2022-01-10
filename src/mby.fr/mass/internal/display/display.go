@@ -1,18 +1,13 @@
 package display
 
 import (
-	//"os"
-	//"io"
-	"fmt"
-	//"strings"
+	//"fmt"
 	"log"
-	//"bytes"
 	"sync"
 	"time"
 
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/output"
-	//"mby.fr/mass/internal/templates"
 )
 
 // Display should display data to user.
@@ -79,14 +74,15 @@ func (d *StandarDisplay) flushMainOutputs() {
                 if time.Now().Sub(d.lastMainOutsWrite).Seconds() > logPeriodInSeconds {
                         // If main outputs did not write for 5 seconds select new main outputs
                         for _, outs := range *d.flushableOuts {
-                                //fmt.Println("printer last print:", printer.LastPrint(), time.Now().Sub(lastMainPrint).Seconds(), time.Now().Sub(printer.LastPrint()).Seconds())
+                                //fmt.Println("outs last write:", d.mainOuts, outs.LastWriteTime(), time.Now().Sub(d.lastMainOutsWrite).Seconds(), time.Now().Sub(outs.LastWriteTime()).Seconds())
                                 if time.Now().Sub(outs.LastWriteTime()).Seconds() < logPeriodInSeconds {
                                         d.mainOuts = outs
+					//break
                                 }
                         }
                 }
                 if d.mainOuts != nil {
-                        fmt.Println("Flushing main printer")
+                        //fmt.Println("Flushing main printer")
                         d.mainOuts.Flush()
 			d.lastMainOutsWrite = d.mainOuts.LastWriteTime()
                 }
@@ -97,7 +93,6 @@ func (d *StandarDisplay) flushMainOutputs() {
 
 func (d StandarDisplay) flushOtherOutputs() {
         for {
-		fmt.Println(d)
                 time.Sleep(logPeriodInSeconds * time.Second)
                 d.Lock()
                 if len(*d.flushableOuts) > 0 {

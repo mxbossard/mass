@@ -67,9 +67,11 @@ func actionLogger(d display.Displayer, action, subject string, logCount int) {
 		for _, lf := range loggingFuncs {
 			// Use outputs
 			for _, o := range outputs {
-				text := strconv.Itoa(i) + " " + produceText()
-				fmt.Fprintf(o, "%s\n", text)
-				time.Sleep(logPeriodInMs * time.Millisecond)
+				for k := 0; k < 3; k++ {
+					text := strconv.Itoa(i) + " " + produceText()
+					fmt.Fprintf(o, "%s\n", text)
+					time.Sleep(logPeriodInMs * time.Millisecond)
+				}
 			}
 
 			if i == logCount {

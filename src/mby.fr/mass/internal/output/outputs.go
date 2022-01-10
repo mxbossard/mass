@@ -5,7 +5,7 @@ import (
 	"os"
 	"bufio"
 	"time"
-	"fmt"
+	//"fmt"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -22,11 +22,34 @@ type Outputs interface {
 }
 
 type BasicOutputs struct {
-	out, err ActivityWriter
+	out, err *ActivityWriter
 }
 
 func (o BasicOutputs) Flush() error {
-	outs := []io.Writer{&o.out, &o.err}
+	return nil
+}
+
+func (o BasicOutputs) LastWriteTime() time.Time {
+	if o.out.activity.Before(o.err.activity) {
+		return o.err.activity
+	}
+	return o.out.activity
+}
+
+func (o BasicOutputs) Out() io.Writer {
+	return o.out
+}
+
+func (o BasicOutputs) Err() io.Writer {
+	return o.err
+}
+
+type BufferedOutputs struct {
+	BasicOutputs
+	bufferedOut, bufferedErr *bufio.Writer
+}
+func (o BufferedOutputs) Flush() error {
+	outs := []io.Writer{o.bufferedOut, o.bufferedErr}
 	for _, out := range outs {
 		f, ok := out.(Flusher)
 		if ok {
@@ -36,23 +59,8 @@ func (o BasicOutputs) Flush() error {
 			}
 		}
 	}
+	//fmt.Printf("flushed %T %T\n", o.out, o.err)
 	return nil
-}
-
-func (o BasicOutputs) LastWriteTime() time.Time {
-	fmt.Println(o.out.activity, o.err.activity)
-	if o.out.activity.Before(o.err.activity) {
-		return o.err.activity
-	}
-	return o.out.activity
-}
-
-func (o BasicOutputs) Out() io.Writer {
-	return &o.out
-}
-
-func (o BasicOutputs) Err() io.Writer {
-	return &o.err
 }
 
 type ActivityWriter struct {
@@ -60,14 +68,16 @@ type ActivityWriter struct {
 	activity time.Time
 }
 func (w *ActivityWriter) Write(b []byte) (int, error) {
-	w.activity = time.Now()
+	t := time.Now()
+	w.activity = t
 	return w.nested.Write(b)
 }
 
-func New(out, err io.Writer) Outputs {
-	activityOut := ActivityWriter{out, time.Time{}}
-	activityErr := ActivityWriter{err, time.Time{}}
-	return BasicOutputs{activityOut, activityErr}
+func New(out, err io.Writer) BasicOutputs {
+	t := time.Time{}
+	activityOut := ActivityWriter{out, t}
+	activityErr := ActivityWriter{err, t}
+	return BasicOutputs{&activityOut, &activityErr}
 }
 
 func NewStandardOutputs() Outputs {
@@ -77,7 +87,8 @@ func NewStandardOutputs() Outputs {
 func NewBufferedOutputs(outputs Outputs) Outputs {
 	buffOut := bufio.NewWriter(outputs.Out())
 	buffErr := bufio.NewWriter(outputs.Err())
-	buffered := New(buffOut, buffErr)
+	basic := New(buffOut, buffErr)
+	buffered := BufferedOutputs{basic, buffOut, buffErr}
 	return buffered
 }
 
