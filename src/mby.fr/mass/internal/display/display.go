@@ -91,7 +91,7 @@ func (d *StandarDisplay) flushMainOutputs() {
         }
 }
 
-func (d StandarDisplay) flushOtherOutputs() {
+func (d *StandarDisplay) flushOtherOutputs() {
         for {
                 time.Sleep(logPeriodInSeconds * time.Second)
                 d.Lock()

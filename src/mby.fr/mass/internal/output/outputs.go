@@ -8,6 +8,7 @@ import (
 	//"fmt"
 
 	"mby.fr/utils/datetime"
+	"mby.fr/utils/inout"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -24,37 +25,12 @@ type Outputs interface {
 	LastWriteTime() time.Time
 }
 
-type BasicOutputs struct {
-	log, out, err *ActivityWriter
+type ActivityOutputs struct {
+	log, out, err *inout.ActivityWriter
 }
 
-func (o BasicOutputs) Flush() error {
-	return nil
-}
-
-func (o BasicOutputs) LastWriteTime() time.Time {
-	lastTime := datetime.Max(o.log.activity, o.out.activity, o.err.activity)
-	return lastTime
-}
-
-func (o BasicOutputs) Log() io.Writer {
-	return o.log
-}
-
-func (o BasicOutputs) Out() io.Writer {
-	return o.out
-}
-
-func (o BasicOutputs) Err() io.Writer {
-	return o.err
-}
-
-type BufferedOutputs struct {
-	BasicOutputs
-	bufferedLog, bufferedOut, bufferedErr *bufio.Writer
-}
-func (o BufferedOutputs) Flush() error {
-	outs := []io.Writer{o.bufferedLog, o.bufferedOut, o.bufferedErr}
+func (o ActivityOutputs) Flush() error {
+	outs := []io.Writer{o.log.Nested, o.out.Nested, o.err.Nested}
 	for _, out := range outs {
 		f, ok := out.(Flusher)
 		if ok {
@@ -64,26 +40,41 @@ func (o BufferedOutputs) Flush() error {
 			}
 		}
 	}
-	//fmt.Printf("flushed %T %T\n", o.out, o.err)
 	return nil
 }
 
-type ActivityWriter struct {
-	nested io.Writer
-	activity time.Time
-}
-func (w *ActivityWriter) Write(b []byte) (int, error) {
-	t := time.Now()
-	w.activity = t
-	return w.nested.Write(b)
+func (o ActivityOutputs) LastWriteTime() time.Time {
+	lastTime := datetime.Max(o.log.Activity, o.out.Activity, o.err.Activity)
+	return lastTime
 }
 
-func New(log, out, err io.Writer) BasicOutputs {
+func (o ActivityOutputs) Log() io.Writer {
+	return o.log
+}
+
+func (o ActivityOutputs) Out() io.Writer {
+	return o.out
+}
+
+func (o ActivityOutputs) Err() io.Writer {
+	return o.err
+}
+
+type AwareOutputs struct {
+	ActivityOutputs
+	underlying *Outputs
+}
+
+func (o AwareOutputs) Flush() error {
+	return (*o.underlying).Flush()
+}
+
+func New(log, out, err io.Writer) ActivityOutputs {
 	t := time.Time{}
-	aLog := ActivityWriter{log, t}
-	aOut := ActivityWriter{out, t}
-	aErr := ActivityWriter{err, t}
-	return BasicOutputs{&aLog, &aOut, &aErr}
+	aLog := inout.ActivityWriter{log, t}
+	aOut := inout.ActivityWriter{out, t}
+	aErr := inout.ActivityWriter{err, t}
+	return ActivityOutputs{&aLog, &aOut, &aErr}
 }
 
 func NewStandardOutputs() Outputs {
@@ -94,8 +85,7 @@ func NewBufferedOutputs(outputs Outputs) Outputs {
 	log := bufio.NewWriter(outputs.Log())
 	out := bufio.NewWriter(outputs.Out())
 	err := bufio.NewWriter(outputs.Err())
-	basic := New(log, out, err)
-	buffered := BufferedOutputs{basic, log, out, err}
+	buffered := New(log, out, err)
 	return buffered
 }
 
