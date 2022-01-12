@@ -8,6 +8,7 @@ import (
 	"mby.fr/utils/logger"
 	"mby.fr/utils/ansi"
 	"mby.fr/utils/inout"
+	"mby.fr/utils/format"
 )
 
 const (
@@ -40,23 +41,28 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	// Decorate outputs
 	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
 	errColorFormatter := inout.AnsiFormatter{getErrAnsiColor()}
-	prefixedFormatter := inout.PrefixFormatter{Prefix: loggerName + " ", RightPad: actionPadding}
-	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "| >O |", RightPad: 8}
-	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "| >E |", RightPad: 8}
+	//prefixedFormatter := inout.PrefixFormatter{Prefix: loggerName + " ", RightPad: actionPadding}
+	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDOUT>", RightPad: 8}
+	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDERR>", RightPad: 8}
+
+	loggerPrefixedFormatter := inout.LineFormatter{func(line string) string {
+		prefix := fmt.Sprintf("[%s] ", format.PadRight(loggerName, actionPadding))
+		return prefix + line
+	}}
 
 	log := outs.Log()
 	log = inout.NewFormattingWriter(log, outColorFormatter)
 	out := outs.Out()
 	out = inout.NewFormattingWriter(out, outColorFormatter)
-	out = inout.NewFormattingWriter(out, prefixedFormatter)
+	out = inout.NewFormattingWriter(out, loggerPrefixedFormatter)
 	out = inout.NewFormattingWriter(out, outPrefixedFormatter)
 	err := outs.Err()
 	err = inout.NewFormattingWriter(err, errColorFormatter)
-	err = inout.NewFormattingWriter(err, prefixedFormatter)
+	err = inout.NewFormattingWriter(err, loggerPrefixedFormatter)
 	err = inout.NewFormattingWriter(err, errPrefixedFormatter)
 	decoratedOuts := output.New(log, out, err)
 
-	logger := logger.New(log, loggerName, true, false)
+	logger := logger.New(log, loggerName, actionPadding, true, false)
 	al := ActionLogger{logger, decoratedOuts}
 	return al
 }
