@@ -18,80 +18,70 @@ mass init project p1 p2 p3
 # Init some images
 mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
-# Init env configs
-
-cat <<EOF > envs/dev/config.yaml
+configEnvs() {
+	for name in "$@"; do	
+		cat <<EOF > envs/$name/config.yaml
 labels:
-  lkey1: ldev
+  lkey1: l$name
 tags:
-  tkey1: tdev
+  tkey1: t$name
 environment:
-  ekey1: edev
+  ekey1: e$name
   ctx: env
 EOF
+	done
+}
+
+configProjects() {
+	for name in "$@"; do	
+		cat <<EOF > $name/config.yaml
+labels:
+  lkey2: l$name
+tags:
+  tkey2: t$name
+environment:
+  ekey2: e$name
+  ctx: project
+EOF
+	done
+}
+
+configImages() {
+	for name in "$@"; do
+		projactName=$( echo $name | cut -d'/' -f1 )
+		imageName=$( echo $name | cut -d'/' -f2 )
+		cat <<EOF > $name/config.yaml
+labels:
+  lkey3: l$name
+tags:
+  tkey3: t$name
+environment:
+  ekey3: e$name
+  ctx: image
+EOF
+	echo "FROM alpine" > $name/Dockerfile
+	done
+}
+
+# Init env configs
+configEnvs dev
 
 # Init project configs
-
-cat <<EOF > p1/config.yaml
-labels:
-  lkey2: lproject1
-tags:
-  tkey2: tproject1
-environment:
-  ekey2: eproject1
-  ctx: project
-EOF
-
-cat <<EOF > p2/config.yaml
-labels:
-  lkey2: lproject2
-tags:
-  tkey2: tproject2
-environment:
-  ekey2: eproject2
-  ctx: project
-EOF
+configProjects p1 p2 p3
 
 # Init image configs
-
-cat <<EOF > p1/i11/config.yaml
-labels:
-  lkey3: limage11
-tags:
-  tkey3: timage11
-environment:
-  ekey3: eimage11
-  ctx: image
-EOF
-echo "FROM alpine" > p1/i11/Dockerfile
-
-cat <<EOF > p2/i21/config.yaml
-labels:
-  lkey3: limage21
-tags:
-  tkey3: timage21
-environment:
-  ekey3: eimage21
-  ctx: image
-EOF
-
-cat <<EOF > p3/i31/config.yaml
-labels:
-  lkey3: limage31
-tags:
-  tkey3: timage31
-environment:
-  ekey3: eimage31
-  ctx: image
-EOF
+configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
 tree -Ca $workspaceDir
 
 # Display config for env
+echo "##### Testing mass config ..."
 mass config e/dev
 mass config p/p1 i/p1/i11
 mass config -e stage p/p1 i/p1/i11
 mass config p,i p1 p1/i11 notExist || true
 
-mass build e/dev p/p1 || true
-mass build p/p1
+echo "##### Testing mass build ..."
+mass build e/dev i/p1/i11 || true
+mass build i/p3/i31
+mass build p/p1 p/p2

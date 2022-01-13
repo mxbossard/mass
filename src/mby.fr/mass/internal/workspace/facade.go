@@ -22,7 +22,6 @@ func buildResource(res resources.Resource) error {
 		return err
 	}
 
-	fmt.Println("Build finished")
 	err = builder.Build()
 	fmt.Println("Build finished")
 	return err

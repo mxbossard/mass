@@ -4,6 +4,7 @@ import (
 	//"bytes"
 	"fmt"
 	"os/exec"
+	"os"
 
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/display"
@@ -54,14 +55,14 @@ func buildDockerImage(binary string, image resources.Image) (err error) {
 	logger.Info("Building image: %s ...", image.Name())
 	cmd := exec.Command(binary, "build", ".")
 	cmd.Dir = image.Dir()
-	//var stdout, stderr bytes.Buffer
-	cmd.Stdout = logger.Out()
-	cmd.Stderr = logger.Err()
-	err = cmd.Run()
-	//fmt.Fprint(os.Stdout, stdout.String())
-	//fmt.Fprint(os.Stderr, stderr.String())
+	//cmd.Stdout = logger.Out()
+	//cmd.Stderr = logger.Err()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err != nil {
 		return fmt.Errorf("Error building image %s : %w", image.Name(), err)
 	}
+	logger.Info("Finished build image: %s .", image.Name())
+	logger.Flush()
 	return
 }
