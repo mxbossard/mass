@@ -59,7 +59,13 @@ environment:
   ekey3: e$name
   ctx: image
 EOF
-	echo "FROM alpine" > $name/Dockerfile
+	cat <<EOF > $name/Dockerfile
+FROM alpine
+RUN echo foo
+RUN echo bar
+RUN echo baz
+CMD /bin/bash
+EOF
 	done
 }
 
