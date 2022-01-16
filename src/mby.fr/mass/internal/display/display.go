@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"mby.fr/utils/logz"
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/output"
 )
@@ -22,18 +23,21 @@ const (
 )
 
 type Displayer interface {
+	logz.Logger
 	Display(...interface{})
-	ActionLogger(string, string, bool) logger.ActionLogger
+	BufferedActionLogger(string, string) logger.ActionLogger
+	ImmediateActionLogger(string, string) logger.ActionLogger
 	Flush() error
 }
 
 type StandarDisplay struct {
 	sync.Mutex
+	*logger.ActionLogger
 	outs output.Outputs
 	printer *Printer
 	tuners *[]Tuner
 	flushableOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
-	autoFlushOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
+	bufferedOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
 	mainOuts output.Outputs
 	lastMainOutsWrite time.Time
 }
@@ -45,16 +49,12 @@ func (d StandarDisplay) Display(objects ...interface{}) {
 	}
 }
 
-func (d *StandarDisplay) ActionLogger(action, subject string, autoFlush bool) logger.ActionLogger {
-	outs := output.NewBufferedOutputs(d.outs)
-	al := logger.NewAction(outs, action, subject)
-	appended := append(*d.flushableOuts, outs)
-	d.flushableOuts = &appended
-	if autoFlush {
-		appended = append(*d.autoFlushOuts, outs)
-		d.autoFlushOuts = &appended
-	}
-	return al
+func (d *StandarDisplay) BufferedActionLogger(action, subject string) logger.ActionLogger {
+	return actionLogger(d, action, subject, true)
+}
+
+func (d *StandarDisplay) ImmediateActionLogger(action, subject string) logger.ActionLogger {
+	return actionLogger(d, action, subject, false)
 }
 
 func (d StandarDisplay) Flush() (err error) {
@@ -69,6 +69,8 @@ func (d StandarDisplay) Flush() (err error) {
 			return err
 		}
 	}
+
+	d.Debug("Flushing display.")
 	return
 }
 
@@ -77,7 +79,7 @@ func (d *StandarDisplay) flushMainOutputs() {
                 d.Lock()
                 if time.Now().Sub(d.lastMainOutsWrite).Seconds() > logPeriodInSeconds {
                         // If main outputs did not write for 5 seconds select new main outputs
-                        for _, outs := range *d.autoFlushOuts {
+                        for _, outs := range *d.bufferedOuts {
                                 //fmt.Println("outs last write:", d.mainOuts, outs.LastWriteTime(), time.Now().Sub(d.lastMainOutsWrite).Seconds(), time.Now().Sub(outs.LastWriteTime()).Seconds())
                                 if time.Now().Sub(outs.LastWriteTime()).Seconds() < logPeriodInSeconds {
                                         d.mainOuts = outs
@@ -99,8 +101,8 @@ func (d *StandarDisplay) flushOtherOutputs() {
         for {
                 time.Sleep(logPeriodInSeconds * time.Second)
                 d.Lock()
-                if len(*d.autoFlushOuts) > 0 {
-                        for _, outs := range *d.autoFlushOuts {
+                if len(*d.bufferedOuts) > 0 {
+                        for _, outs := range *d.bufferedOuts {
                                 if outs != d.mainOuts {
                                         outs.Flush()
                                 }
@@ -110,14 +112,31 @@ func (d *StandarDisplay) flushOtherOutputs() {
         }
 }
 
+func actionLogger(d *StandarDisplay, action, subject string, buffered bool) logger.ActionLogger {
+	var outs output.Outputs
+	if buffered {
+		outs = output.NewBufferedOutputs(d.outs)
+		appended := append(*d.bufferedOuts, outs)
+		d.bufferedOuts = &appended
+	} else {
+		outs = d.outs
+	}
+	al := logger.NewAction(outs, action, subject)
+	appended := append(*d.flushableOuts, outs)
+	d.flushableOuts = &appended
+	return al
+}
+
 func newInstance() Displayer {
 	var m sync.Mutex
 	outs := output.NewStandardOutputs()
 	var printer Printer = NewPrinter(NewStandardOutputs())
 	tuners := []Tuner{}
 	flushableOuts := []output.Outputs{}
-	autoFlushOuts := []output.Outputs{}
-	d := StandarDisplay{m, outs, &printer, &tuners, &flushableOuts, &autoFlushOuts, nil, time.Time{}}
+	bufferedOuts := []output.Outputs{}
+	d := StandarDisplay{m, nil, outs, &printer, &tuners, &flushableOuts, &bufferedOuts, nil, time.Time{}}
+	logger := actionLogger(&d, "display", "", false)
+	d.ActionLogger = &logger
 
 	go d.flushMainOutputs()
         go d.flushOtherOutputs()

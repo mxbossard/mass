@@ -2,7 +2,7 @@ package workspace
 
 import (
 	"strings"
-	"fmt"
+	//"fmt"
 	"log"
 	"sync"
 
@@ -42,16 +42,19 @@ func BuildResources(args []string) {
 	var wg sync.WaitGroup
 	for _, r := range res {
 		wg.Add(1)
-		go func() {
+		go func(r resources.Resource) {
 			defer wg.Done()
 			err := buildResource(r)
 			if err != nil {
 				log.Fatal(err)
 			}
-		}()
+		}(r)
 	}
 	wg.Wait()
-	fmt.Println("Build finished")
+
+	d := display.Service()
+	d.Flush()
+	d.Info("Build finished")
 }
 
 func GetResourcesConfig(args []string) {

@@ -49,8 +49,7 @@ func (b DockerBuilder) Build() (err error) {
 
 func buildDockerImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
-	defer d.Flush()
-	logger := d.ActionLogger("build", image.Name(), true)
+	logger := d.BufferedActionLogger("build", image.Name())
 	logger.Info("Building image: %s ...", image.Name())
 	cmd := exec.Command(binary, "build", ".")
 	cmd.Dir = image.Dir()
@@ -61,6 +60,5 @@ func buildDockerImage(binary string, image resources.Image) (err error) {
 		return fmt.Errorf("Error building image %s : %w", image.Name(), err)
 	}
 	logger.Info("Build finished for image: %s .", image.Name())
-	logger.Flush()
 	return
 }

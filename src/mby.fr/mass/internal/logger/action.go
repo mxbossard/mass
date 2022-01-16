@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"mby.fr/mass/internal/output"
-	"mby.fr/utils/logger"
+	"mby.fr/utils/logz"
 	"mby.fr/utils/ansi"
 	"mby.fr/utils/inout"
 	"mby.fr/utils/format"
@@ -22,7 +22,7 @@ var (
 
 
 type ActionLogger struct {
-	logger.Logger
+	logz.Logger
 	output.Outputs
 }
 
@@ -49,7 +49,8 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 		return prefix + line
 	}}
 
-	log := outs.Log()
+	//log := outs.Log()
+	log := outs.Out()
 	log = inout.NewFormattingWriter(log, outColorFormatter)
 	out := outs.Out()
 	out = inout.NewFormattingWriter(out, outColorFormatter)
@@ -61,7 +62,7 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	err = inout.NewFormattingWriter(err, errPrefixedFormatter)
 	decoratedOuts := output.New(log, out, err)
 
-	logger := logger.New(log, loggerName, actionPadding, true, false)
+	logger := logz.New(log, loggerName, actionPadding, true, false)
 	al := ActionLogger{logger, decoratedOuts}
 	return al
 }
