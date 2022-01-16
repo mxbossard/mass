@@ -12,6 +12,7 @@ import (
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
+// FIXME: Flush only until EOL as an option
 
 type Flusher interface {
 	Flush() error

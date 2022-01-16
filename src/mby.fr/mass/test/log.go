@@ -53,7 +53,7 @@ func infiniteActionLogger(d display.Displayer, action, subject string) {
 }
 
 func actionLogger(d display.Displayer, action, subject string, logCount int) {
-	al := d.ActionLogger(action, subject)
+	al := d.ActionLogger(action, subject, true)
 	//outs := output.NewStandardOutputs()
 	//al := logger.NewAction(outs, action, subject)
 	//funcs := []func(string, ...interface{}){al.Trace, al.Debug, al.Warn, al.Error, al.Fatal}

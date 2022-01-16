@@ -23,7 +23,7 @@ const (
 
 type Displayer interface {
 	Display(...interface{})
-	ActionLogger(string, string) logger.ActionLogger
+	ActionLogger(string, string, bool) logger.ActionLogger
 	Flush() error
 }
 
@@ -33,6 +33,7 @@ type StandarDisplay struct {
 	printer *Printer
 	tuners *[]Tuner
 	flushableOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
+	autoFlushOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
 	mainOuts output.Outputs
 	lastMainOutsWrite time.Time
 }
@@ -44,12 +45,15 @@ func (d StandarDisplay) Display(objects ...interface{}) {
 	}
 }
 
-func (d *StandarDisplay) ActionLogger(action, subject string) logger.ActionLogger {
+func (d *StandarDisplay) ActionLogger(action, subject string, autoFlush bool) logger.ActionLogger {
 	outs := output.NewBufferedOutputs(d.outs)
 	al := logger.NewAction(outs, action, subject)
 	appended := append(*d.flushableOuts, outs)
 	d.flushableOuts = &appended
-
+	if autoFlush {
+		appended = append(*d.autoFlushOuts, outs)
+		d.autoFlushOuts = &appended
+	}
 	return al
 }
 
@@ -73,7 +77,7 @@ func (d *StandarDisplay) flushMainOutputs() {
                 d.Lock()
                 if time.Now().Sub(d.lastMainOutsWrite).Seconds() > logPeriodInSeconds {
                         // If main outputs did not write for 5 seconds select new main outputs
-                        for _, outs := range *d.flushableOuts {
+                        for _, outs := range *d.autoFlushOuts {
                                 //fmt.Println("outs last write:", d.mainOuts, outs.LastWriteTime(), time.Now().Sub(d.lastMainOutsWrite).Seconds(), time.Now().Sub(outs.LastWriteTime()).Seconds())
                                 if time.Now().Sub(outs.LastWriteTime()).Seconds() < logPeriodInSeconds {
                                         d.mainOuts = outs
@@ -95,8 +99,8 @@ func (d *StandarDisplay) flushOtherOutputs() {
         for {
                 time.Sleep(logPeriodInSeconds * time.Second)
                 d.Lock()
-                if len(*d.flushableOuts) > 0 {
-                        for _, outs := range *d.flushableOuts {
+                if len(*d.autoFlushOuts) > 0 {
+                        for _, outs := range *d.autoFlushOuts {
                                 if outs != d.mainOuts {
                                         outs.Flush()
                                 }
@@ -112,7 +116,8 @@ func newInstance() Displayer {
 	var printer Printer = NewPrinter(NewStandardOutputs())
 	tuners := []Tuner{}
 	flushableOuts := []output.Outputs{}
-	d := StandarDisplay{m, outs, &printer, &tuners, &flushableOuts, nil, time.Time{}}
+	autoFlushOuts := []output.Outputs{}
+	d := StandarDisplay{m, outs, &printer, &tuners, &flushableOuts, &autoFlushOuts, nil, time.Time{}}
 
 	go d.flushMainOutputs()
         go d.flushOtherOutputs()

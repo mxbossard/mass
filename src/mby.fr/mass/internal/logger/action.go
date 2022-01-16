@@ -41,7 +41,6 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	// Decorate outputs
 	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
 	errColorFormatter := inout.AnsiFormatter{getErrAnsiColor()}
-	//prefixedFormatter := inout.PrefixFormatter{Prefix: loggerName + " ", RightPad: actionPadding}
 	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDOUT>", RightPad: 8}
 	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDERR>", RightPad: 8}
 

@@ -4,12 +4,20 @@ import (
 	"strings"
 	"fmt"
 	"log"
+	"sync"
 
 	"mby.fr/utils/errorz"
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/build"
 	"mby.fr/mass/internal/display"
 )
+
+func printErrors(errors errorz.Aggregated) {
+	if errors.GotError() {
+		display := display.Service()
+		display.Display(errors)
+	}
+}
 
 func ResolveExpression(args []string) ([]resources.Resource, errorz.Aggregated) {
 	resourceExpr := strings.Join(args, " ")
@@ -23,27 +31,26 @@ func buildResource(res resources.Resource) error {
 	}
 
 	err = builder.Build()
-	fmt.Println("Build finished")
+	//fmt.Println("Build finished")
 	return err
-}
-
-func printErrors(errors errorz.Aggregated) {
-	if errors.GotError() {
-		display := display.Service()
-		display.Display(errors)
-	}
 }
 
 func BuildResources(args []string) {
 	res, errors := ResolveExpression(args)
 	//fmt.Println(res)
 	printErrors(errors)
+	var wg sync.WaitGroup
 	for _, r := range res {
-		err := buildResource(r)
-		if err != nil {
-			log.Fatal(err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := buildResource(r)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 	}
+	wg.Wait()
 	fmt.Println("Build finished")
 }
 
