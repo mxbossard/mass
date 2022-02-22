@@ -91,3 +91,4 @@ echo "##### Testing mass build ..."
 mass build e/dev i/p1/i11 || true
 mass build i/p3/i31
 mass build p/p1 p/p2
+mass build p/p3

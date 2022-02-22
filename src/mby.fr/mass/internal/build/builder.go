@@ -51,7 +51,7 @@ func buildDockerImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
 	logger.Info("Building image: %s ...", image.Name())
-	cmd := exec.Command(binary, "build", ".")
+	cmd := exec.Command(binary, "build", "--no-cache", ".")
 	cmd.Dir = image.Dir()
 	cmd.Stdout = logger.Out()
 	cmd.Stderr = logger.Err()
