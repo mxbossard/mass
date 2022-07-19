@@ -39,7 +39,8 @@ hostModCacheDir="$hostGoDir/pkg/mod"
 mkdir -p "$hostModCacheDir"
 
 #ctImage="golang:1.18-alpine"
-ctImage="go-dev-image:latest"
+ctImage="golang:1.18"
+#ctImage="go-dev-image:latest"
 ctName="goid_$( basename $scriptDir )"
 
 runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
