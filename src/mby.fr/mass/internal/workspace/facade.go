@@ -37,6 +37,9 @@ func buildResource(res resources.Resource, noCache bool) error {
 }
 
 func BuildResources(args []string, noCache bool) {
+	d := display.Service()
+	d.Info("Starting build ...")
+
 	res, errors := ResolveExpression(args)
 	//fmt.Println(res)
 	printErrors(errors)
@@ -53,7 +56,6 @@ func BuildResources(args []string, noCache bool) {
 	}
 	wg.Wait()
 
-	d := display.Service()
 	d.Flush()
 	d.Info("Build finished")
 }
@@ -70,6 +72,9 @@ func upResource(res resources.Resource) error {
 }
 
 func UpResources(args []string) {
+	d := display.Service()
+	d.Info("Starting up ...")
+
 	res, errors := ResolveExpression(args)
 	//fmt.Println(res)
 	printErrors(errors)
@@ -86,7 +91,6 @@ func UpResources(args []string) {
 	}
 	wg.Wait()
 
-	d := display.Service()
 	d.Flush()
 	d.Info("Up finished")
 }
