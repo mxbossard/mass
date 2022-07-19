@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/display"
+	"mby.fr/mass/internal/resources"
 )
 
 var NotDeployableResource error = fmt.Errorf("Not deployable resource")
@@ -51,7 +51,30 @@ func runDockerImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("run", image.Name())
 	logger.Info("Running image: %s ...", image.FullName())
-	cmd := exec.Command(binary, "run", image.FullName(), "finalArg")
+
+	var runParams []string
+	runParams = append(runParams, "run")
+
+	configs, errors := resources.MergedConfig(image)
+	if errors != nil {
+		return errors
+	}
+	// Add envVars
+	for argKey, argValue := range configs.Environment {
+		var envArg string = "-e=" + argKey + "=" + argValue
+		runParams = append(runParams, envArg)
+	}
+
+	// Add image full name
+	runParams = append(runParams, image.FullName())
+
+	// Add runParams
+	for _, argValue := range configs.RunArgs {
+		runParams = append(runParams, argValue)
+	}
+
+	logger.Debug("run params: %s", runParams)
+	cmd := exec.Command(binary, runParams...)
 	cmd.Dir = image.Dir()
 	cmd.Stdout = logger.Out()
 	cmd.Stderr = logger.Err()
