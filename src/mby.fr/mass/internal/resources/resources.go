@@ -5,6 +5,7 @@ import(
 	"os"
 	"sync"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
@@ -174,6 +175,14 @@ func (i Image) SourceDir() (string) {
 
 func (i Image) Name() string {
 	return i.Project.Name() + "/" + i.name
+}
+
+func (i Image) FullName() string {
+	if i.Version != "" {
+		return strings.ToLower(i.Name()) + ":" + i.Version
+	} else {
+		return strings.ToLower(i.Name()) + ":latest"
+	}
 }
 
 func buildBase(kind Kind, path string) (b Base, err error) {

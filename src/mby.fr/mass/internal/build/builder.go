@@ -51,12 +51,32 @@ func buildDockerImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
 	logger.Info("Building image: %s ...", image.Name())
-	cmd := exec.Command(binary, "build", "--no-cache", ".")
+
+	var buildParams []string
+	buildParams = append(buildParams, "build", "--no-cache", "-t", image.FullName())
+
+	// Forge build-args
+	configs, errors := resources.MergedConfig(image)
+	if (errors != nil) {
+		return errors
+	}
+	
+	for argKey, argValue := range configs.BuildArgs {
+		var buildArg string = argKey + "=\"" + argValue + "\""
+		buildParams = append(buildParams, "--build-arg=" + buildArg)
+	}
+
+	// Add dot folder as last param
+	buildParams = append(buildParams, ".")
+
+	logger.Debug("build params: %s", buildParams)
+	cmd := exec.Command(binary, buildParams...)
 	cmd.Dir = image.Dir()
 	cmd.Stdout = logger.Out()
 	cmd.Stderr = logger.Err()
 	err = cmd.Run()
 	if err != nil {
+		logger.Flush()
 		return fmt.Errorf("Error building image %s : %w", image.Name(), err)
 	}
 	logger.Info("Build finished for image: %s .", image.Name())

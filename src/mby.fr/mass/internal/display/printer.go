@@ -140,7 +140,7 @@ func stringify(obj interface{}) (str string, err error) {
 			}
 		}
 	case error:
-		str = fmt.Sprintf("Error: %s !\n", err)
+		str = fmt.Sprintf("Error: %s !\n", obj)
 	case config.Config:
 		renderer := templates.New("")
 		builder := strings.Builder{}

@@ -12,14 +12,18 @@ import(
 
 const DefaultConfigFile = templates.ConfigTemplate
 
-type EnvConfig map[string]string
 type LabelsConfig map[string]string
 type TagsConfig map[string]string
+type EnvConfig map[string]string
+type BuildArgsConfig map[string]string
+type RunArgsConfig []string
 
 type Config struct {
-	Environment EnvConfig
 	Labels LabelsConfig
 	Tags TagsConfig
+	Environment EnvConfig
+	BuildArgs BuildArgsConfig
+	RunArgs RunArgsConfig
 }
 
 // Init config in a directory path
@@ -81,13 +85,29 @@ func mergeStringMaps(base, replace map[string]string) map[string]string {
 	return merged
 }
 
+func mergeStringArrays(base, replace []string) []string {
+	var merged []string
+	if base == nil {
+		return replace
+	} else {
+		merged = base
+	}
+	for k, v := range replace {
+		merged[k] = v
+	}
+	return merged
+}
+
 // Merge several config from lowest priority to highest priority
 func Merge(configs ...Config) (Config) {
 	mergedConfig := configs[0]
 
 	for _, c := range configs[1:] {
-		mergedEnv := mergeStringMaps(mergedConfig.Environment, c.Environment)
-		mergedConfig.Environment = mergedEnv
+		mergedConfig.Labels = mergeStringMaps(mergedConfig.Labels, c.Labels)
+		mergedConfig.Tags = mergeStringMaps(mergedConfig.Tags, c.Tags)
+		mergedConfig.Environment = mergeStringMaps(mergedConfig.Environment, c.Environment)
+		mergedConfig.BuildArgs = mergeStringMaps(mergedConfig.BuildArgs, c.BuildArgs)
+		mergedConfig.RunArgs = mergeStringArrays(mergedConfig.RunArgs, c.RunArgs)
 	}
 
 	return mergedConfig
