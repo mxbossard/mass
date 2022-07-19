@@ -8,7 +8,7 @@ go install
 
 rm -rf -- "$workspaceDir"
 
-massCmd="$scriptDir/bin/mass"
+massCmd="mass"
 
 # Init a workspace
 $massCmd init workspace $workspaceDir
