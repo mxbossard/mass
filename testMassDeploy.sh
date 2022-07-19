@@ -65,17 +65,20 @@ runargs:
 EOF
 	cat <<EOF > $name/Dockerfile
 FROM alpine
-ARG barg3=notDefinedBuildArg
-#ENV barg3 ${barg3:-missingBuildArg}
-#ENV barg3 $barg3
+ARG barg3 notDefinedBuildArg
+ENV envBarg3 \${barg3:-missingBuildArg}
 ENV ekey2 NotDefinedEnvVar
-RUN echo foo
-RUN echo $barg3
-RUN echo ${ekey2}
+RUN echo "foo"
+RUN echo "\$barg3"
+RUN echo "\${ekey2}"
+RUN echo -e "#!/bin/sh\n" >> entrypoint.sh \
+    echo -e 'echo "buildArg: \$barg3"\n' >> entrypoint.sh \
+    echo -e 'echo "envBarg : \$envBarg3"\n' >> entrypoint.sh \
+    echo -e 'echo "envParam: \$ekey2"\n' >> entrypoint.sh \
+    echo -e 'echo "runArgs : \$@"\n' >> entrypoint.sh
 
-ENTRYPOINT ["/bin/echo", "${barg3:-nop1}", "${ekey2:-nop2}"]
+ENTRYPOINT ["/bin/sh", "entrypoint.sh", "runArgFromDockerfile"]
 CMD ["NotDefinedRunArg"]
-
 EOF
 	done
 }

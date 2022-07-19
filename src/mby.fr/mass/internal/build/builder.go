@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/display"
+	"mby.fr/mass/internal/resources"
 )
 
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
@@ -57,13 +57,13 @@ func buildDockerImage(binary string, image resources.Image) (err error) {
 
 	// Forge build-args
 	configs, errors := resources.MergedConfig(image)
-	if (errors != nil) {
+	if errors != nil {
 		return errors
 	}
-	
+
 	for argKey, argValue := range configs.BuildArgs {
-		var buildArg string = argKey + "=\"" + argValue + "\""
-		buildParams = append(buildParams, "--build-arg=" + buildArg)
+		var buildArg string = "--build-arg=" + argKey + "=" + argValue
+		buildParams = append(buildParams, buildArg)
 	}
 
 	// Add dot folder as last param
