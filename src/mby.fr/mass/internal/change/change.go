@@ -37,21 +37,43 @@ func calcImageSignature(res resources.Resource) (signature string, err error) {
 	return
 }
 
-func loadImageSignature(res resources.Resource) (err error) {
-	// Use utils/cache to load signature
+func imageCacheKey(res resources.Resource) (signature string) {
+	return
+}
+
+func loadImageSignature(res resources.Resource) ((signature string, err error) {
+	var key := imageCacheKey(res)
+	value, ok, e := imageCacheDir.LoadString(key)
+	if e != nil {
+		return _, e
+	}
 	return
 }
 
 func StoreImageSignature(res resources.Resource) (err error) {
-	// Use utils/cache to store signature
+	var signature, e := calcImageSignature(res)
+	if e != nil {
+		return e
+	}
+	var key := imageCacheKey(res)
+	err = imageCacheDir.StoreString(key, signature)
 	return
 }
 
 func DoesImageChanged(res resources.Resource) (res bool, err error) {
 	// Return true if found image changed
 
-	// Need to compare versus a store if the image change since last build.
-	return
+	previousSignature, e1 := loadImageSignature(res)
+	if e1 != nil {
+		return e1
+	}
+
+	actualSignature, e2 := calcImageSignature(res)
+	if e2 != nil {
+		return e2
+	}
+
+	return previousSignature != actualSignature
 }
 
 func StoreDeploySignature(res resources.Resource) (err error) {
