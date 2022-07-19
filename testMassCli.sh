@@ -8,12 +8,14 @@ go install
 
 rm -rf -- "$workspaceDir"
 
+massCmd="$scriptDir/bin/mass"
+
 # Init a workspace
-mass init workspace $workspaceDir
+$massCmd init workspace $workspaceDir
 cd $workspaceDir
 
 # Init some projects
-mass init project p1 p2 p3
+$massCmd init project p1 p2 p3
 
 # Init some images
 mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
@@ -64,7 +66,7 @@ FROM alpine
 RUN echo foo
 RUN echo bar
 RUN echo baz
-CMD /bin/bash
+CMD /bin/sh -c 'echo hello world !'
 EOF
 	done
 }
@@ -82,17 +84,17 @@ tree -Ca $workspaceDir
 
 # Display config for env
 echo "##### Testing mass config ..."
-mass config e/dev
-mass config p/p1 i/p1/i11
-mass config -e stage p/p1 i/p1/i11
-mass config p,i p1 p1/i11 notExist || true
+$massCmd config e/dev
+$massCmd config p/p1 i/p1/i11
+$massCmd config -e stage p/p1 i/p1/i11
+$massCmd config p,i p1 p1/i11 notExist || true
 
 echo "##### Testing mass build ..."
-mass build e/dev i/p1/i11 || true
-mass build i/p3/i31
-mass build p/p1 p/p2
-mass build p/p3
+$massCmd build e/dev i/p1/i11 || true
+$massCmd build --no-cache i/p3/i31
+$massCmd build --no-cache p/p1 p/p2
+$massCmd build p/p3
 
 echo "##### Testing mass up ..."
 mass up i/p3/i31
-mass up p2
+mass up p/p2

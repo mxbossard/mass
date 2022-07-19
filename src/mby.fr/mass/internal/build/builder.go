@@ -12,7 +12,7 @@ import (
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
 
 type Builder interface {
-	Build() error
+	Build(noCache bool) error
 }
 
 func New(r resources.Resource) (Builder, error) {
@@ -37,9 +37,9 @@ type DockerBuilder struct {
 	images []resources.Image
 }
 
-func (b DockerBuilder) Build() (err error) {
+func (b DockerBuilder) Build(noCache bool) (err error) {
 	for _, image := range b.images {
-		err = buildDockerImage(b.binary, image)
+		err = buildDockerImage(b.binary, image, noCache)
 		if err != nil {
 			return
 		}
@@ -47,13 +47,18 @@ func (b DockerBuilder) Build() (err error) {
 	return
 }
 
-func buildDockerImage(binary string, image resources.Image) (err error) {
+func buildDockerImage(binary string, image resources.Image, noCache bool) (err error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
 	logger.Info("Building image: %s ...", image.Name())
 
 	var buildParams []string
-	buildParams = append(buildParams, "build", "--no-cache", "-t", image.FullName())
+	buildParams = append(buildParams, "build", "-t", image.FullName())
+
+	// Add --no-cache option
+	if noCache {
+		buildParams = append(buildParams, "--no-cache")
+	}
 
 	// Forge build-args
 	configs, errors := resources.MergedConfig(image)

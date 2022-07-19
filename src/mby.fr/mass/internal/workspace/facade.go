@@ -6,11 +6,11 @@ import (
 	"log"
 	"sync"
 
-	"mby.fr/utils/errorz"
-	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/build"
 	"mby.fr/mass/internal/deploy"
 	"mby.fr/mass/internal/display"
+	"mby.fr/mass/internal/resources"
+	"mby.fr/utils/errorz"
 )
 
 func printErrors(errors errorz.Aggregated) {
@@ -25,31 +25,31 @@ func ResolveExpression(args []string) ([]resources.Resource, errorz.Aggregated) 
 	return resources.ResolveExpression(resourceExpr)
 }
 
-func buildResource(res resources.Resource) error {
+func buildResource(res resources.Resource, noCache bool) error {
 	builder, err := build.New(res)
 	if err != nil {
 		return err
 	}
 
-	err = builder.Build()
+	err = builder.Build(noCache)
 	//fmt.Println("Build finished")
 	return err
 }
 
-func BuildResources(args []string) {
+func BuildResources(args []string, noCache bool) {
 	res, errors := ResolveExpression(args)
 	//fmt.Println(res)
 	printErrors(errors)
 	var wg sync.WaitGroup
 	for _, r := range res {
 		wg.Add(1)
-		go func(r resources.Resource) {
+		go func(r resources.Resource, noCache bool) {
 			defer wg.Done()
-			err := buildResource(r)
+			err := buildResource(r, noCache)
 			if err != nil {
 				log.Fatal(err)
 			}
-		}(r)
+		}(r, noCache)
 	}
 	wg.Wait()
 

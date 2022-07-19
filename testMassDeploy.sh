@@ -8,15 +8,17 @@ go install
 
 rm -rf -- "$workspaceDir"
 
+massCmd="$scriptDir/bin/mass"
+
 # Init a workspace
-mass init workspace $workspaceDir
+$massCmd init workspace $workspaceDir
 cd $workspaceDir
 
 # Init some projects
-mass init project p1 p2 p3
+$massCmd init project p1 p2 p3
 
 # Init some images
-mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
+$massCmd init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
 configEnvs() {
 	for name in "$@"; do	
@@ -96,10 +98,10 @@ configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
 # Display config for env
 echo "##### Testing mass config ..."
-mass config i/p2/i21
+$massCmd config i/p2/i21
 
 echo "##### Testing mass build ..."
-mass build i/p2/i21
+$massCmd build i/p2/i21
 
 echo "##### Testing mass up ..."
-mass up i/p2/i21
+$massCmd up i/p2/i21
