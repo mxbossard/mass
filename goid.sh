@@ -22,7 +22,7 @@ relpath() {
     echo "$down${ref##$pos/}"
 }
 
-ctDurationInSec=7200
+ctDurationInSec=3600
 rootDir=$scriptDir
 rootDirInCt=/tmp/goid
 workDir=$PWD
@@ -38,9 +38,11 @@ hostGoDir="$HOME/go"
 hostModCacheDir="$hostGoDir/pkg/mod"
 mkdir -p "$hostModCacheDir"
 
+#ctImage="golang:1.18-alpine"
+ctImage="go-dev-image:latest"
 ctName="goid_$( basename $scriptDir )"
 
-runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw golang:1.17"
+runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
 #echo $runCmd
 
 #>&2 echo "Executing go in a container on workspace: $rootDir within container workdir: $workDirInCt ..."
