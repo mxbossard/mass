@@ -1,16 +1,16 @@
 package resources
 
-import(
-	"testing"
+import (
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/test"
 )
 
 func TestBuildResources(t *testing.T) {
@@ -62,8 +62,8 @@ func TestWriteThenRead(t *testing.T) {
 	loadedImage := res.(Image)
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
-	assert.Equal(t, path + "/" + DefaultSourceDir, loadedImage.SourceDir(), "bad source dir")
-	assert.Equal(t, path + "/" + DefaultBuildFile, loadedImage.BuildFile, "bad build file")
+	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.SourceDir(), "bad source dir")
+	assert.Equal(t, path+"/"+DefaultBuildFile, loadedImage.BuildFile, "bad build file")
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
@@ -80,12 +80,12 @@ func assertBaseContent(t *testing.T, path string, b Base) {
 
 func assertBaseFs(t *testing.T, b Base) {
 	assert.DirExists(t, b.Dir(), "should exists")
-	assert.FileExists(t, b.Dir() + "/" + config.DefaultConfigFile, "should exists")
-	assert.FileExists(t, b.Dir() + "/" + DefaultResourceFile, "should exists")
+	assert.FileExists(t, b.Dir()+"/"+config.DefaultConfigFile, "should exists")
+	assert.FileExists(t, b.Dir()+"/"+DefaultResourceFile, "should exists")
 }
 
 func assertTestableContent(t *testing.T, path string, r Testable) {
-	assert.Equal(t, path + "/" + DefaultTestDir, r.TestDir(), "bad resource dir")
+	assert.Equal(t, path+"/"+DefaultTestDir, r.TestDir(), "bad resource dir")
 }
 
 func assertTestableFs(t *testing.T, r Testable) {
@@ -135,7 +135,7 @@ func TestBuildProject(t *testing.T) {
 	assert.Equal(t, ProjectKind, r.Kind(), "bad resource kind")
 
 	_, err = r.Images()
-	require.Error(t, err, "should error")
+	require.NoError(t, err, "should not error")
 }
 
 func TestInitProject(t *testing.T) {
@@ -173,8 +173,8 @@ func TestBuildImage(t *testing.T) {
 	assertTestableContent(t, path, r.Testable)
 
 	assert.Equal(t, ImageKind, r.Kind(), "bad resource kind")
-	assert.Equal(t, path + "/" + DefaultSourceDir, r.SourceDir(), "bad source dir")
-	assert.Equal(t, path + "/" + DefaultBuildFile, r.BuildFile, "bad buildfile")
+	assert.Equal(t, path+"/"+DefaultSourceDir, r.SourceDir(), "bad source dir")
+	assert.Equal(t, path+"/"+DefaultBuildFile, r.BuildFile, "bad buildfile")
 	assert.Equal(t, DefaultInitialVersion, r.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
@@ -241,4 +241,3 @@ func TestInitProjectWithImages(t *testing.T) {
 	assert.Len(t, images, 2, "should got 2 images")
 
 }
-

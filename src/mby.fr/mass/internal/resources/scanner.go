@@ -1,12 +1,12 @@
 package resources
 
-import(
-	//"fmt"
+import (
+	"errors"
 	"io/fs"
 	"path/filepath"
 )
 
-func buildScanner(resKind Kind, c chan<- interface{}) (fs.WalkDirFunc) {
+func buildScanner(resKind Kind, c chan<- interface{}) fs.WalkDirFunc {
 	scanner := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -43,11 +43,15 @@ func ScanProjects(path string) (projects []Project, err error) {
 	scanner := buildScanner(ProjectKind, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
+		// Swallow error if path don't exists
+		err = nil
+		return
+	} else if err != nil {
 		return
 	}
 	// BLock until array finished
-	<- finished
+	<-finished
 	return
 }
 
@@ -66,11 +70,15 @@ func ScanImages(path string) (images []Image, err error) {
 	scanner := buildScanner(ImageKind, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
+		// Swallow error if path don't exists
+		err = nil
+		return
+	} else if err != nil {
 		return
 	}
 	// BLock until array finished
-	<- finished
+	<-finished
 	return
 }
 
@@ -89,10 +97,14 @@ func ScanEnvs(path string) (envs []Env, err error) {
 	scanner := buildScanner(EnvKind, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
+		// Swallow error if path don't exists
+		err = nil
+		return
+	} else if err != nil {
 		return
 	}
 	// BLock until array finished
-	<- finished
+	<-finished
 	return
 }

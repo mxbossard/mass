@@ -1,12 +1,12 @@
 package resources
 
 import (
-	"testing"
 	"os"
+	"testing"
 	//"path/filepath"
 
 	"github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
 )
@@ -22,31 +22,37 @@ func initRandResource(t *testing.T, parentPath string, kind Kind) (path string) 
 
 func TestScanBlankPath(t *testing.T) {
 	path := ""
-	_, err := ScanProjects(path)
-	assert.Error(t, err, "should error")
+	projects, err := ScanProjects(path)
+	require.NoError(t, err, "should not error")
+	assert.Empty(t, projects, "should be empty")
 
-	_, err = ScanImages(path)
-	assert.Error(t, err, "should error")
+	images, err := ScanImages(path)
+	require.NoError(t, err, "should not error")
+	assert.Empty(t, images, "should be empty")
 
-	_, err = ScanEnvs(path)
-	assert.Error(t, err, "should error")
+	envs, err := ScanEnvs(path)
+	require.NoError(t, err, "should not error")
+	assert.Empty(t, envs, "should be empty")
 }
 
 func TestScanNotExistingDir(t *testing.T) {
 	path := "notExistingDirZzz"
-	_, err := ScanProjects(path)
-	assert.Error(t, err, "should error")
+	projects, err := ScanProjects(path)
+	assert.NoError(t, err, "should error")
+	assert.Empty(t, projects, "should be empty")
 
-	_, err = ScanImages(path)
-	assert.Error(t, err, "should error")
+	images, err := ScanImages(path)
+	assert.NoError(t, err, "should error")
+	assert.Empty(t, images, "should be empty")
 
-	_, err = ScanEnvs(path)
-	assert.Error(t, err, "should error")
+	envs, err := ScanEnvs(path)
+	assert.NoError(t, err, "should error")
+	assert.Empty(t, envs, "should be empty")
 }
 
 func TestScanProjects(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
-        defer os.RemoveAll(parentPath)
+	defer os.RemoveAll(parentPath)
 
 	res, err := ScanProjects(parentPath)
 	require.NoError(t, err, "should not error")
@@ -82,7 +88,7 @@ func TestScanProjects(t *testing.T) {
 
 func TestScanEnvs(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
-        defer os.RemoveAll(parentPath)
+	defer os.RemoveAll(parentPath)
 
 	res, err := ScanEnvs(parentPath)
 	require.NoError(t, err, "should not error")
@@ -118,7 +124,7 @@ func TestScanEnvs(t *testing.T) {
 
 func TestScanImages(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
-        defer os.RemoveAll(parentPath)
+	defer os.RemoveAll(parentPath)
 
 	res, err := ScanImages(parentPath)
 	require.NoError(t, err, "should not error")

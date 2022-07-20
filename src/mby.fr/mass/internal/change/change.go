@@ -38,9 +38,16 @@ func Init() (err error) {
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
 	filesToSign := []string{res.BuildFile, res.SourceDir()}
-	signature, err = trust.SignFsContents(filesToSign...)
+	filesSignature, err := trust.SignFsContents(filesToSign...)
+	if err != nil {
+		return "", err
+	}
 
-	// TODO add build config in signature
+	configs, err := resources.MergedConfig(res)
+	if err != nil {
+		return "", err
+	}
+	signature, err = trust.SignObjects(configs.BuildArgs, filesSignature)
 
 	return
 }
@@ -87,10 +94,16 @@ func DoesImageChanged(res resources.Image) (test bool, err error) {
 }
 
 func calcDeploySignature(res resources.Image) (signature string, err error) {
-	// TODO add run config in signature
 	// TODO add volumes in signature
 	filesToSign := []string{}
-	signature, err = trust.SignFsContents(filesToSign...)
+	filesSignature, err := trust.SignFsContents(filesToSign...)
+
+	configs, err := resources.MergedConfig(res)
+	if err != nil {
+		return "", err
+	}
+	signature, err = trust.SignObjects(filesSignature, configs.Environment, configs.RunArgs)
+
 	return
 }
 

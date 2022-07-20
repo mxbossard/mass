@@ -2,13 +2,20 @@ package resources
 
 import (
 	//"fmt"
-	"testing"
-	"os"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"testing"
 
 	"mby.fr/mass/internal/commontest"
 )
+
+func TestListProjectsWithoutProjectDir(t *testing.T) {
+	commontest.InitMinimalTempWorkspace(t)
+	envs, err := ListProjects()
+	require.NoError(t, err, "should not error")
+	assert.Empty(t, envs, "Should list 0 projects")
+}
 
 func TestListProjects(t *testing.T) {
 	tempDir := commontest.InitTempWorkspace(t)
@@ -32,6 +39,13 @@ func TestListProjects(t *testing.T) {
 	assert.Len(t, projects, 2, "Should list 2 project")
 }
 
+func TestListEnvsWithoutEnvDir(t *testing.T) {
+	commontest.InitMinimalTempWorkspace(t)
+	envs, err := ListEnvs()
+	require.NoError(t, err, "should not error")
+	assert.Empty(t, envs, "Should list 0 envs")
+}
+
 func TestListEnvs(t *testing.T) {
 	tempDir := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(tempDir)
@@ -45,4 +59,3 @@ func TestListEnvs(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, envs, 4, "Should list 4 envs")
 }
-

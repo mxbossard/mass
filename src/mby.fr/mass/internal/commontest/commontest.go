@@ -1,16 +1,16 @@
 package commontest
 
 import (
-        "os"
 	"fmt"
+	"os"
 	"path/filepath"
-        "testing"
+	"testing"
 
-        "github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-        "mby.fr/utils/test"
-        "mby.fr/mass/internal/settings"
+	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/test"
 )
 
 // Common function for testing which import minimum packages to not introduce dep cycle.
@@ -20,19 +20,23 @@ const projectKind = "project"
 const imageKind = "image"
 
 func AssertSettingsFileTree(t *testing.T, path string) {
-	assert.FileExists(t, path + "/settings.yaml", "settings file should exists")
+	assert.FileExists(t, path+"/settings.yaml", "settings file should exists")
 }
 
-func AssertWorkspaceFileTree(t *testing.T, wksPath string) {
+func AssertMinimalWorkspaceFileTree(t *testing.T, wksPath string) {
 	assert.DirExists(t, wksPath, "workspace dir should exists")
 
 	settingsDir := wksPath + "/.mass"
 	assert.DirExists(t, settingsDir, ".mass/ dir should exists")
 	AssertSettingsFileTree(t, settingsDir)
+}
 
+func AssertWorkspaceFileTree(t *testing.T, wksPath string) {
+	AssertMinimalWorkspaceFileTree(t, wksPath)
+
+	// Check envs FS is ok
 	envsDir := wksPath + "/envs"
 	assert.DirExists(t, envsDir, "config dir should exists")
-	AssertSettingsFileTree(t, settingsDir)
 
 	for _, env := range settings.Default().Environments {
 		envPath := envsDir + "/" + env
@@ -42,27 +46,27 @@ func AssertWorkspaceFileTree(t *testing.T, wksPath string) {
 }
 
 func AssertEnvFileTree(t *testing.T, path string) {
-        assert.DirExists(t, path, "env dir file should exists")
-        assert.FileExists(t, path + "/resource.yaml", "file should exists")
-        assert.FileExists(t, path + "/config.yaml", "file should exists")
+	assert.DirExists(t, path, "env dir file should exists")
+	assert.FileExists(t, path+"/resource.yaml", "file should exists")
+	assert.FileExists(t, path+"/config.yaml", "file should exists")
 }
 
 func AssertProjectFileTree(t *testing.T, path string) {
 	assert.DirExists(t, path, "project dir file should exists")
-	assert.DirExists(t, path + "/test", "test dir should exists")
+	assert.DirExists(t, path+"/test", "test dir should exists")
 	//assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
-	assert.FileExists(t, path + "/resource.yaml", "resource file should exists")
-	assert.FileExists(t, path + "/config.yaml", "config file should exists")
+	assert.FileExists(t, path+"/resource.yaml", "resource file should exists")
+	assert.FileExists(t, path+"/config.yaml", "config file should exists")
 }
 
 func AssertImageFileTree(t *testing.T, path string) {
 	assert.DirExists(t, path, "image dir file should exists")
-	assert.DirExists(t, path + "/src", "test dir should exists")
-	assert.DirExists(t, path + "/test", "test dir should exists")
-	assert.FileExists(t, path + "/version.txt", "version.txt file should exists")
-	assert.FileExists(t, path + "/resource.yaml", "version.txt file should exists")
-	assert.FileExists(t, path + "/config.yaml", "config file should exists")
-	assert.FileExists(t, path + "/Dockerfile", "buildfile file should exists")
+	assert.DirExists(t, path+"/src", "test dir should exists")
+	assert.DirExists(t, path+"/test", "test dir should exists")
+	assert.FileExists(t, path+"/version.txt", "version.txt file should exists")
+	assert.FileExists(t, path+"/resource.yaml", "version.txt file should exists")
+	assert.FileExists(t, path+"/config.yaml", "config file should exists")
+	assert.FileExists(t, path+"/Dockerfile", "buildfile file should exists")
 }
 
 func createEmptyDirs(rootDir string, dirs ...string) (err error) {
@@ -108,8 +112,22 @@ func initResourceFile(t *testing.T, dir string, kind string) {
 	require.NoError(t, err, "Init resource file should not return an error")
 }
 
+func InitMinimalTempWorkspace(t *testing.T) (path string) {
+	path, _ = test.BuildRandTempPath()
+	err := settings.Init(path)
+	require.NoError(t, err, "Init settings should not return an error")
+
+	AssertMinimalWorkspaceFileTree(t, path)
+	err = os.Chdir(path)
+	if err != nil {
+		return
+	}
+	return
+}
+
 func InitTempWorkspace(t *testing.T) (path string) {
-        path, _ = test.BuildRandTempPath()
+	path = InitMinimalTempWorkspace(t)
+	// Add envs
 	for _, env := range settings.Default().Environments {
 		envDir := filepath.Join(path, "envs", env)
 		err := createEmptyFiles(envDir, "config.yaml", "resource.yaml")
@@ -118,25 +136,25 @@ func InitTempWorkspace(t *testing.T) (path string) {
 		initResourceFile(t, envDir, envKind)
 	}
 	err := settings.Init(path)
-        require.NoError(t, err, "Init settings should not return an error")
+	require.NoError(t, err, "Init settings should not return an error")
 
 	AssertWorkspaceFileTree(t, path)
 	err = os.Chdir(path)
 	if err != nil {
 		return
 	}
-        return
+	return
 }
 
 func InitRandEnv(t *testing.T, workspacePath string) (path string) {
 	name := test.RandSeq(6)
 	path = filepath.Join(workspacePath, "envs", name)
 	err := createEmptyFiles(path, "config.yaml", "resource.yaml")
-        require.NoError(t, err, "Init temp files should not error")
+	require.NoError(t, err, "Init temp files should not error")
 	initConfigFile(t, path)
 	initResourceFile(t, path, envKind)
-        AssertEnvFileTree(t, path)
-        return
+	AssertEnvFileTree(t, path)
+	return
 
 }
 
@@ -161,4 +179,3 @@ func InitRandImage(t *testing.T, projectDir string) (name, path string) {
 	AssertImageFileTree(t, path)
 	return
 }
-

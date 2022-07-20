@@ -1,6 +1,9 @@
 package resources
 
 import (
+	"fmt"
+	"os"
+
 	"mby.fr/mass/internal/settings"
 )
 
@@ -10,6 +13,11 @@ func ListEnvs() (envs []Env, err error) {
 		return
 	}
 	envs, err = ScanEnvs(ss.EnvsDir())
+	if err == os.ErrNotExist {
+		err = nil
+	} else if err != nil {
+		fmt.Printf("Error from ListEnvs: %s\n", err)
+	}
 	return
 }
 
@@ -44,6 +52,7 @@ func GetProject(name string) (p Project, ok bool, err error) {
 
 func GetEnv(name string) (r Env, ok bool, err error) {
 	envs, err := ListEnvs()
+
 	for _, r = range envs {
 		if r.Name() == name {
 			ok = true
@@ -56,11 +65,10 @@ func GetEnv(name string) (r Env, ok bool, err error) {
 func GetImage(projectName, imageName string) (r Image, ok bool, err error) {
 	images, err := ListImages()
 	for _, r = range images {
-		if r.Name() == projectName + "/" + imageName {
+		if r.Name() == projectName+"/"+imageName {
 			ok = true
 			return
 		}
 	}
 	return
 }
-
