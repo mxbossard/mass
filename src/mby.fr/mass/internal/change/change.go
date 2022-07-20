@@ -38,7 +38,7 @@ func Init() (err error) {
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
 	filesToSign := []string{res.BuildFile, res.SourceDir()}
-	signature, err = trust.SignFsContents(filesToSign)
+	signature, err = trust.SignFsContents(filesToSign...)
 
 	// TODO add build config in signature
 
@@ -90,7 +90,7 @@ func calcDeploySignature(res resources.Image) (signature string, err error) {
 	// TODO add run config in signature
 	// TODO add volumes in signature
 	filesToSign := []string{}
-	signature, err = trust.SignFsContents(filesToSign)
+	signature, err = trust.SignFsContents(filesToSign...)
 	return
 }
 
