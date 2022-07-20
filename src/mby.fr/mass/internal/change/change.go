@@ -37,8 +37,11 @@ func Init() (err error) {
 }
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
-	filesToSign := []string{res.BuildFile, res.SourceDirectory}
+	filesToSign := []string{res.BuildFile, res.SourceDir()}
 	signature, err = trust.SignContents(filesToSign)
+
+	// TODO add build config in signature
+
 	return
 }
 
@@ -70,7 +73,6 @@ func StoreImageSignature(res resources.Image) (err error) {
 
 func DoesImageChanged(res resources.Image) (test bool, err error) {
 	// Return true if found image changed
-
 	previousSignature, e1 := loadImageSignature(res)
 	if e1 != nil {
 		return false, e1
@@ -81,6 +83,30 @@ func DoesImageChanged(res resources.Image) (test bool, err error) {
 		return false, e2
 	}
 	test = previousSignature != actualSignature
+	return
+}
+
+func calcDeploySignature(res resources.Image) (signature string, err error) {
+	// TODO add run config in signature
+	// TODO add volumes in signature
+	filesToSign := []string{}
+	signature, err = trust.SignContents(filesToSign)
+	return
+}
+
+func deployCacheKey(res resources.Image) (signature string) {
+	return res.FullName()
+}
+
+func loadDeploySignature(res resources.Image) (signature string, err error) {
+	key := imageCacheKey(res)
+	value, ok, e := imageCacheDir.LoadString(key)
+	if e != nil {
+		return signature, e
+	}
+	if ok {
+		signature = value
+	}
 	return
 }
 
