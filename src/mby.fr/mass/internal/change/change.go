@@ -38,7 +38,7 @@ func Init() (err error) {
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
 	filesToSign := []string{res.BuildFile, res.SourceDir()}
-	signature, err = trust.SignContents(filesToSign)
+	signature, err = trust.SignFsContents(filesToSign)
 
 	// TODO add build config in signature
 
@@ -90,7 +90,7 @@ func calcDeploySignature(res resources.Image) (signature string, err error) {
 	// TODO add run config in signature
 	// TODO add volumes in signature
 	filesToSign := []string{}
-	signature, err = trust.SignContents(filesToSign)
+	signature, err = trust.SignFsContents(filesToSign)
 	return
 }
 
@@ -99,8 +99,8 @@ func deployCacheKey(res resources.Image) (signature string) {
 }
 
 func loadDeploySignature(res resources.Image) (signature string, err error) {
-	key := imageCacheKey(res)
-	value, ok, e := imageCacheDir.LoadString(key)
+	key := deployCacheKey(res)
+	value, ok, e := deployCacheDir.LoadString(key)
 	if e != nil {
 		return signature, e
 	}
@@ -110,10 +110,27 @@ func loadDeploySignature(res resources.Image) (signature string, err error) {
 	return
 }
 
-func StoreDeploySignature(res resources.Resource) (err error) {
+func StoreDeploySignature(res resources.Image) (err error) {
+	signature, e := calcDeploySignature(res)
+	if e != nil {
+		return e
+	}
+	key := deployCacheKey(res)
+	err = deployCacheDir.StoreString(key, signature)
 	return
 }
 
-func DoesDeployChanged(res resources.Resource) (test bool, err error) {
+func DoesDeployChanged(res resources.Image) (test bool, err error) {
+	// Return true if found deploy changed
+	previousSignature, e1 := loadDeploySignature(res)
+	if e1 != nil {
+		return false, e1
+	}
+
+	actualSignature, e2 := calcDeploySignature(res)
+	if e2 != nil {
+		return false, e2
+	}
+	test = previousSignature != actualSignature
 	return
 }
