@@ -1,8 +1,12 @@
 package change
 
 import (
+	"path/filepath"
+
+	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/cache"
+	"mby.fr/utils/trust"
 )
 
 const defaultImageCacheDir = "imageSignatures"
@@ -11,14 +15,14 @@ const defaultDeployCacheDir = "deploySignatures"
 var imageCacheDir cache.Cache
 var deployCacheDir cache.Cache
 
-func init() (err error) {
+func Init() (err error) {
 	// Initializes caches
-	var ss, e := settings.GetSettingsService()
+	ss, e := settings.GetSettingsService()
 	if err != nil {
 		return e
 	}
-	var imageSignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultImageCacheDir)
-	var deploySignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultDeployCacheDir)
+	imageSignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultImageCacheDir)
+	deploySignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultDeployCacheDir)
 
 	imageCacheDir, err = cache.NewPersistentCache(imageSignaturesCacheDir)
 	if err != nil {
@@ -32,54 +36,58 @@ func init() (err error) {
 	return
 }
 
-func calcImageSignature(res resources.Resource) (signature string, err error) {
-	// Use utils/trust to calc signature
+func calcImageSignature(res resources.Image) (signature string, err error) {
+	filesToSign := []string{res.BuildFile, res.SourceDirectory}
+	signature, err = trust.SignContents(filesToSign)
 	return
 }
 
-func imageCacheKey(res resources.Resource) (signature string) {
-	return
+func imageCacheKey(res resources.Image) (signature string) {
+	return res.FullName()
 }
 
-func loadImageSignature(res resources.Resource) ((signature string, err error) {
-	var key := imageCacheKey(res)
+func loadImageSignature(res resources.Image) (signature string, err error) {
+	key := imageCacheKey(res)
 	value, ok, e := imageCacheDir.LoadString(key)
 	if e != nil {
-		return _, e
+		return signature, e
+	}
+	if ok {
+		signature = value
 	}
 	return
 }
 
-func StoreImageSignature(res resources.Resource) (err error) {
-	var signature, e := calcImageSignature(res)
+func StoreImageSignature(res resources.Image) (err error) {
+	signature, e := calcImageSignature(res)
 	if e != nil {
 		return e
 	}
-	var key := imageCacheKey(res)
+	key := imageCacheKey(res)
 	err = imageCacheDir.StoreString(key, signature)
 	return
 }
 
-func DoesImageChanged(res resources.Resource) (res bool, err error) {
+func DoesImageChanged(res resources.Image) (test bool, err error) {
 	// Return true if found image changed
 
 	previousSignature, e1 := loadImageSignature(res)
 	if e1 != nil {
-		return e1
+		return false, e1
 	}
 
 	actualSignature, e2 := calcImageSignature(res)
 	if e2 != nil {
-		return e2
+		return false, e2
 	}
-
-	return previousSignature != actualSignature
+	test = previousSignature != actualSignature
+	return
 }
 
 func StoreDeploySignature(res resources.Resource) (err error) {
 	return
 }
 
-func DoesDeployChanged(res resources.Resource) (res bool, err error) {
+func DoesDeployChanged(res resources.Resource) (test bool, err error) {
 	return
 }
