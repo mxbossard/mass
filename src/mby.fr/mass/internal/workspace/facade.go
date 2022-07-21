@@ -100,7 +100,9 @@ func GetResourcesConfig(args []string) {
 	printErrors(errors)
 	configs, errors := resources.MergedConfigs(res)
 	d := display.Service()
-	d.Display(configs, errors)
+	logger := d.ImmediateActionLogger("config", res.AbsoluteName())
+	logger.
+		d.Display(configs, errors)
 	d.Flush()
 	d.Info("Config finished")
 }
