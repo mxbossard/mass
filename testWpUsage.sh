@@ -25,10 +25,16 @@ mass init image wp/wordpress wp/db
 
 cat <<EOF > wp/wordpress/Dockerfile
 FROM wordpress:6.0-fpm-alpine
+RUN echo foo
+RUN echo bar
+RUN echo baz
 EOF
 
 cat <<EOF > wp/db/Dockerfile
 FROM mariadb:10.7-focal
+RUN echo pif
+RUN echo paf
+RUN echo pouf
 EOF
 
 cat <<EOF > wp/wordpress/config.yaml

@@ -47,10 +47,10 @@ func (b DockerBuilder) Build(noCache bool) (err error) {
 
 	for _, image := range b.images {
 		wg.Add(1)
-		go func() {
+		go func(image resources.Image) {
 			defer wg.Done()
 			buildDockerImage(b.binary, image, noCache, errors)
-		}()
+		}(image)
 	}
 
 	// Wait for all build to finish
