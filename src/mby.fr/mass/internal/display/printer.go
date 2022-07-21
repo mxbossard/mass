@@ -1,21 +1,21 @@
 package display
 
 import (
-	"io"
-	"os"
 	"bufio"
 	"fmt"
-	"reflect"
-	"time"
-	"sync"
+	"io"
 	"log"
-	"strings"
+	"os"
+	"reflect"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/templates"
-	"mby.fr/utils/errorz"
 	"mby.fr/utils/ansi"
+	"mby.fr/utils/errorz"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -68,7 +68,7 @@ type Printer interface {
 
 type BasicPrinter struct {
 	sync.Mutex
-	outputs Outputs
+	outputs   Outputs
 	lastPrint time.Time
 }
 
@@ -77,8 +77,8 @@ func (p *BasicPrinter) Outputs() Outputs {
 }
 
 func (o BasicPrinter) Flush() error {
-        o.Lock()
-        defer o.Unlock()
+	o.Lock()
+	defer o.Unlock()
 	return o.outputs.Flush()
 }
 
@@ -105,13 +105,13 @@ func (p BasicPrinter) LastPrint() time.Time {
 }
 
 func stringify(obj interface{}) (str string, err error) {
-	switch o:= obj.(type) {
+	switch o := obj.(type) {
 	case string:
 		str = o
 	case int:
-                str = strconv.Itoa(o)
-        case float64:
-                str = strconv.FormatFloat(o, 'E', 3, 32)
+		str = strconv.Itoa(o)
+	case float64:
+		str = strconv.FormatFloat(o, 'E', 3, 32)
 
 	case ansiFormatted:
 		if o.content == "" {
@@ -177,7 +177,7 @@ func printTo(w io.Writer, objects ...interface{}) (err error) {
 	var toPrint []string
 
 	for _, obj := range objects {
-		switch o:= obj.(type) {
+		switch o := obj.(type) {
 		case errorz.Aggregated:
 			for _, err := range o.Errors() {
 				//fmt.Fprintf(w, "Error: %s !\n", err)
@@ -250,9 +250,8 @@ func NewPrinter(outputs Outputs) Printer {
 
 // ANSI formatting for content
 type ansiFormatted struct {
-	format string
-	content interface{}
-	tab bool
+	format            string
+	content           interface{}
+	tab               bool
 	leftPad, rightPad int
 }
-

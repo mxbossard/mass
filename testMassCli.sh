@@ -91,9 +91,9 @@ $massCmd config p,i p1 p1/i11 notExist || true
 
 echo "##### Testing mass build ..."
 $massCmd build e/dev i/p1/i11 || true
-$massCmd build --no-cache i/p3/i31
-$massCmd build --no-cache p/p1 p/p2
+$massCmd build i/p3/i31
 $massCmd build p/p3
+$massCmd build --no-cache p/p1 p/p2
 
 echo "##### Testing mass up ..."
 mass up i/p3/i31

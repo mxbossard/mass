@@ -1,4 +1,3 @@
----
 labels: 
 {{- range $key, $value := .Labels }}
   {{ $key }}: {{ $value }}
@@ -19,4 +18,3 @@ runArgs:
 {{- range $key, $value := .RunArgs }}
   - {{ $value }}
 {{- end }}
----
