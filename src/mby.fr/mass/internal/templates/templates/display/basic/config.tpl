@@ -14,7 +14,7 @@ buildArgs:
 {{- range $key, $value := .BuildArgs }}
   {{ $key }}: {{ $value }}
 {{- end }}
-runArgs: 
+runArgs:
 {{- range $key, $value := .RunArgs }}
   - {{ $value }}
 {{- end }}

@@ -1,7 +1,9 @@
 package workspace
 
 import (
+	"fmt"
 	"strings"
+
 	//"fmt"
 	"log"
 	"sync"
@@ -98,11 +100,16 @@ func UpResources(args []string) {
 func GetResourcesConfig(args []string) {
 	res, errors := ResolveExpression(args)
 	printErrors(errors)
-	configs, errors := resources.MergedConfigs(res)
 	d := display.Service()
-	logger := d.ImmediateActionLogger("config", res.AbsoluteName())
-	logger.
-		d.Display(configs, errors)
-	d.Flush()
+	for _, r := range res {
+		config, err := resources.MergedConfig(r)
+		if err != nil {
+			printErrors(errors)
+		}
+		header := fmt.Sprintf("--- Config of %s %s\n", r.Kind(), r.AbsoluteName())
+		footer := "---\n"
+		d.Display(header, *config, footer)
+	}
 	d.Info("Config finished")
+	d.Flush()
 }
