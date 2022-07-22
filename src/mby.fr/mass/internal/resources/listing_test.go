@@ -28,6 +28,7 @@ func TestListProjects(t *testing.T) {
 	name, path := commontest.InitRandProject(t, tempDir)
 	projects, err = ListProjects()
 	require.NoError(t, err, "should not error")
+	require.NotEmpty(t, projects, "should not be empty")
 	assert.Len(t, projects, 1, "Should list 1 project")
 	p1 := projects[0]
 	assert.Equal(t, name, p1.Name(), "Bad project name")

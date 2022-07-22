@@ -125,8 +125,6 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 		"-v", projectVol, "--workdir", "/code", // Mount project code
 	}
 
-	runComposeOnDockerArgs = append(runComposeOnDockerArgs, composeImage)
-
 	config, errors := resources.MergedConfig(project)
 	if errors != nil {
 		return errors
@@ -136,6 +134,8 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 		var envArg string = "-e=" + argKey + "=" + argValue
 		runComposeOnDockerArgs = append(runComposeOnDockerArgs, envArg)
 	}
+
+	runComposeOnDockerArgs = append(runComposeOnDockerArgs, composeImage)
 
 	// Compose level congig
 	var composeParams []string

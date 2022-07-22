@@ -19,8 +19,8 @@ const DefaultTestDir = "test"
 const DefaultVersionFile = "version.txt"
 const DefaultInitialVersion = "0.0.1"
 const DefaultBuildFile = "Dockerfile"
-const DefaultDeployFile = "compose.yml"
-const DefaultResourceFile = "resource.yml"
+const DefaultDeployFile = "compose.yaml"
+const DefaultResourceFile = "resource.yaml"
 
 type Resource interface {
 	Kind() Kind

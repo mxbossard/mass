@@ -2,10 +2,10 @@ package workspace
 
 import (
 	//"fmt"
-	"testing"
-	"os"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"testing"
 
 	//"mby.fr/utils/test"
 	"mby.fr/mass/internal/commontest"
@@ -28,6 +28,7 @@ func TestReInitProject(t *testing.T) {
 	commontest.AssertProjectFileTree(t, path)
 	projects, err := resources.ListProjects()
 	require.NoError(t, err, "should not error")
+	require.NotEmpty(t, projects, "should not be empty")
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 := projects[0]
 	assert.Equal(t, name, p1.Name(), "Bad project name")
@@ -160,4 +161,3 @@ func TestReInitProject(t *testing.T) {
 //	i1 := images[0]
 //	assert.Equal(t, newVersion, i1.Version, "reinit image should not change version")
 //}
-
