@@ -20,6 +20,36 @@ git init .
 # Init some projects
 $massCmd init project wp
 
+cat <<EOF > wp/compose.yml
+services:
+  db:
+    image: mariadb:10.6.4-focal
+    command: '--default-authentication-plugin=mysql_native_password'
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress
+    expose:
+      - 3306
+      - 33060
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - 80:80
+    restart: always
+    environment:
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=wordpress
+      - WORDPRESS_DB_NAME=wordpress
+volumes:
+  db_data:
+EOF
+
 # Init some images
 mass init image wp/wordpress wp/db
 
@@ -66,6 +96,7 @@ tree -Ca $workspaceDir
 # Display configs
 $massCmd config i/wp/wordpress i/wp/db
 
-$massCmd build --no-cache p/wp
+#$massCmd build --no-cache p/wp
+$massCmd build p/wp
 
 $massCmd up p/wp

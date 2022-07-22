@@ -1,11 +1,11 @@
 package resources
 
-import(
+import (
 	"fmt"
 	"os"
-	"sync"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v2"
 
@@ -18,7 +18,8 @@ const DefaultTestDir = "test"
 const DefaultVersionFile = "version.txt"
 const DefaultInitialVersion = "0.0.1"
 const DefaultBuildFile = "Dockerfile"
-const DefaultResourceFile = "resource.yaml"
+const DefaultDeployFile = "compose.yml"
+const DefaultResourceFile = "resource.yml"
 
 type Resource interface {
 	Kind() Kind
@@ -32,7 +33,7 @@ type Resource interface {
 type Base struct {
 	//Resource
 	ResourceKind Kind `yaml:"resourceKind"`
-	name, dir string
+	name, dir    string
 }
 
 func (r Base) Kind() Kind {
@@ -76,7 +77,7 @@ type Testable struct {
 	TestDirectory string `yaml:"testDirectory"`
 }
 
-func (t Testable) TestDir() (string) {
+func (t Testable) TestDir() string {
 	//var err error = nil
 	return t.TestDirectory
 }
@@ -101,9 +102,10 @@ func (e Env) Init() (err error) {
 }
 
 type Project struct {
-	Base `yaml:"base,inline"`
-	Testable `yaml:"testable,inline"`
-	images []Image
+	Base       `yaml:"base,inline"`
+	Testable   `yaml:"testable,inline"`
+	images     []Image
+	DeployFile string `yaml:"deployFile"`
 }
 
 func (p Project) Init() (err error) {
@@ -115,6 +117,15 @@ func (p Project) Init() (err error) {
 	if err != nil {
 		return
 	}
+
+	// Init Deploy file
+	deployfileContent := ""
+	//buildfileContent := "FROM alpine\n"
+	_, err = file.SoftInitFile(p.DeployFile, deployfileContent)
+	if err != nil {
+		return
+	}
+
 	err = Write(p)
 	return
 }
@@ -132,12 +143,12 @@ func (p *Project) Images() ([]Image, error) {
 }
 
 type Image struct {
-	Base `yaml:"base,inline"`
-	Testable `yaml:"testable,inline"`
-	SourceDirectory string `yaml:"sourceDirectory"`
-	BuildFile string `yaml:"buildFile"`
-	Version string `yaml:"version"`
-	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
+	Base            `yaml:"base,inline"`
+	Testable        `yaml:"testable,inline"`
+	SourceDirectory string  `yaml:"sourceDirectory"`
+	BuildFile       string  `yaml:"buildFile"`
+	Version         string  `yaml:"version"`
+	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) Init() (err error) {
@@ -151,8 +162,8 @@ func (i Image) Init() (err error) {
 	}
 
 	// Init version file
-        //versionFile := versionFilepath(projectPath)
-        //_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
+	//versionFile := versionFilepath(projectPath)
+	//_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
 
 	// Init source directory
 	err = os.MkdirAll(i.SourceDir(), 0755)
@@ -160,7 +171,7 @@ func (i Image) Init() (err error) {
 	// Init Build file
 	buildfileContent := ""
 	//buildfileContent := "FROM alpine\n"
-        _, err = file.SoftInitFile(i.BuildFile, buildfileContent)
+	_, err = file.SoftInitFile(i.BuildFile, buildfileContent)
 
 	if err != nil {
 		return
@@ -169,7 +180,7 @@ func (i Image) Init() (err error) {
 	return
 }
 
-func (i Image) SourceDir() (string) {
+func (i Image) SourceDir() string {
 	return i.SourceDirectory
 }
 
@@ -207,22 +218,22 @@ func buildTestable(path string) (t Testable, err error) {
 
 func Init(path string, kind Kind) (b Base, err error) {
 	switch kind {
-		case EnvKind:
+	case EnvKind:
 		var r Env
 		r, err = BuildEnv(path)
 		r.Init()
 		b = r.Base
-		case ProjectKind:
+	case ProjectKind:
 		var p Project
 		p, err = BuildProject(path)
 		p.Init()
 		b = p.Base
-		case ImageKind:
+	case ImageKind:
 		var i Image
 		i, err = BuildImage(path)
 		i.Init()
 		b = i.Base
-		default:
+	default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
 	}
 
@@ -232,8 +243,8 @@ func Init(path string, kind Kind) (b Base, err error) {
 func BuildEnv(path string) (r Env, err error) {
 	base, err := buildBase(EnvKind, path)
 	if err != nil {
-                return
-        }
+		return
+	}
 
 	r = Env{Base: base}
 	return
@@ -242,46 +253,48 @@ func BuildEnv(path string) (r Env, err error) {
 func BuildProject(path string) (r Project, err error) {
 	base, err := buildBase(ProjectKind, path)
 	if err != nil {
-                return
-        }
+		return
+	}
 
 	testable, err := buildTestable(path)
 	if err != nil {
-                return
-        }
+		return
+	}
 
-	r = Project{Base: base, Testable: testable}
+	deployfile := filepath.Join(base.Dir(), DefaultDeployFile)
+
+	r = Project{Base: base, Testable: testable, DeployFile: deployfile}
 	return
 }
 
 func BuildImage(path string) (r Image, err error) {
 	base, err := buildBase(ImageKind, path)
 	if err != nil {
-                return
-        }
+		return
+	}
 
 	testable, err := buildTestable(path)
 	if err != nil {
-                return
-        }
+		return
+	}
 
 	version := DefaultInitialVersion
-        buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
+	buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
 	sourceDir := filepath.Join(base.Dir(), DefaultSourceDir)
 
 	projectPath := filepath.Dir(path)
 	project, err := BuildProject(projectPath)
 	if err != nil {
-                return
-        }
+		return
+	}
 
 	r = Image{
-		Base: base, 
-		Testable: testable, 
-		Version: version, 
-		BuildFile: buildfile, 
+		Base:            base,
+		Testable:        testable,
+		Version:         version,
+		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
-		Project: project,
+		Project:         project,
 	}
 	return
 }
@@ -312,7 +325,7 @@ func Read(path string) (r Resource, err error) {
 
 	kind := base.Kind()
 	switch kind {
-		case EnvKind:
+	case EnvKind:
 		res, err := BuildEnv(base.Dir())
 		if err != nil {
 			return r, err
@@ -320,7 +333,7 @@ func Read(path string) (r Resource, err error) {
 		//res.Base = base
 		err = yaml.Unmarshal(content, &res)
 		r = res
-		case ProjectKind:
+	case ProjectKind:
 		res, err := BuildProject(base.Dir())
 		if err != nil {
 			return r, err
@@ -328,7 +341,7 @@ func Read(path string) (r Resource, err error) {
 		//res := Project{Base: base}
 		err = yaml.Unmarshal(content, &res)
 		r = res
-		case ImageKind:
+	case ImageKind:
 		res, err := BuildImage(base.Dir())
 		if err != nil {
 			return r, err
@@ -336,7 +349,7 @@ func Read(path string) (r Resource, err error) {
 		//res := Image{Base: base}
 		err = yaml.Unmarshal(content, &res)
 		r = res
-		default:
+	default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
 		return
 	}
@@ -349,26 +362,27 @@ func Read(path string) (r Resource, err error) {
 }
 
 var writeLock = &sync.Mutex{}
+
 func Write(r Resource) (err error) {
 	writeLock.Lock()
 	defer writeLock.Unlock()
 
 	var content []byte
 	switch r := r.(type) {
-		case Env, Project, Image:
+	case Env, Project, Image:
 		content, err = yaml.Marshal(r)
-		//case Project:
-		//content, err = yaml.Marshal(r)
-		//case Image:
-		//content, err = yaml.Marshal(r)
-		default:
+	//case Project:
+	//content, err = yaml.Marshal(r)
+	//case Image:
+	//content, err = yaml.Marshal(r)
+	default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
 		return
 	}
 
-        if err != nil {
-                return
-        }
+	if err != nil {
+		return
+	}
 
 	resourceFilepath := filepath.Join(r.Dir(), DefaultResourceFile)
 	err = os.WriteFile(resourceFilepath, content, 0644)
@@ -379,4 +393,3 @@ func Write(r Resource) (err error) {
 func resourceName(path string) string {
 	return filepath.Base(path)
 }
-

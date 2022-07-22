@@ -4,10 +4,10 @@ import (
 	//"bytes"
 
 	"fmt"
-	"io"
 	"os/exec"
 	"sync"
 
+	"mby.fr/mass/internal/command"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
 )
@@ -65,13 +65,6 @@ func (b DockerBuilder) Build(noCache bool) (err error) {
 	return err
 }
 
-func stream(r io.Reader, w io.Writer, errors chan error) {
-	_, err := io.Copy(w, r)
-	if err != nil {
-		errors <- err
-	}
-}
-
 func buildDockerImage(binary string, image resources.Image, noCache bool, errors chan error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
@@ -86,12 +79,12 @@ func buildDockerImage(binary string, image resources.Image, noCache bool, errors
 	}
 
 	// Forge build-args
-	configs, err := resources.MergedConfig(image)
+	config, err := resources.MergedConfig(image)
 	if err != nil {
 		errors <- err
 	}
 
-	for argKey, argValue := range configs.BuildArgs {
+	for argKey, argValue := range config.BuildArgs {
 		var buildArg string = "--build-arg=" + argKey + "=" + argValue
 		buildParams = append(buildParams, buildArg)
 	}
@@ -102,36 +95,13 @@ func buildDockerImage(binary string, image resources.Image, noCache bool, errors
 	logger.Debug("build params: %s", buildParams)
 	cmd := exec.Command(binary, buildParams...)
 	cmd.Dir = image.Dir()
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		errors <- err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		errors <- err
-	}
 
-	streamErrors := make(chan error, 10)
-	go stream(stdout, logger.Out(), streamErrors)
-	go stream(stderr, logger.Err(), streamErrors)
-
-	err = cmd.Start()
-	if err != nil {
-		logger.Flush()
-		errors <- err
-	}
-	err = cmd.Wait()
-	if err == nil {
-		// Use select to not block if no error in channel
-		select {
-		case err = <-streamErrors:
-		default:
-		}
-	}
+	err = command.RunLogging(cmd, logger)
 	if err != nil {
 		logger.Flush()
 		err := fmt.Errorf("Error building image %s : %w", image.Name(), err)
 		errors <- err
 	}
+
 	logger.Info("Build finished for image: %s .", image.Name())
 }
