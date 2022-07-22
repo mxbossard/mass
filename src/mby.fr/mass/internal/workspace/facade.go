@@ -106,7 +106,7 @@ func GetResourcesConfig(args []string) {
 		if err != nil {
 			printErrors(errors)
 		}
-		header := fmt.Sprintf("--- Config of %s %s\n", r.Kind(), r.AbsoluteName())
+		header := fmt.Sprintf("--- Config of %s %s\n", r.Kind(), r.QualifiedName())
 		footer := "---\n"
 		d.Display(header, *config, footer)
 	}

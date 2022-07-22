@@ -30,7 +30,7 @@ func New(r resources.Resource) (Builder, error) {
 	case resources.Image:
 		images = append(images, res)
 	default:
-		return nil, fmt.Errorf("%w: %s", NotBuildableResource, r.AbsoluteName())
+		return nil, fmt.Errorf("%w: %s", NotBuildableResource, r.QualifiedName())
 	}
 	return DockerBuilder{"docker", images}, nil
 }

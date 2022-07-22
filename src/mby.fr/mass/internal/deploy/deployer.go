@@ -26,7 +26,7 @@ func New(r resources.Resource) (Deployer, error) {
 	case resources.Image:
 		return DockerImagesDeployer{"docker", []string{}, []resources.Image{res}}, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", NotDeployableResource, r.AbsoluteName())
+		return nil, fmt.Errorf("%w: %s", NotDeployableResource, r.QualifiedName())
 	}
 }
 
@@ -151,7 +151,11 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 	// --env-file ?
 
 	// Set project name
-	composeParams = append(composeParams, "--project-name", project.Name())
+	absoluteName, err := project.AbsoluteName()
+	if err != nil {
+		return err
+	}
+	composeParams = append(composeParams, "--project-name", absoluteName)
 	//composeParams = append(composeParams, "--verbose")
 
 	// Up level config

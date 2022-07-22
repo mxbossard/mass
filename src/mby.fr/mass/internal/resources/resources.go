@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"mby.fr/mass/internal/config"
+	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/file"
 )
 
@@ -24,7 +25,7 @@ const DefaultResourceFile = "resource.yml"
 type Resource interface {
 	Kind() Kind
 	Name() string
-	AbsoluteName() string
+	QualifiedName() string
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
@@ -44,7 +45,7 @@ func (r Base) Name() string {
 	return r.name
 }
 
-func (r Base) AbsoluteName() string {
+func (r Base) QualifiedName() string {
 	return fmt.Sprintf("%s/%s", r.ResourceKind, r.Name())
 }
 
@@ -127,6 +128,15 @@ func (p Project) Init() (err error) {
 	}
 
 	err = Write(p)
+	return
+}
+
+func (p Project) AbsoluteName() (name string, err error) {
+	ss, err := settings.GetSettingsService()
+	if err != nil {
+		return "", err
+	}
+	name = ss.Settings().Name + "-" + p.Name()
 	return
 }
 
