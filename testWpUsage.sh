@@ -36,8 +36,6 @@ RUN echo pif
 RUN echo paf
 RUN echo pouf
 ADD src/docker-entrypoint-initdb.d /docker-entrypoint-initdb.d
-ADD src/conf.d /etc/mysql/conf.d
-RUN chmod -R a+w /etc/mysql/conf.d
 EOF
 
 cat <<EOF > wp/wordpress/config.yaml
@@ -103,7 +101,7 @@ services:
 
   wait-db:
     image: mariadb:10.6.4-focal
-    command: /bin/sh -c 'while ! mysql -h db -u $${WORDPRESS_DB_USER} --password=$${WORDPRESS_DB_PASSWORD}; do sleep 1; echo .; done'
+    command: /bin/sh -c 'while ! mysql -h db -u \${WORDPRESS_DB_USER} --password=\${WORDPRESS_DB_PASSWORD}; do sleep 1; echo .; done'
     depends_on:
       - db
 
@@ -111,6 +109,7 @@ services:
     image: wordpress:cli-2.6
     command: |
       bash -c "
+      while ! mysql -h db -u \${WORDPRESS_DB_USER} --password=\${WORDPRESS_DB_PASSWORD}; do sleep 1; echo .; done ; sleep 2 ;
       wp db repair ;
       wp theme delete --all --force ;
       wp db optimize ;
@@ -130,7 +129,7 @@ services:
       - WORDPRESS_DB_USER
       - WORDPRESS_DB_PASSWORD
     depends_on: 
-      - wait-db
+      - db
     
 
 volumes:
@@ -149,12 +148,6 @@ confDbDir="wp/db/src/conf.d"
 mkdir -p "$initDbDir" "$confDbDir"
 cp ~/Documents/ede_backup_2020-01/ecrindes_phtest.sql $initDbDir/10-init-ede-db.sql
 echo "update wp_users set user_pass=md5('password') where user_login = 'nathalie';" > $initDbDir/20-change-admin-password.sql
-
-cat <<EOF > $confDbDir/50-server.cnf
-[mariadb]
-bind-address = 127.0.0.1
-EOF
-echo "rm /etc/mysql/conf.d/50-server.cnf" > $initDbDir/80-enable-db.sh
 
 #$massCmd build --no-cache p/wp
 $massCmd build p/wp
