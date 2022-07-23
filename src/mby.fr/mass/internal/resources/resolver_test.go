@@ -1,13 +1,13 @@
 package resources
 
-import(
-	"testing"
+import (
 	"os"
 	"path/filepath"
+	"testing"
 	//"fmt"
 
 	"github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
 	//"mby.fr/utils/errorz"
@@ -37,23 +37,24 @@ const image32 = "i32"
 const image33 = "i33"
 
 var (
-	envs = []string{env1, env2, env3}
+	envs     = []string{env1, env2, env3}
 	projects = []string{project1, project2, project3}
-	images = map[string][]string{
+	images   = map[string][]string{
 		project1: []string{image11, image12, image13},
 		project2: []string{image21, image22, image33},
 		project3: []string{image31, image32, image33},
 	}
 )
+
 func initWorkspace(t *testing.T) (path string) {
 	// Build fake workspace with resources tree
 	path, err := test.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work
-        err = settings.Init(path)
-        require.NoError(t, err, "should not error")
-        os.Chdir(path)
+	err = settings.Init(path)
+	require.NoError(t, err, "should not error")
+	os.Chdir(path)
 
 	// Init envs
 	os.MkdirAll(filepath.Join(path, envDir), 0755)
@@ -85,10 +86,10 @@ func initWorkspace(t *testing.T) (path string) {
 
 func TestSplitExpression(t *testing.T) {
 	cases := []struct {
-                exprIn string
-                kindWanted Kind
-                nameWanted string
-        } {
+		exprIn     string
+		kindWanted Kind
+		nameWanted string
+	}{
 		{"foo", AllKind, "foo"},
 		{"p/bar", ProjectKind, "bar"},
 		{"project/bar", ProjectKind, "bar"},
@@ -112,10 +113,10 @@ func TestSplitExpression(t *testing.T) {
 
 func TestSplitImageName(t *testing.T) {
 	cases := []struct {
-                nameIn string
-                projectWanted string
-                imageWanted string
-        } {
+		nameIn        string
+		projectWanted string
+		imageWanted   string
+	}{
 		{"foo", "", "foo"},
 		{"foo/bar", "foo", "bar"},
 		{"", "", ""},
@@ -134,10 +135,10 @@ func TestResolveResourceFrom(t *testing.T) {
 
 	cases := []struct {
 		fromPath, exprIn string
-		kindIn Kind
-		resNameWanted string
-		errWanted error
-	} {
+		kindIn           Kind
+		resNameWanted    string
+		errWanted        error
+	}{
 		// --- Resolving relative resource name
 		// Project
 		{fakeWorkspacePath, project1, -1, "", InvalidArgument}, // case 0
@@ -147,6 +148,10 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath, project1, EnvKind, "", ResourceNotFound{project1, NewKindSet(EnvKind)}},
 		{fakeWorkspacePath, project1, ImageKind, "", ResourceNotFound{project1, NewKindSet(ImageKind)}},
 		{fakeWorkspacePath + "/" + project1, project1, ProjectKind, project1, nil},
+		{fakeWorkspacePath + "/" + project1, "", ProjectKind, project1, nil},
+		{fakeWorkspacePath + "/" + project1, ".", ProjectKind, project1, nil},
+		{fakeWorkspacePath + "/" + project1, "", AllKind, project1, nil},
+		{fakeWorkspacePath + "/" + project1, ".", AllKind, project1, nil},
 		{fakeWorkspacePath + "/" + project2, project1, ProjectKind, "", ResourceNotFound{project1, NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath + "/" + envDir + env1, project1, ProjectKind, "", ResourceNotFound{project1, NewKindSet(ProjectKind)}},
 
@@ -156,6 +161,10 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath, env1, ProjectKind, "", ResourceNotFound{env1, NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath, env1, ImageKind, "", ResourceNotFound{env1, NewKindSet(ImageKind)}},
 		{fakeWorkspacePath + "/" + envDir + "/" + env1, env1, EnvKind, env1, nil},
+		{fakeWorkspacePath + "/" + envDir + "/" + env1, "", EnvKind, env1, nil},
+		{fakeWorkspacePath + "/" + envDir + "/" + env1, ".", EnvKind, env1, nil},
+		{fakeWorkspacePath + "/" + envDir + "/" + env1, "", AllKind, env1, nil},
+		{fakeWorkspacePath + "/" + envDir + "/" + env1, ".", AllKind, env1, nil},
 		{fakeWorkspacePath + "/" + envDir + "/" + env2, env1, EnvKind, "", ResourceNotFound{env1, NewKindSet(EnvKind)}},
 		{fakeWorkspacePath + "/" + project2, env1, EnvKind, "", ResourceNotFound{env1, NewKindSet(EnvKind)}},
 
@@ -168,6 +177,10 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath, project2 + "/" + image11, ImageKind, "", ResourceNotFound{project2 + "/" + image11, NewKindSet(ImageKind)}},
 		{fakeWorkspacePath + "/" + project1, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{fakeWorkspacePath + "/" + project1 + "/" + image11, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1 + "/" + image11, "", ImageKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1 + "/" + image11, ".", ImageKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1 + "/" + image11, "", AllKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1 + "/" + image11, ".", AllKind, project1 + "/" + image11, nil},
 		{fakeWorkspacePath + "/" + project2, project1 + "/" + image11, ImageKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(ImageKind)}},
 		{fakeWorkspacePath + "/" + project2 + "/" + image21, project1 + "/" + image11, ImageKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(ImageKind)}},
 
@@ -199,16 +212,20 @@ func TestResolveContextualResource(t *testing.T) {
 
 	cases := []struct {
 		fromPath, exprIn string
-		kindIn Kind
-		resNameWanted string
-		errWanted error
-	} {
+		kindIn           Kind
+		resNameWanted    string
+		errWanted        error
+	}{
 		// Project
 		{"/", project1, -1, "", InvalidArgument}, // case 0
 		{"/", "", ProjectKind, "", InvalidArgument},
 		{"/", project1, ProjectKind, project1, nil},
 		{"/", project1, EnvKind, "", ResourceNotFound{project1, NewKindSet(EnvKind)}},
 		{"/", project1, ImageKind, "", ResourceNotFound{project1, NewKindSet(ImageKind)}},
+		{"/" + project1, "", ProjectKind, project1, nil},
+		{"/" + project1, "", AllKind, project1, nil},
+		{"/" + project1, ".", ProjectKind, project1, nil},
+		{"/" + project1, ".", AllKind, project1, nil},
 		{"/" + project1, project1, ProjectKind, project1, nil},
 		{"/" + project2, project1, ProjectKind, project1, nil},
 		{"/" + envDir + env1, project1, ProjectKind, project1, nil},
@@ -220,6 +237,10 @@ func TestResolveContextualResource(t *testing.T) {
 		{"/", env1, ProjectKind, "", ResourceNotFound{env1, NewKindSet(ProjectKind)}},
 		{"/", env1, ImageKind, "", ResourceNotFound{env1, NewKindSet(ImageKind)}},
 		{"/" + envDir + "/" + env1, env1, EnvKind, env1, nil},
+		{"/" + envDir + "/" + env1, "", EnvKind, env1, nil},
+		{"/" + envDir + "/" + env1, ".", EnvKind, env1, nil},
+		{"/" + envDir + "/" + env1, "", AllKind, env1, nil},
+		{"/" + envDir + "/" + env1, ".", AllKind, env1, nil},
 		{"/" + envDir + "/" + env2, env1, EnvKind, env1, nil},
 		{"/" + project2, env1, EnvKind, env1, nil},
 
@@ -233,6 +254,10 @@ func TestResolveContextualResource(t *testing.T) {
 		{"/", project2 + "/" + image11, ImageKind, "", ResourceNotFound{project2 + "/" + image11, NewKindSet(ImageKind)}},
 		{"/" + project1, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{"/" + project1 + "/" + image11, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		{"/" + project1 + "/" + image11, "", ImageKind, project1 + "/" + image11, nil},
+		{"/" + project1 + "/" + image11, ".", ImageKind, project1 + "/" + image11, nil},
+		{"/" + project1 + "/" + image11, "", AllKind, project1 + "/" + image11, nil},
+		{"/" + project1 + "/" + image11, ".", AllKind, project1 + "/" + image11, nil},
 		{"/" + project2, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{"/" + project2 + "/" + image21, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 
@@ -272,15 +297,19 @@ func TestResolveResource(t *testing.T) {
 
 	cases := []struct {
 		fromPath, exprIn string
-		kindIn Kind
-		resNameWanted string
-		errWanted error
-	} {
+		kindIn           Kind
+		resNameWanted    string
+		errWanted        error
+	}{
 		// --- Resolving not typed resource
 		// Project
 		{"/", project1, AllKind, "", InconsistentExpression{project1, NewKindSet(AllKind)}}, // case 0
 		{"/", project1, ProjectKind, project1, nil},
 		{project1, project1, ProjectKind, project1, nil},
+		{project1, "", ProjectKind, project1, nil},
+		{project1, ".", ProjectKind, project1, nil},
+		{project1, "", AllKind, project1, nil},
+		{project1, ".", AllKind, project1, nil},
 		{project2, project1, ProjectKind, project1, nil},
 		{envDir + env1, project1, ProjectKind, project1, nil},
 		{"..", project1, ProjectKind, "", settings.PathNotFound},
@@ -288,6 +317,10 @@ func TestResolveResource(t *testing.T) {
 		// Env
 		{"/", env1, EnvKind, env1, nil},
 		{envDir + env1, env1, EnvKind, env1, nil},
+		{envDir + env1, "", EnvKind, env1, nil},
+		{envDir + env1, ".", EnvKind, env1, nil},
+		{envDir + env1, "", AllKind, env1, nil},
+		{envDir + env1, ".", AllKind, env1, nil},
 		{envDir + env2, env1, EnvKind, env1, nil},
 		{project1, env1, EnvKind, env1, nil},
 		{"..", env1, EnvKind, "", settings.PathNotFound}, // case 10
@@ -296,11 +329,15 @@ func TestResolveResource(t *testing.T) {
 		{"/", image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
 		{"/", project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{project1, image11, ImageKind, project1 + "/" + image11, nil},
+		//{project1 + "/" + image11, image11, ImageKind, project1 + "/" + image11, nil},
+		{project1 + "/" + image11, "", ImageKind, project1 + "/" + image11, nil},
+		{project1 + "/" + image11, ".", ImageKind, project1 + "/" + image11, nil},
+		{project1 + "/" + image11, "", AllKind, project1 + "/" + image11, nil},
+		{project1 + "/" + image11, ".", AllKind, project1 + "/" + image11, nil},
 		{project2, image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
 		{envDir + env1, image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
 		{project1, image11, EnvKind, "", ResourceNotFound{image11, NewKindSet(EnvKind)}},
 		{"..", image11, ImageKind, "", settings.PathNotFound},
-
 
 		// Resolving typed resource
 		// Project
@@ -309,13 +346,13 @@ func TestResolveResource(t *testing.T) {
 		{project1, "p/" + project1, ProjectKind, project1, nil}, // case 20
 		{project2, "p/" + project1, ProjectKind, project1, nil},
 
-		// Env 
+		// Env
 		{"/", "e/" + env1, AllKind, env1, nil},
 		{"/", "e/" + env1, EnvKind, env1, nil},
 		{envDir + env1, "e/" + env1, EnvKind, env1, nil},
 		{envDir + env2, "e/" + env1, EnvKind, env1, nil},
 
-		// Image 
+		// Image
 		{"/", "i/" + project1 + "/" + image11, AllKind, project1 + "/" + image11, nil},
 		{"/", "i/" + project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{project1, "i/" + image11, ImageKind, project1 + "/" + image11, nil},
@@ -343,7 +380,6 @@ func TestResolveResource(t *testing.T) {
 		{project1, "project/" + project1, EnvKind, "", InconsistentExpressionType{"project/" + project1, NewKindSet(EnvKind)}},
 		{"/", "env/" + env1, ProjectKind, "", InconsistentExpressionType{"env/" + env1, NewKindSet(ProjectKind)}},
 		{"/", "env/" + env1, ImageKind, "", InconsistentExpressionType{"env/" + env1, NewKindSet(ImageKind)}},
-
 	}
 
 	for i, c := range cases {
@@ -368,11 +404,13 @@ func TestResolveResource(t *testing.T) {
 
 func TestSplitExpressions(t *testing.T) {
 	cases := []struct {
-                exprIn string
-                strippedExprsWanted []string
-		kindsWanted []Kind
-                errWanted error
-        } {
+		exprIn              string
+		strippedExprsWanted []string
+		kindsWanted         []Kind
+		errWanted           error
+	}{
+		{"", []string{""}, []Kind{AllKind}, nil},
+		{".", []string{"."}, []Kind{AllKind}, nil},
 		{"p foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil}, // case 0
 		{"project foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil},
 		{"projects foo bar", []string{"foo", "bar"}, []Kind{ProjectKind}, nil},
@@ -405,10 +443,10 @@ func TestResolveExpression(t *testing.T) {
 
 	cases := []struct {
 		fromPath, exprIn string
-		kindsIn []Kind
-		resNamesWanted []string
-		errWanted error
-	} {
+		kindsIn          []Kind
+		resNamesWanted   []string
+		errWanted        error
+	}{
 		// Projects resolution
 		{"/", project1, []Kind{}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}}, // case 0
 		{"/", project1, []Kind{AllKind}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}},

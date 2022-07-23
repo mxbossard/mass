@@ -1,13 +1,13 @@
 package resources
 
-import(
+import (
 	"fmt"
-	"strings"
 	"path/filepath"
+	"strings"
 
-	"mby.fr/utils/file"
-	"mby.fr/utils/errorz"
 	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/errorz"
+	"mby.fr/utils/file"
 )
 
 const EnvPrefix = "env/"
@@ -21,7 +21,7 @@ var InvalidArgument error = fmt.Errorf("Invalid argument error")
 // type name1 name2 name3
 // type1/name1 type2/name2 type3/name3
 // all
-// 
+//
 // projects
 // projects p1 p2
 // p p1 p2
@@ -97,6 +97,10 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 
 // Split exprssion into a list of kinds and a list of expressions
 func splitExpressions(expressions string) (strippedExpressions []string, kinds []Kind, err error) {
+	if expressions == "" || expressions == "." {
+		return []string{expressions}, []Kind{AllKind}, nil
+	}
+
 	splittedExpr := strings.Split(expressions, " ")
 
 	// First expr may specify type if different from others expr
@@ -163,7 +167,7 @@ func resolveExpresionForKinds(expr string, kinds KindSet) (res Resource, aggErr 
 		case ResourceNotFound:
 			notFoundKinds = append(notFoundKinds, kind)
 		case InconsistentExpressionType:
-			inconsistentExpressionTypeCount ++
+			inconsistentExpressionTypeCount++
 			knownErrors.Add(e)
 		default:
 			unknownErrors.Add(e)
@@ -189,7 +193,7 @@ func resolveExpresionForKinds(expr string, kinds KindSet) (res Resource, aggErr 
 // project1/image2 image/project1/image2
 //
 func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
-	if expr == "" || ! KindExists(expectedKind) {
+	if !KindExists(expectedKind) {
 		err = InvalidArgument
 		return
 	}
@@ -202,7 +206,7 @@ func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
 	if expectedKind == AllKind {
 		expectedKind = kind
 	}
-	if expectedKind == AllKind {
+	if name != "" && name != "." && expectedKind == AllKind {
 		err = InconsistentExpression{expr, NewKindSet(expectedKind)}
 		return
 	}
@@ -219,15 +223,15 @@ func splitExpression(expr string) (kind Kind, name string) {
 	res := strings.Split(name, "/")
 	if len(res) > 1 {
 		switch res[0] {
-			case "p", "project", "projects":
-				kind = ProjectKind
-				name = strings.Join(res[1:], "/")
-			case "e", "env", "envs":
-				kind = EnvKind
-				name = strings.Join(res[1:], "/")
-			case "i", "image", "images":
-				kind = ImageKind
-				name = strings.Join(res[1:], "/")
+		case "p", "project", "projects":
+			kind = ProjectKind
+			name = strings.Join(res[1:], "/")
+		case "e", "env", "envs":
+			kind = EnvKind
+			name = strings.Join(res[1:], "/")
+		case "i", "image", "images":
+			kind = ImageKind
+			name = strings.Join(res[1:], "/")
 		}
 	}
 	return
@@ -249,16 +253,20 @@ func splitImageName(name string) (project, image string) {
 // env1 env2
 // project1/image1 image2
 func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
-	if name == "" || ! KindExists(kind) {
+	if !KindExists(kind) {
 		err = InvalidArgument
 		return
 	}
 
+	if name == "" || name == "." {
+		return getCurrentDirResource(kind)
+	}
+
 	ss, err := settings.GetSettingsService()
-        if err != nil {
-                return
-        }
-        workspaceDir := ss.WorkspaceDir()
+	if err != nil {
+		return
+	}
+	workspaceDir := ss.WorkspaceDir()
 
 	switch kind {
 	case EnvKind, ProjectKind:
@@ -287,9 +295,13 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 
 // Return one resource matching name and kind in fromDir tree
 func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error) {
-	if name == "" || fromDir == "" || ! KindExists(kind) {
+	if fromDir == "" || !KindExists(kind) {
 		err = InvalidArgument
 		return
+	}
+
+	if name == "" || name == "." {
+		return getDirResource(fromDir, kind)
 	}
 
 	resources, err := scanResourcesFrom(fromDir, kind)
@@ -344,3 +356,29 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err err
 	return
 }
 
+func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error) {
+	ss, err := settings.GetSettingsService()
+	if err != nil {
+		return
+	}
+
+	if fromDir == ss.WorkspaceDir() {
+		// If in root workspace dir return what ?
+		err = InvalidArgument
+		return
+	}
+
+	r, err := Read(fromDir)
+	if resourceKind == AllKind || resourceKind == r.Kind() {
+		res = r
+	}
+	return
+}
+
+func getCurrentDirResource(resourceKind Kind) (res Resource, err error) {
+	workDir, err := file.WorkDirPath()
+	if err != nil {
+		return
+	}
+	return getDirResource(workDir, resourceKind)
+}

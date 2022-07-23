@@ -22,13 +22,13 @@ func printErrors(errors errorz.Aggregated) {
 	}
 }
 
-func ResolveExpression(args []string) ([]resources.Resource, errorz.Aggregated) {
+func ResolveExpression(args ...string) ([]resources.Resource, errorz.Aggregated) {
 	resourceExpr := strings.Join(args, " ")
 	return resources.ResolveExpression(resourceExpr)
 }
 
 func GetResourcesConfig(args []string) {
-	res, errors := ResolveExpression(args)
+	res, errors := ResolveExpression(args...)
 	printErrors(errors)
 	d := display.Service()
 	for _, r := range res {
@@ -59,7 +59,7 @@ func BuildResources(args []string, noCache bool, forcePull bool) {
 	d := display.Service()
 	d.Info("Starting build ...")
 
-	res, errors := ResolveExpression(args)
+	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
 	printErrors(errors)
 	var wg sync.WaitGroup
@@ -75,8 +75,8 @@ func BuildResources(args []string, noCache bool, forcePull bool) {
 	}
 	wg.Wait()
 
-	d.Flush()
 	d.Info("Build finished")
+	d.Flush()
 }
 
 func pullResource(res resources.Resource) error {
@@ -105,7 +105,7 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 	d := display.Service()
 	d.Info("Starting up ...")
 
-	res, errors := ResolveExpression(args)
+	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
 	printErrors(errors)
 	var wg sync.WaitGroup
@@ -137,8 +137,8 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 	}
 	wg.Wait()
 
-	d.Flush()
 	d.Info("Up finished")
+	d.Flush()
 }
 
 func downResource(res resources.Resource, rmVolumes bool) error {
@@ -155,7 +155,7 @@ func DownResources(args []string, rmVolumes bool) {
 	d := display.Service()
 	d.Info("Starting down ...")
 
-	res, errors := ResolveExpression(args)
+	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
 	printErrors(errors)
 	var wg sync.WaitGroup
@@ -171,6 +171,22 @@ func DownResources(args []string, rmVolumes bool) {
 	}
 	wg.Wait()
 
-	d.Flush()
 	d.Info("Down finished")
+	d.Flush()
+}
+
+func TestResources(args []string) {
+	d := display.Service()
+	d.Info("Starting test ...")
+
+	res, errors := ResolveExpression(args...)
+	printErrors(errors)
+
+	d.Info(fmt.Sprintf("Will test resources:"))
+	for _, r := range res {
+		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))
+	}
+
+	d.Info("Test finished")
+	d.Flush()
 }

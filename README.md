@@ -21,7 +21,9 @@ go get github.com/spf13/cobra/cobra
 go install github.com/spf13/cobra/cobra
 ln -s $PWD/bin/cobra ~/bin/cobra
 export GOPATH=$PWD
-cobra
+cd src/mby.fr/mass
+cobra help
+cobra add test
 ```
 
 # Testing
