@@ -16,6 +16,10 @@ var imageCacheDir cache.Cache
 var deployCacheDir cache.Cache
 
 func Init() (err error) {
+	if imageCacheDir != nil && deployCacheDir != nil {
+		return
+	}
+
 	// Initializes caches
 	ss, e := settings.GetSettingsService()
 	if err != nil {

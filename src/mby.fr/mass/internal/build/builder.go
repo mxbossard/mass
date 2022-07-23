@@ -16,7 +16,7 @@ import (
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
 
 type Builder interface {
-	Build(noCache bool, force bool, forcePull bool) error
+	Build(onlyIfChange bool, noCache bool, force bool, forcePull bool) error
 }
 
 func New(r resources.Resource) (Builder, error) {
@@ -41,29 +41,17 @@ type DockerBuilder struct {
 	images []resources.Image
 }
 
-func (b DockerBuilder) Build(noCache bool, force bool, forcePull bool) (err error) {
+func (b DockerBuilder) Build(onlyIfChange bool, noCache bool, force bool, forcePull bool) (err error) {
 	buildCount := len(b.images)
-	errors := make(chan error, buildCount)
+	errors := make(chan error, buildCount*2)
 	var wg sync.WaitGroup
 
 	for _, image := range b.images {
-		doBuild := force
-		if !doBuild {
-			err = change.Init()
-
-			if err != nil {
-				return
-			}
-			doBuild, _, err = change.DoesImageChanged(image)
-		}
-
-		if doBuild {
-			wg.Add(1)
-			go func(image resources.Image) {
-				defer wg.Done()
-				buildDockerImage(b.binary, image, noCache, forcePull, errors)
-			}(image)
-		}
+		wg.Add(1)
+		go func(image resources.Image) {
+			defer wg.Done()
+			buildDockerImage(b.binary, image, onlyIfChange, noCache, forcePull, errors)
+		}(image)
 	}
 
 	// Wait for all build to finish
@@ -75,16 +63,30 @@ func (b DockerBuilder) Build(noCache bool, force bool, forcePull bool) (err erro
 	default:
 	}
 
-	for _, image := range b.images {
-		change.StoreImageSignature(image)
-	}
-
 	return err
 }
 
-func buildDockerImage(binary string, image resources.Image, noCache bool, forcePull bool, errors chan error) {
+func buildDockerImage(binary string, image resources.Image, onlyIfChange bool, noCache bool, forcePull bool, errors chan error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
+
+	err := change.Init()
+	if err != nil {
+		errors <- err
+		return
+	}
+
+	// If forcePull => force build
+	if !forcePull && onlyIfChange {
+		changed, _, err := change.DoesImageChanged(image)
+		if err != nil {
+			errors <- err
+		} else if !changed {
+			logger.Info("Image: %s did not changed. Do not build it.", image.Name())
+			return
+		}
+	}
+
 	logger.Info("Building image: %s ...", image.Name())
 
 	var buildParams []string
@@ -123,6 +125,8 @@ func buildDockerImage(binary string, image resources.Image, noCache bool, forceP
 		err := fmt.Errorf("Error building image %s : %w", image.Name(), err)
 		errors <- err
 	}
+
+	change.StoreImageSignature(image)
 
 	logger.Info("Build finished for image: %s .", image.Name())
 }
