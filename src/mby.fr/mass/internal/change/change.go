@@ -78,18 +78,19 @@ func StoreImageSignature(res resources.Image) (err error) {
 	return
 }
 
-func DoesImageChanged(res resources.Image) (test bool, err error) {
+func DoesImageChanged(res resources.Image) (changed bool, sign string, err error) {
 	// Return true if found image changed
 	previousSignature, e1 := loadImageSignature(res)
 	if e1 != nil {
-		return false, e1
+		return false, "", e1
 	}
 
 	actualSignature, e2 := calcImageSignature(res)
 	if e2 != nil {
-		return false, e2
+		return false, "", e2
 	}
-	test = previousSignature != actualSignature
+	changed = previousSignature != actualSignature
+	sign = actualSignature
 	return
 }
 

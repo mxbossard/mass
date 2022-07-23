@@ -206,6 +206,15 @@ func (i Image) FullName() string {
 	}
 }
 
+func (i Image) AbsoluteName() (name string, err error) {
+	ss, err := settings.GetSettingsService()
+	if err != nil {
+		return "", err
+	}
+	name = ss.Settings().Name + "-" + i.Name()
+	return
+}
+
 func buildBase(kind Kind, path string) (b Base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {

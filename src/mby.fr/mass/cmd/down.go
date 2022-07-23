@@ -21,33 +21,30 @@ import (
 	"mby.fr/mass/internal/workspace"
 )
 
-var forceBuild bool
-var forcePull bool
+var rmVolumes bool
 
-// upCmd represents the up command
-var upCmd = &cobra.Command{
-	Use:   "up <resourceExpr>",
-	Short: "up resources",
+// downCmd represents the down command
+var downCmd = &cobra.Command{
+	Use:   "down <resourceExpr>",
+	Short: "down resources",
 	Long:  ``,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.UpResources(args, noCacheBuild, forceBuild, forcePull)
+		workspace.DownResources(args, rmVolumes)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(upCmd)
+	rootCmd.AddCommand(downCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// upCmd.PersistentFlags().String("foo", "", "A help for foo")
-	upCmd.PersistentFlags().BoolVarP(&noCacheBuild, "no-cache", "", false, "Disable build cache")
-	upCmd.PersistentFlags().BoolVarP(&forceBuild, "build", "b", false, "Force build")
-	upCmd.PersistentFlags().BoolVarP(&forcePull, "pull", "p", false, "Force pull")
+	// downCmd.PersistentFlags().String("foo", "", "A help for foo")
+	downCmd.PersistentFlags().BoolVarP(&rmVolumes, "volumes", "", false, "Remove persistent volumes")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// upCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// downCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

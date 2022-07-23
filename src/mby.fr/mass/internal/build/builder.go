@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"sync"
 
+	"mby.fr/mass/internal/change"
 	"mby.fr/mass/internal/command"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
@@ -15,7 +16,7 @@ import (
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
 
 type Builder interface {
-	Build(noCache bool) error
+	Build(noCache bool, force bool) error
 }
 
 func New(r resources.Resource) (Builder, error) {
@@ -40,17 +41,28 @@ type DockerBuilder struct {
 	images []resources.Image
 }
 
-func (b DockerBuilder) Build(noCache bool) (err error) {
+func (b DockerBuilder) Build(noCache bool, force bool) (err error) {
 	buildCount := len(b.images)
 	errors := make(chan error, buildCount)
 	var wg sync.WaitGroup
 
 	for _, image := range b.images {
-		wg.Add(1)
-		go func(image resources.Image) {
-			defer wg.Done()
-			buildDockerImage(b.binary, image, noCache, errors)
-		}(image)
+		doBuild := force
+		if !doBuild {
+			err = change.Init()
+			if err != nil {
+				return
+			}
+			doBuild, _, err = change.DoesImageChanged(image)
+		}
+
+		if doBuild {
+			wg.Add(1)
+			go func(image resources.Image) {
+				defer wg.Done()
+				buildDockerImage(b.binary, image, noCache, errors)
+			}(image)
+		}
 	}
 
 	// Wait for all build to finish
@@ -60,6 +72,10 @@ func (b DockerBuilder) Build(noCache bool) (err error) {
 	select {
 	case err = <-errors:
 	default:
+	}
+
+	for _, image := range b.images {
+		change.StoreImageSignature(image)
 	}
 
 	return err

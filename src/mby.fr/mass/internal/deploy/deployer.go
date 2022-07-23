@@ -4,19 +4,25 @@ import (
 	//"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 
 	"mby.fr/mass/internal/command"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/resources"
+
+	"mby.fr/utils/errorz"
 )
 
 const composeImage = "docker/compose:alpine-1.29.2"
+const defaultComposeDownTimeoutInSec = "60"
 
 var NotDeployableResource error = fmt.Errorf("Not deployable resource")
 
 type Deployer interface {
+	Pull() error
 	Deploy() error
+	Undeploy(rmVolumes bool) error
 }
 
 func New(r resources.Resource) (Deployer, error) {
@@ -36,6 +42,16 @@ type DockerImagesDeployer struct {
 	images []resources.Image
 }
 
+func (d DockerImagesDeployer) Pull() (err error) {
+	for _, image := range d.images {
+		err = pullImage(d.binary, image)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (d DockerImagesDeployer) Deploy() (err error) {
 	for _, image := range d.images {
 		err = runImage(d.binary, image)
@@ -45,13 +61,60 @@ func (d DockerImagesDeployer) Deploy() (err error) {
 	}
 	return
 }
-func runDockerImage(binary string, image string, log logger.ActionLogger, args ...string) (err error) {
-	log.Info("Running image: %s ...", image)
+
+func (d DockerImagesDeployer) Undeploy(rmVolumes bool) (err error) {
+	// FIXME: remove persistent volumes
+	return undeployContainers(d.binary, d.images)
+}
+
+func absContainerName(image resources.Image) (name string, err error) {
+	imageAbsName, err := image.AbsoluteName()
+	if err != nil {
+		return
+	}
+	re := regexp.MustCompile("[/ ]")
+	name = re.ReplaceAllString(imageAbsName, "_")
+	return
+}
+
+func pullImage(binary string, image resources.Image) (err error) {
+	d := display.Service()
+	log := d.BufferedActionLogger("pull", image.FullName())
+
+	var pullParams []string
+	pullParams = append(pullParams, "pull", image.FullName())
+
+	log.Debug("pull params: %s", pullParams)
+	cmd := exec.Command(binary, pullParams...)
+	//cmd.Dir = image.Dir()
+
+	err = command.RunLogging(cmd, log)
+	if err != nil {
+		flushErr := d.Flush()
+		err = fmt.Errorf("Error pulling image %s : %w", image.FullName(), err)
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
+	}
+
+	log.Info("Pull finished for image: %s .", image)
+	return
+}
+
+func runDockerImage(log logger.ActionLogger, binary string, runArgs []string, name string, image string, cmdArgs ...string) (err error) {
+	log.Info("Running image: %s as: %s ...", image, name)
 
 	var runParams []string
 	runParams = append(runParams, "run")
 
-	runParams = append(runParams, args...)
+	runParams = append(runParams, runArgs...)
+
+	if name != "" {
+		runParams = append(runParams, "--name", name)
+	}
+
+	runParams = append(runParams, image)
+
+	runParams = append(runParams, cmdArgs...)
 
 	log.Debug("run params: %s", runParams)
 	cmd := exec.Command(binary, runParams...)
@@ -59,7 +122,8 @@ func runDockerImage(binary string, image string, log logger.ActionLogger, args .
 
 	err = command.RunLogging(cmd, log)
 	if err != nil {
-		log.Flush()
+		// flushErr := log.Flush()
+		// agg := errorz.NewAggregated(err, flushErr)
 		return fmt.Errorf("Error running image %s : %w", image, err)
 	}
 	log.Info("Run finished for image: %s .", image)
@@ -70,9 +134,7 @@ func runImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
 	log := d.BufferedActionLogger("run", image.FullName())
 
-	var runParams []string
-	runParams = append(runParams, "run")
-
+	var runArgs []string
 	config, errors := resources.MergedConfig(image)
 	if errors != nil {
 		return errors
@@ -80,19 +142,71 @@ func runImage(binary string, image resources.Image) (err error) {
 	// Add envVars
 	for argKey, argValue := range config.Environment {
 		var envArg string = "-e=" + argKey + "=" + argValue
-		runParams = append(runParams, envArg)
+		runArgs = append(runArgs, envArg)
 	}
 
-	// Add image full name
-	runParams = append(runParams, image.FullName())
+	//runArgs = append(runArgs, "badArg")
 
+	var cmdArgs []string
 	// Add runParams
 	for _, argValue := range config.RunArgs {
-		runParams = append(runParams, argValue)
+		cmdArgs = append(cmdArgs, argValue)
 	}
 
-	err = runDockerImage(binary, image.FullName(), log, runParams...)
+	ctName, err := absContainerName(image)
+	if err != nil {
+		return
+	}
 
+	err = runDockerImage(log, binary, runArgs, ctName, image.FullName(), cmdArgs...)
+	if err != nil {
+		flushErr := d.Flush()
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
+	}
+
+	return
+}
+
+func rmDockerContainers(log logger.ActionLogger, binary string, names ...string) (err error) {
+	var rmParams []string
+	rmParams = append(rmParams, "rm", "-f")
+	rmParams = append(rmParams, names...)
+
+	cmd := exec.Command(binary, rmParams...)
+	//cmd.Dir = image.Dir()
+
+	err = command.RunLogging(cmd, log)
+	if err != nil {
+		// flushErr := log.Flush()
+		// agg := errorz.NewAggregated(err, flushErr)
+		return fmt.Errorf("Error removing image %s : %w", names, err)
+	}
+
+	return
+}
+
+func undeployContainers(binary string, images []resources.Image) (err error) {
+	d := display.Service()
+	log := d.BufferedActionLogger("rm", "")
+
+	names := []string{}
+	for _, image := range images {
+		ctName, err := absContainerName(image)
+		if err != nil {
+			return err
+		}
+		names = append(names, ctName)
+	}
+	log.Info("Removing images: %s ...", names)
+	err = rmDockerContainers(log, binary, names...)
+	if err != nil {
+		flushErr := d.Flush()
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
+	}
+
+	log.Info("Removing finished")
 	return
 }
 
@@ -102,6 +216,16 @@ type DockerComposeProjectsDeployer struct {
 	projects []resources.Project
 }
 
+func (d DockerComposeProjectsDeployer) Pull() (err error) {
+	for _, project := range d.projects {
+		err = pullDockerComposeProject(project, d.binary)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (d DockerComposeProjectsDeployer) Deploy() (err error) {
 	for _, project := range d.projects {
 		err = upDockerComposeProject(project, d.binary, d.args...)
@@ -109,6 +233,65 @@ func (d DockerComposeProjectsDeployer) Deploy() (err error) {
 			return
 		}
 	}
+	return
+}
+
+func (d DockerComposeProjectsDeployer) Undeploy(rmVolumes bool) (err error) {
+	for _, p := range d.projects {
+		err = downDockerComposeProject(p, d.binary, rmVolumes)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func pullDockerComposeProject(project resources.Project, binary string) (err error) {
+	d := display.Service()
+	log := d.BufferedActionLogger("pull", project.Name())
+	log.Info("Pulling project: %s ...", project.Name())
+
+	// Docker run level config
+	projectVol := project.Dir() + ":/code:ro"
+	runComposeOnDockerArgs := []string{"--rm",
+		"-v", "/var/run/docker.sock:/var/run/docker.sock:rw", // Mount Docker daemon socket
+		"-v", "/var/lib/docker/image:/var/lib/docker/image:rw", // Mount docker image cache
+		"-v", projectVol, "--workdir", "/code", // Mount project code
+	}
+
+	config, errors := resources.MergedConfig(project)
+	if errors != nil {
+		return errors
+	}
+	// Supply environment at docker run level
+	for argKey, argValue := range config.Environment {
+		var envArg string = "-e=" + argKey + "=" + argValue
+		runComposeOnDockerArgs = append(runComposeOnDockerArgs, envArg)
+	}
+
+	// Set project name
+	absoluteName, err := project.AbsoluteName()
+	if err != nil {
+		return err
+	}
+
+	// Up level config
+	var cmdParams []string
+	cmdParams = append(cmdParams, "--project-name", absoluteName)
+	cmdParams = append(cmdParams, "pull")
+
+	// Add default params
+	//cmdParams = append(cmdParams,)
+
+	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
+	if err != nil {
+		flushErr := d.Flush()
+		err = fmt.Errorf("Error pulling project %s : %w", project.Name(), err)
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
+	}
+
+	log.Info("Pull finished for project: %s .", project.Name())
 	return
 }
 
@@ -135,12 +318,6 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 		runComposeOnDockerArgs = append(runComposeOnDockerArgs, envArg)
 	}
 
-	runComposeOnDockerArgs = append(runComposeOnDockerArgs, composeImage)
-
-	// Compose level congig
-	var composeParams []string
-	composeParams = append(composeParams, args...)
-
 	// compose interesting Options
 	// --project-name
 	// --profile (to deploy part of compose file) ?
@@ -155,12 +332,12 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 	if err != nil {
 		return err
 	}
-	composeParams = append(composeParams, "--project-name", absoluteName)
-	//composeParams = append(composeParams, "--verbose")
 
 	// Up level config
-	var upParams []string
-	upParams = append(upParams, "up")
+	var cmdParams []string
+	cmdParams = append(cmdParams, "--project-name", absoluteName)
+	//cmdParams = append(cmdParams, "--verbose")
+	cmdParams = append(cmdParams, "up")
 	// up interesting Options
 	// --force-recreate
 	// --no-recreate
@@ -172,16 +349,71 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 	// --scale ?
 
 	// Add default params
-	upParams = append(upParams, "--detach", "--no-build", "--remove-orphans", "--force-recreate")
+	cmdParams = append(cmdParams, "--detach", "--no-build", "--remove-orphans", "--force-recreate")
 
-	allParams := append(runComposeOnDockerArgs, composeParams...)
-	allParams = append(allParams, upParams...)
-	err = runDockerImage(binary, composeImage, log, allParams...)
+	cmdParams = append(cmdParams, args...)
 
+	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
 	if err != nil {
-		log.Flush()
-		return fmt.Errorf("Error upping project %s : %w", project.Name(), err)
+		flushErr := d.Flush()
+		err = fmt.Errorf("Error upping project %s : %w", project.Name(), err)
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
 	}
+
 	log.Info("Up finished for project: %s .", project.Name())
+	return
+}
+
+func downDockerComposeProject(project resources.Project, binary string, rmVolumes bool) (err error) {
+	d := display.Service()
+	log := d.BufferedActionLogger("down", project.Name())
+	log.Info("Downing project: %s ...", project.Name())
+
+	// Docker run level config
+	projectVol := project.Dir() + ":/code:ro"
+	runComposeOnDockerArgs := []string{"--rm",
+		"-v", "/var/run/docker.sock:/var/run/docker.sock:rw", // Mount Docker daemon socket
+		"-v", "/var/lib/docker/image:/var/lib/docker/image:rw", // Mount docker image cache
+		"-v", projectVol, "--workdir", "/code", // Mount project code
+	}
+
+	config, errors := resources.MergedConfig(project)
+	if errors != nil {
+		return errors
+	}
+	// Supply environment at docker run level
+	for argKey, argValue := range config.Environment {
+		var envArg string = "-e=" + argKey + "=" + argValue
+		runComposeOnDockerArgs = append(runComposeOnDockerArgs, envArg)
+	}
+
+	// Set project name
+	absoluteName, err := project.AbsoluteName()
+	if err != nil {
+		return err
+	}
+
+	// Up level config
+	var cmdParams []string
+	cmdParams = append(cmdParams, "--project-name", absoluteName)
+	cmdParams = append(cmdParams, "down")
+
+	// Add default params
+	cmdParams = append(cmdParams, "--remove-orphans", "--timeout", defaultComposeDownTimeoutInSec)
+
+	if rmVolumes {
+		cmdParams = append(cmdParams, "--volumes")
+	}
+
+	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
+	if err != nil {
+		flushErr := d.Flush()
+		err = fmt.Errorf("Error downing project %s : %w", project.Name(), err)
+		agg := errorz.NewAggregated(err, flushErr)
+		return agg
+	}
+
+	log.Info("Down finished for project: %s .", project.Name())
 	return
 }

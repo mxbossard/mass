@@ -152,12 +152,15 @@ func TestDoesImageChanged(t *testing.T) {
 	err = StoreImageSignature(r)
 	require.NoError(t, err, "should not error")
 
-	test, err := DoesImageChanged(r)
+	test, sign1, err := DoesImageChanged(r)
 	require.NoError(t, err, "should not error")
+	assert.NotEmpty(t, sign1, "should not be empty")
 	assert.False(t, test, "image should not be changed")
 
-	test, err = DoesImageChanged(r)
+	test, sign2, err := DoesImageChanged(r)
 	require.NoError(t, err, "should not error")
+	assert.NotEmpty(t, sign2, "should not be empty")
+	assert.Equal(t, sign1, sign2, "signature should not be changed")
 	assert.False(t, test, "image should not be changed")
 
 	// Add source file shoud change signature
@@ -165,7 +168,9 @@ func TestDoesImageChanged(t *testing.T) {
 	err = os.WriteFile(srcFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 
-	test, err = DoesImageChanged(r)
+	test, sign3, err := DoesImageChanged(r)
 	require.NoError(t, err, "should not error")
+	assert.NotEmpty(t, sign3, "should not be empty")
+	assert.NotEqual(t, sign1, sign3, "signature should be changed")
 	assert.True(t, test, "image should be changed")
 }

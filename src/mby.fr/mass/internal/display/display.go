@@ -1,14 +1,14 @@
 package display
 
 import (
-	//"fmt"
+	"fmt"
 	"log"
 	"sync"
 	"time"
 
-	"mby.fr/utils/logz"
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/output"
+	"mby.fr/utils/logz"
 )
 
 // Display should display data to user.
@@ -33,12 +33,12 @@ type Displayer interface {
 type StandarDisplay struct {
 	sync.Mutex
 	*logger.ActionLogger
-	outs output.Outputs
-	printer *Printer
-	tuners *[]Tuner
-	flushableOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
-	bufferedOuts *[]output.Outputs // FIXME memory leak this slice is never cleaned
-	mainOuts output.Outputs
+	outs              output.Outputs
+	printer           *Printer
+	tuners            *[]Tuner
+	flushableOuts     *[]output.Outputs // FIXME memory leak this slice is never cleaned
+	bufferedOuts      *[]output.Outputs // FIXME memory leak this slice is never cleaned
+	mainOuts          output.Outputs
 	lastMainOutsWrite time.Time
 }
 
@@ -64,6 +64,7 @@ func (d StandarDisplay) Flush() (err error) {
 	}
 
 	for _, outs := range *d.flushableOuts {
+		fmt.Printf("Flushing out ...\n")
 		err = outs.Flush()
 		if err != nil {
 			return err
@@ -75,41 +76,41 @@ func (d StandarDisplay) Flush() (err error) {
 }
 
 func (d *StandarDisplay) flushMainOutputs() {
-        for {
-                d.Lock()
-                if time.Now().Sub(d.lastMainOutsWrite).Seconds() > logPeriodInSeconds {
-                        // If main outputs did not write for 5 seconds select new main outputs
-                        for _, outs := range *d.bufferedOuts {
-                                //fmt.Println("outs last write:", d.mainOuts, outs.LastWriteTime(), time.Now().Sub(d.lastMainOutsWrite).Seconds(), time.Now().Sub(outs.LastWriteTime()).Seconds())
-                                if time.Now().Sub(outs.LastWriteTime()).Seconds() < logPeriodInSeconds {
-                                        d.mainOuts = outs
+	for {
+		d.Lock()
+		if time.Now().Sub(d.lastMainOutsWrite).Seconds() > logPeriodInSeconds {
+			// If main outputs did not write for 5 seconds select new main outputs
+			for _, outs := range *d.bufferedOuts {
+				//fmt.Println("outs last write:", d.mainOuts, outs.LastWriteTime(), time.Now().Sub(d.lastMainOutsWrite).Seconds(), time.Now().Sub(outs.LastWriteTime()).Seconds())
+				if time.Now().Sub(outs.LastWriteTime()).Seconds() < logPeriodInSeconds {
+					d.mainOuts = outs
 					//break
-                                }
-                        }
-                }
-                if d.mainOuts != nil {
-                        //fmt.Println("Flushing main printer")
-                        d.mainOuts.Flush()
+				}
+			}
+		}
+		if d.mainOuts != nil {
+			//fmt.Println("Flushing main printer")
+			d.mainOuts.Flush()
 			d.lastMainOutsWrite = d.mainOuts.LastWriteTime()
-                }
-                d.Unlock()
-                time.Sleep(100 * time.Millisecond)
-        }
+		}
+		d.Unlock()
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func (d *StandarDisplay) flushOtherOutputs() {
-        for {
-                time.Sleep(logPeriodInSeconds * time.Second)
-                d.Lock()
-                if len(*d.bufferedOuts) > 0 {
-                        for _, outs := range *d.bufferedOuts {
-                                if outs != d.mainOuts {
-                                        outs.Flush()
-                                }
-                        }
-                }
-                d.Unlock()
-        }
+	for {
+		time.Sleep(logPeriodInSeconds * time.Second)
+		d.Lock()
+		if len(*d.bufferedOuts) > 0 {
+			for _, outs := range *d.bufferedOuts {
+				if outs != d.mainOuts {
+					outs.Flush()
+				}
+			}
+		}
+		d.Unlock()
+	}
 }
 
 func actionLogger(d *StandarDisplay, action, subject string, buffered bool) logger.ActionLogger {
@@ -139,17 +140,16 @@ func newInstance() Displayer {
 	d.ActionLogger = &logger
 
 	go d.flushMainOutputs()
-        go d.flushOtherOutputs()
+	go d.flushOtherOutputs()
 
 	return &d
 }
 
 var service = newInstance()
+
 func Service() Displayer {
 	return service
 }
 
-
 // Tune objects converting them to other objects
 type Tuner func(interface{}) interface{}
-

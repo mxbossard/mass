@@ -21,7 +21,7 @@ import (
 	"mby.fr/mass/internal/workspace"
 )
 
-var noCache bool
+var noCacheBuild bool
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -30,7 +30,7 @@ var buildCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.BuildResources(args, noCache)
+		workspace.BuildResources(args, noCacheBuild)
 	},
 }
 
@@ -44,7 +44,7 @@ func init() {
 	// buildCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	//rootCmd.PersistentFlags().StringVarP(&settings.SelectedEnvironment, "env", "e", "", "environment to use")
-	buildCmd.PersistentFlags().BoolVarP(&noCache, "no-cache", "", false, "Disable build cache")
+	buildCmd.PersistentFlags().BoolVarP(&noCacheBuild, "no-cache", "", false, "Disable build cache")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

@@ -150,6 +150,24 @@ cp ~/Documents/ede_backup_2020-01/ecrindes_phtest.sql $initDbDir/10-init-ede-db.
 echo "update wp_users set user_pass=md5('password') where user_login = 'nathalie';" > $initDbDir/20-change-admin-password.sql
 
 #$massCmd build --no-cache p/wp
-$massCmd build p/wp
+#$massCmd build p/wp
 
-$massCmd up p/wp
+$massCmd up p/wp || true
+
+echo "Will execute mass down in 10 seconds ..."
+for k in $( seq 10 ); do
+	echo -n .
+	sleep 1
+done
+echo
+
+$massCmd down p/wp
+
+echo "Will execute mass down --volumes in 10 seconds ..."
+for k in $( seq 10 ); do
+	echo -n .
+	sleep 1
+done
+echo
+
+$massCmd down --volumes p/wp
