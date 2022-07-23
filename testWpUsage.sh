@@ -24,7 +24,7 @@ $massCmd init project wp
 mass init image wp/wordpress wp/db
 
 cat <<EOF > wp/wordpress/Dockerfile
-FROM wordpress:6.0-fpm-alpine
+FROM wordpress:6.0-php8.0-apache
 RUN echo foo
 RUN echo bar
 RUN echo baz
@@ -35,6 +35,9 @@ FROM mariadb:10.7-focal
 RUN echo pif
 RUN echo paf
 RUN echo pouf
+ADD src/docker-entrypoint-initdb.d /docker-entrypoint-initdb.d
+ADD src/conf.d /etc/mysql/conf.d
+RUN chmod -R a+w /etc/mysql/conf.d
 EOF
 
 cat <<EOF > wp/wordpress/config.yaml
@@ -85,16 +88,54 @@ services:
   wordpress:
     #image: wordpress:latest
     image: wp/wordpress:0.0.1
+    volumes:
+      - wp_site:/var/www/html:rw
     ports:
-      - 80:80
+      - 8000:80
     restart: always
     environment:
       - WORDPRESS_DB_HOST=db
       - WORDPRESS_DB_USER
       - WORDPRESS_DB_PASSWORD
       - WORDPRESS_DB_NAME
+      #- WORDPRESS_CONFIG_EXTRA=define( 'WP_CONTENT_URL', 'http://localhost/wp-content' ); define( 'WP_HOME', 'http://localhost' ); define( 'WP_SITEURL', 'http://localhost' );
+      - WORDPRESS_CONFIG_EXTRA=define( 'WP_HOME', 'http://localhost:8000' ); define( 'WP_SITEURL', 'http://localhost:8000' );
+
+  wait-db:
+    image: mariadb:10.6.4-focal
+    command: /bin/sh -c 'while ! mysql -h db -u $${WORDPRESS_DB_USER} --password=$${WORDPRESS_DB_PASSWORD}; do sleep 1; echo .; done'
+    depends_on:
+      - db
+
+  cli:
+    image: wordpress:cli-2.6
+    command: |
+      bash -c "
+      wp db repair ;
+      wp theme delete --all --force ;
+      wp db optimize ;
+      wp core update-db ;
+      wp theme install shuttle-clean ;
+      wp theme activate shuttle-clean ;
+      wp plugin install wp-optimize wordpress-seo disable-comments login-lockdown imsanity;
+      "
+    #wp search-replace old-site-url.co.uk new-site-url.co.uk ;
+    working_dir: /var/www/html
+    user: "33:33"
+    volumes:
+      - wp_site:/var/www/html:rw
+    environment:
+      - HOME=/tmp
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_USER
+      - WORDPRESS_DB_PASSWORD
+    depends_on: 
+      - wait-db
+    
+
 volumes:
   db_data:
+  wp_site:
 EOF
 
 tree -Ca $workspaceDir
@@ -104,8 +145,16 @@ $massCmd config i/wp/wordpress i/wp/db
 
 # Add DB initialization
 initDbDir="wp/db/src/docker-entrypoint-initdb.d"
-mkdir -p "$initDbDir"
-cp ~/Documents/ede_backup_2020-01/ecrindes_phtest.sql $initDbDir
+confDbDir="wp/db/src/conf.d"
+mkdir -p "$initDbDir" "$confDbDir"
+cp ~/Documents/ede_backup_2020-01/ecrindes_phtest.sql $initDbDir/10-init-ede-db.sql
+echo "update wp_users set user_pass=md5('password') where user_login = 'nathalie';" > $initDbDir/20-change-admin-password.sql
+
+cat <<EOF > $confDbDir/50-server.cnf
+[mariadb]
+bind-address = 127.0.0.1
+EOF
+echo "rm /etc/mysql/conf.d/50-server.cnf" > $initDbDir/80-enable-db.sh
 
 #$massCmd build --no-cache p/wp
 $massCmd build p/wp
