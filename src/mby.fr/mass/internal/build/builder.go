@@ -16,7 +16,7 @@ import (
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
 
 type Builder interface {
-	Build(noCache bool, force bool) error
+	Build(noCache bool, force bool, forcePull bool) error
 }
 
 func New(r resources.Resource) (Builder, error) {
@@ -41,7 +41,7 @@ type DockerBuilder struct {
 	images []resources.Image
 }
 
-func (b DockerBuilder) Build(noCache bool, force bool) (err error) {
+func (b DockerBuilder) Build(noCache bool, force bool, forcePull bool) (err error) {
 	buildCount := len(b.images)
 	errors := make(chan error, buildCount)
 	var wg sync.WaitGroup
@@ -50,6 +50,7 @@ func (b DockerBuilder) Build(noCache bool, force bool) (err error) {
 		doBuild := force
 		if !doBuild {
 			err = change.Init()
+
 			if err != nil {
 				return
 			}
@@ -60,7 +61,7 @@ func (b DockerBuilder) Build(noCache bool, force bool) (err error) {
 			wg.Add(1)
 			go func(image resources.Image) {
 				defer wg.Done()
-				buildDockerImage(b.binary, image, noCache, errors)
+				buildDockerImage(b.binary, image, noCache, forcePull, errors)
 			}(image)
 		}
 	}
@@ -81,7 +82,7 @@ func (b DockerBuilder) Build(noCache bool, force bool) (err error) {
 	return err
 }
 
-func buildDockerImage(binary string, image resources.Image, noCache bool, errors chan error) {
+func buildDockerImage(binary string, image resources.Image, noCache bool, forcePull bool, errors chan error) {
 	d := display.Service()
 	logger := d.BufferedActionLogger("build", image.Name())
 	logger.Info("Building image: %s ...", image.Name())
@@ -92,6 +93,10 @@ func buildDockerImage(binary string, image resources.Image, noCache bool, errors
 	// Add --no-cache option
 	if noCache {
 		buildParams = append(buildParams, "--no-cache")
+	}
+
+	if forcePull {
+		buildParams = append(buildParams, "--pull")
 	}
 
 	// Forge build-args

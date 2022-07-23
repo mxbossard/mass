@@ -30,7 +30,7 @@ var buildCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.BuildResources(args, noCacheBuild)
+		workspace.BuildResources(args, noCacheBuild, forcePull)
 	},
 }
 
@@ -45,6 +45,7 @@ func init() {
 
 	//rootCmd.PersistentFlags().StringVarP(&settings.SelectedEnvironment, "env", "e", "", "environment to use")
 	buildCmd.PersistentFlags().BoolVarP(&noCacheBuild, "no-cache", "", false, "Disable build cache")
+	buildCmd.PersistentFlags().BoolVarP(&forcePull, "pull", "p", false, "Attempt to pull newer image versions")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

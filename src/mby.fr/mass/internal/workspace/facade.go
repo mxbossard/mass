@@ -44,18 +44,18 @@ func GetResourcesConfig(args []string) {
 	d.Flush()
 }
 
-func buildResource(res resources.Resource, noCache bool, force bool) error {
+func buildResource(res resources.Resource, noCache bool, force bool, forcePull bool) error {
 	builder, err := build.New(res)
 	if err != nil {
 		return err
 	}
 
-	err = builder.Build(noCache, force)
+	err = builder.Build(noCache, force, forcePull)
 	//fmt.Println("Build finished")
 	return err
 }
 
-func BuildResources(args []string, noCache bool) {
+func BuildResources(args []string, noCache bool, forcePull bool) {
 	d := display.Service()
 	d.Info("Starting build ...")
 
@@ -67,7 +67,7 @@ func BuildResources(args []string, noCache bool) {
 		wg.Add(1)
 		go func(r resources.Resource, noCache bool) {
 			defer wg.Done()
-			err := buildResource(r, noCache, true)
+			err := buildResource(r, noCache, true, forcePull)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -115,7 +115,7 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 			defer wg.Done()
 			if !forcePull {
 				// Never build if forcePull
-				err := buildResource(r, noCacheBuild, forceBuild)
+				err := buildResource(r, noCacheBuild, forceBuild, false)
 				if err != nil {
 					d.Error("Encountered error during build phase !")
 					log.Fatal(err)
