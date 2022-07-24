@@ -195,7 +195,7 @@ func printTo(w io.Writer, objects ...interface{}) (err error) {
 		}
 	}
 	//fmt.Printf("toPrint: %d %s\n", len(toPrint), toPrint)
-	_, err = fmt.Fprintf(w, "%s", strings.Join(toPrint, " "))
+	_, err = fmt.Fprintf(w, "%s", strings.Join(toPrint, ""))
 	return
 }
 
