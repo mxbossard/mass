@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
 	//"fmt"
 
 	"github.com/stretchr/testify/assert"
@@ -90,6 +91,8 @@ func TestSplitExpression(t *testing.T) {
 		kindWanted Kind
 		nameWanted string
 	}{
+		{"", AllKind, ""},
+		{".", AllKind, "."},
 		{"foo", AllKind, "foo"},
 		{"p/bar", ProjectKind, "bar"},
 		{"project/bar", ProjectKind, "bar"},
@@ -141,8 +144,8 @@ func TestResolveResourceFrom(t *testing.T) {
 	}{
 		// --- Resolving relative resource name
 		// Project
-		{fakeWorkspacePath, project1, -1, "", InvalidArgument}, // case 0
-		{fakeWorkspacePath, "", ProjectKind, "", InvalidArgument},
+		{fakeWorkspacePath, project1, -1, "", InvalidArgument},    // case 0
+		{fakeWorkspacePath, "", ProjectKind, "", InvalidArgument}, //FIXME: what should return this ?
 		{"", project1, ProjectKind, "", InvalidArgument},
 		{fakeWorkspacePath, project1, ProjectKind, project1, nil},
 		{fakeWorkspacePath, project1, EnvKind, "", ResourceNotFound{project1, NewKindSet(EnvKind)}},
@@ -453,6 +456,10 @@ func TestResolveExpression(t *testing.T) {
 		{"/", "p/" + project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", "p " + project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", project1, []Kind{ProjectKind}, []string{project1}, nil},
+		{"/" + project1, "", []Kind{ProjectKind}, []string{project1}, nil},
+		{"/" + project1, ".", []Kind{ProjectKind}, []string{project1}, nil},
+		{"/" + project1, "", []Kind{AllKind}, []string{project1}, nil},
+		{"/" + project1, ".", []Kind{AllKind}, []string{project1}, nil},
 		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}},
 		{"/", project1 + " " + project2, []Kind{AllKind}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}},
 		{"/", "p/" + project1 + " p/" + project2, []Kind{AllKind}, []string{project1, project2}, nil},
@@ -465,6 +472,10 @@ func TestResolveExpression(t *testing.T) {
 		{"/", "e/" + env1, []Kind{AllKind}, []string{env1}, nil},
 		{"/", "e " + env1, []Kind{AllKind}, []string{env1}, nil},
 		{"/", env1, []Kind{EnvKind}, []string{env1}, nil},
+		{"/env/" + env1, "", []Kind{EnvKind}, []string{env1}, nil},
+		{"/env/" + env1, ".", []Kind{EnvKind}, []string{env1}, nil},
+		{"/env/" + env1, "", []Kind{AllKind}, []string{env1}, nil},
+		{"/env/" + env1, ".", []Kind{AllKind}, []string{env1}, nil},
 		{"/", env1 + " " + env2, []Kind{AllKind}, []string{}, InconsistentExpression{env2, NewKindSet(AllKind)}},
 		{"/", "e/" + env1 + " e/" + env2, []Kind{AllKind}, []string{env1, env2}, nil},
 		{"/", "e " + env1 + " " + env2, []Kind{AllKind}, []string{env1, env2}, nil},
@@ -476,6 +487,10 @@ func TestResolveExpression(t *testing.T) {
 		{"/", "i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", project2 + "/" + image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2 + "/" + image21, "", []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2 + "/" + image21, ".", []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2 + "/" + image21, "", []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2 + "/" + image21, ".", []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{}, InconsistentExpression{project2 + "/" + image21, NewKindSet(AllKind)}},
 		{"/", "i/" + project2 + "/" + image21 + " i/" + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},

@@ -28,7 +28,7 @@ var downCmd = &cobra.Command{
 	Use:   "down <resourceExpr>",
 	Short: "down resources",
 	Long:  ``,
-	Args:  cobra.MinimumNArgs(1),
+	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		workspace.DownResources(args, rmVolumes)
 	},

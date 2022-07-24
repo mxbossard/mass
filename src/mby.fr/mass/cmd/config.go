@@ -26,10 +26,10 @@ import (
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
-	Use:   "config <resourceExpr>",
+	Use:   "config [resourceExpr]",
 	Short: "Display resource config",
-	Long: ``,
-	Args: cobra.MinimumNArgs(1),
+	Long:  ``,
+	//Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		workspace.GetResourcesConfig(args)
 	},

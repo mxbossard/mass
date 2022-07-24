@@ -29,7 +29,7 @@ var upCmd = &cobra.Command{
 	Use:   "up <resourceExpr>",
 	Short: "up resources",
 	Long:  ``,
-	Args:  cobra.MinimumNArgs(1),
+	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		workspace.UpResources(args, noCacheBuild, forceBuild, forcePull)
 	},

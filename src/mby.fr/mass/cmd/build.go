@@ -28,7 +28,7 @@ var buildCmd = &cobra.Command{
 	Use:   "build <resourceExpr>",
 	Short: "Build resources",
 	Long:  ``,
-	Args:  cobra.MinimumNArgs(1),
+	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		workspace.BuildResources(args, noCacheBuild, forcePull)
 	},
