@@ -12,6 +12,7 @@ import (
 	"mby.fr/mass/internal/deploy"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
+	"mby.fr/mass/testing"
 	"mby.fr/utils/errorz"
 )
 
@@ -196,6 +197,7 @@ func TestResources(args []string) {
 	d.Info(fmt.Sprintf("Will test resources:"))
 	for _, r := range res {
 		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))
+		testing.RunVenomTests(d, r)
 	}
 
 	d.Flush()
