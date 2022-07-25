@@ -22,7 +22,7 @@ var (
 
 	dummyRunner = container.Runner{
 		Image:   "alpine:3.16",
-		CmdArgs: []string{"sh", "-c", "echo 'Dummy venom runner '; for i in $(seq 5); do sleep 1; echo .; done"},
+		CmdArgs: []string{"sh", "-c", "echo 'Dummy venom runner '; for i in $(seq 3); do sleep 1; echo .; done"},
 		Remove:  true,
 	}
 )
@@ -73,6 +73,7 @@ func RunVenomTests(d display.Displayer, res resources.Tester) (err error) {
 	runner.Volumes = []string{testDirMount}
 
 	logger := d.BufferedActionLogger("test", res.QualifiedName())
+	//defer logger.Close()
 
 	err = runner.Wait(logger.Out(), logger.Err())
 	return
