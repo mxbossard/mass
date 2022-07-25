@@ -106,5 +106,9 @@ $massCmd build i/p2/i21 -vv
 echo "##### Testing mass up -vvv (TRACE) ..."
 $massCmd up i/p2/i21 -vvv || true
 
+echo "##### Testing mass test ..."
+$massCmd test i/p2/i21 || true
+$massCmd test p/p2 || true
+
 echo "##### Testing mass down -v (INFO) ..."
 $massCmd down i/p2/i21 -v

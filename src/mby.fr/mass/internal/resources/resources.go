@@ -75,6 +75,7 @@ func (r Base) Init() (err error) {
 }
 
 type Testable struct {
+	Base          `yaml:"base,inline"`
 	TestDirectory string `yaml:"testDirectory"`
 }
 
@@ -103,7 +104,7 @@ func (e Env) Init() (err error) {
 }
 
 type Project struct {
-	Base       `yaml:"base,inline"`
+	//Base       `yaml:"base,inline"`
 	Testable   `yaml:"testable,inline"`
 	images     []Image
 	DeployFile string `yaml:"deployFile"`
@@ -153,7 +154,7 @@ func (p *Project) Images() ([]Image, error) {
 }
 
 type Image struct {
-	Base            `yaml:"base,inline"`
+	//Base            `yaml:"base,inline"`
 	Testable        `yaml:"testable,inline"`
 	SourceDirectory string  `yaml:"sourceDirectory"`
 	BuildFile       string  `yaml:"buildFile"`
@@ -225,13 +226,17 @@ func buildBase(kind Kind, path string) (b Base, err error) {
 	return
 }
 
-func buildTestable(path string) (t Testable, err error) {
+func buildTestable(kind Kind, path string) (t Testable, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return
 	}
 	testDir := filepath.Join(absPath, DefaultTestDir)
-	t = Testable{testDir}
+	base, err := buildBase(kind, path)
+	if err != nil {
+		return
+	}
+	t = Testable{base, testDir}
 	return
 }
 
@@ -270,36 +275,26 @@ func BuildEnv(path string) (r Env, err error) {
 }
 
 func BuildProject(path string) (r Project, err error) {
-	base, err := buildBase(ProjectKind, path)
+	testable, err := buildTestable(ProjectKind, path)
 	if err != nil {
 		return
 	}
 
-	testable, err := buildTestable(path)
-	if err != nil {
-		return
-	}
+	deployfile := filepath.Join(testable.Dir(), DefaultDeployFile)
 
-	deployfile := filepath.Join(base.Dir(), DefaultDeployFile)
-
-	r = Project{Base: base, Testable: testable, DeployFile: deployfile}
+	r = Project{Testable: testable, DeployFile: deployfile}
 	return
 }
 
 func BuildImage(path string) (r Image, err error) {
-	base, err := buildBase(ImageKind, path)
-	if err != nil {
-		return
-	}
-
-	testable, err := buildTestable(path)
+	testable, err := buildTestable(ImageKind, path)
 	if err != nil {
 		return
 	}
 
 	version := DefaultInitialVersion
-	buildfile := filepath.Join(base.Dir(), DefaultBuildFile)
-	sourceDir := filepath.Join(base.Dir(), DefaultSourceDir)
+	buildfile := filepath.Join(testable.Dir(), DefaultBuildFile)
+	sourceDir := filepath.Join(testable.Dir(), DefaultSourceDir)
 
 	projectPath := filepath.Dir(path)
 	project, err := BuildProject(projectPath)
@@ -308,7 +303,6 @@ func BuildImage(path string) (r Image, err error) {
 	}
 
 	r = Image{
-		Base:            base,
 		Testable:        testable,
 		Version:         version,
 		BuildFile:       buildfile,

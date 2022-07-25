@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	//"fmt"
-	"log"
+
 	"sync"
 
 	"mby.fr/mass/internal/build"
@@ -82,7 +82,7 @@ func BuildResources(args []string) {
 
 			err := buildResource(r)
 			if err != nil {
-				log.Fatal(err)
+				d.Fatal(fmt.Sprintf("%v", err))
 			}
 		}(r)
 	}
@@ -131,19 +131,19 @@ func UpResources(args []string) {
 				err := pullResource(r)
 				if err != nil {
 					d.Error("Encountered error during pull phase !")
-					log.Fatal(err)
+					d.Fatal(fmt.Sprintf("%v", err))
 				}
 			} else {
 				err := buildResource(r)
 				if err != nil {
 					d.Error("Encountered error during build phase !")
-					log.Fatal(err)
+					d.Fatal(fmt.Sprintf("%v", err))
 				}
 			}
 			err := upResource(r)
 			if err != nil {
 				d.Error("Encountered error during Up !")
-				log.Fatal(err)
+				d.Fatal(fmt.Sprintf("%v", err))
 			}
 		}(r)
 	}
@@ -177,7 +177,7 @@ func DownResources(args []string) {
 			defer wg.Done()
 			err := downResource(r)
 			if err != nil {
-				log.Fatal(err)
+				d.Fatal(fmt.Sprintf("%v", err))
 			}
 		}(r)
 	}
@@ -197,7 +197,10 @@ func TestResources(args []string) {
 	d.Info(fmt.Sprintf("Will test resources:"))
 	for _, r := range res {
 		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))
-		testing.RunVenomTests(d, r)
+		err := testing.RunVenomTests(d, r)
+		if err != nil {
+			d.Fatal(fmt.Sprintf("%v", err))
+		}
 	}
 
 	d.Flush()

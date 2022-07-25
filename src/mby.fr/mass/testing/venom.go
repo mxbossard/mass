@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"fmt"
+
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
 
@@ -9,6 +11,19 @@ import (
 
 var (
 	venomImage = "venom:1.0.1"
+
+	venomRunner = container.Runner{
+		Image: venomImage,
+		//Volumes: []string{testDirMount},
+		CmdArgs: []string{"run"},
+		Remove:  true,
+	}
+
+	dummyRunner = container.Runner{
+		Image:   "alpine:3.16",
+		CmdArgs: []string{"echo", "Dummy venom runner"},
+		Remove:  true,
+	}
 )
 
 func RunVenomTests(d display.Displayer, res resources.Resource) (err error) {
@@ -20,19 +35,22 @@ func RunVenomTests(d display.Displayer, res resources.Resource) (err error) {
 		}
 	*/
 
-	//testable := reflect.
-	testDirMount := res.Dir() + ":/venom:ro"
-
-	run := container.Run{
-		Image:   venomImage,
-		Volumes: []string{testDirMount},
-		CmdArgs: []string{"run"},
-		Remove:  true,
+	testable, ok := res.(resources.Testable)
+	if !ok {
+		//return fmt.Errorf("Resource %s is not testable !", res.QualifiedName())
+		d.Warn(fmt.Sprintf("Resource %s is not testable !", res.QualifiedName()))
+		return
 	}
+
+	//testable := reflect.
+	testDirMount := testable.TestDir() + ":/venom:ro"
+
+	runner := dummyRunner
+	runner.Volumes = []string{testDirMount}
 
 	logger := d.BufferedActionLogger("test", res.QualifiedName())
 
-	err = run.Wait(logger.Out(), logger.Err())
+	err = runner.Wait(logger.Out(), logger.Err())
 
 	return
 }
