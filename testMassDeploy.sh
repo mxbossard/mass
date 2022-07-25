@@ -100,8 +100,11 @@ configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 echo "##### Testing mass config ..."
 $massCmd config i/p2/i21
 
-echo "##### Testing mass build ..."
-$massCmd build i/p2/i21
+echo "##### Testing mass build -vv (DEBUG) ..."
+$massCmd build i/p2/i21 -vv
 
-echo "##### Testing mass up ..."
-$massCmd up i/p2/i21
+echo "##### Testing mass up -vvv (TRACE) ..."
+$massCmd up i/p2/i21 -vvv || true
+
+echo "##### Testing mass down -v (INFO) ..."
+$massCmd down i/p2/i21 -v

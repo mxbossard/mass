@@ -1,12 +1,12 @@
 package settings
 
 import (
+	"errors"
 	"fmt"
-	"sync"
-	"path/filepath"
 	"log"
 	"os"
-	"errors"
+	"path/filepath"
+	"sync"
 
 	"github.com/spf13/viper"
 
@@ -14,6 +14,7 @@ import (
 )
 
 const defaultSettingsDir = ".mass"
+
 var settingsFile = filepath.Join(defaultSettingsDir, "settings.yaml")
 
 var PathNotFound = fmt.Errorf("Unable to found settings path")
@@ -25,29 +26,31 @@ const defaultProjectsDir = "."
 const defaultCacheDir = ".cache"
 const defaultTemplatesDir = ".templates"
 const defaultEnvToUse = "dev"
+
 var defaultEnvs = []string{"dev", "stage", "prod"}
 
 var SelectedEnvironment string = ""
+var LoggingLevel int = 0
 
 // --- Settings ---
 
 type Settings struct {
-	Name string `yaml:"workspace"`
-	EnvsDir string `yaml:"envsDirectory"`
-	ProjectsDir string `yaml:"projectsDirectory"`
-	CacheDir string `yaml:"cacheDirectory"`
-	TemplatesDir string `yaml:"templatesDirectory"`
-	Environments []string `yaml:"environments"`
-	DefaultEnvironment string `yaml:"defaultEnvironment"`
+	Name               string   `yaml:"workspace"`
+	EnvsDir            string   `yaml:"envsDirectory"`
+	ProjectsDir        string   `yaml:"projectsDirectory"`
+	CacheDir           string   `yaml:"cacheDirectory"`
+	TemplatesDir       string   `yaml:"templatesDirectory"`
+	Environments       []string `yaml:"environments"`
+	DefaultEnvironment string   `yaml:"defaultEnvironment"`
 }
 
 func Default() Settings {
 	return Settings{
-		EnvsDir: defaultEnvsDir,
-		ProjectsDir: defaultProjectsDir,
-		CacheDir: defaultCacheDir,
-		TemplatesDir: defaultTemplatesDir,
-		Environments: defaultEnvs,
+		EnvsDir:            defaultEnvsDir,
+		ProjectsDir:        defaultProjectsDir,
+		CacheDir:           defaultCacheDir,
+		TemplatesDir:       defaultTemplatesDir,
+		Environments:       defaultEnvs,
 		DefaultEnvironment: defaultEnvToUse,
 	}
 }
@@ -175,7 +178,7 @@ func SeekSettingsFilePath(path string) (settingsPath string, err error) {
 
 type SettingsService struct {
 	workspacePath string
-	settings *Settings
+	settings      *Settings
 }
 
 // constructor
@@ -279,4 +282,3 @@ func GetSettingsService() (service *SettingsService, err error) {
 	}
 	return
 }
-

@@ -180,7 +180,7 @@ func rmDockerContainers(log logger.ActionLogger, binary string, names ...string)
 	if err != nil {
 		// flushErr := log.Flush()
 		// agg := errorz.NewAggregated(err, flushErr)
-		return fmt.Errorf("Error removing image %s : %w", names, err)
+		return fmt.Errorf("Error removing container %s : %w", names, err)
 	}
 
 	return
@@ -198,7 +198,7 @@ func undeployContainers(binary string, images []resources.Image) (err error) {
 		}
 		names = append(names, ctName)
 	}
-	log.Info("Removing images: %s ...", names)
+	log.Info("Removing containers: %s ...", names)
 	err = rmDockerContainers(log, binary, names...)
 	if err != nil {
 		flushErr := d.Flush()

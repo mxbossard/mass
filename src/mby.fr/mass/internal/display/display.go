@@ -1,13 +1,13 @@
 package display
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/output"
+	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/logz"
 )
 
@@ -64,14 +64,14 @@ func (d StandarDisplay) Flush() (err error) {
 	}
 
 	for _, outs := range *d.flushableOuts {
-		fmt.Printf("Flushing out ...\n")
+		//fmt.Printf("Flushing out ...\n")
 		err = outs.Flush()
 		if err != nil {
 			return err
 		}
 	}
 
-	d.Debug("Flushing display.")
+	d.Trace("Flushing display.")
 	return
 }
 
@@ -122,7 +122,8 @@ func actionLogger(d *StandarDisplay, action, subject string, buffered bool) logg
 	} else {
 		outs = d.outs
 	}
-	al := logger.NewAction(outs, action, subject)
+	filterLevel := settings.LoggingLevel + 1 // Always add Warn level
+	al := logger.NewAction(outs, action, subject, filterLevel)
 	appended := append(*d.flushableOuts, outs)
 	d.flushableOuts = &appended
 	return al
@@ -145,9 +146,12 @@ func newInstance() Displayer {
 	return &d
 }
 
-var service = newInstance()
+var service Displayer
 
 func Service() Displayer {
+	if service == nil {
+		service = newInstance()
+	}
 	return service
 }
 

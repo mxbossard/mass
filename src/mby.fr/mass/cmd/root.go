@@ -52,6 +52,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.mass.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&settings.SelectedEnvironment, "env", "e", "", "environment to use")
+	rootCmd.PersistentFlags().CountVarP(&settings.LoggingLevel, "verbose", "v", "verbosity level")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

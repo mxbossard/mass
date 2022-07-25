@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"mby.fr/mass/internal/output"
-	"mby.fr/utils/logz"
 	"mby.fr/utils/ansi"
-	"mby.fr/utils/inout"
 	"mby.fr/utils/format"
+	"mby.fr/utils/inout"
+	"mby.fr/utils/logz"
 )
 
 const (
@@ -19,7 +19,6 @@ var (
 	outAnsiColors []string = []string{ansi.Reset, ansi.HiGreen, ansi.HiBlue, ansi.HiCyan, ansi.HiWhite, ansi.Green, ansi.Blue, ansi.Cyan, ansi.White}
 	errAnsiColors []string = []string{ansi.HiRed, ansi.HiYellow, ansi.HiPurple, ansi.Red, ansi.Yellow, ansi.Purple}
 )
-
 
 type ActionLogger struct {
 	logz.Logger
@@ -35,7 +34,7 @@ func (l ActionLogger) End() {
 func (l ActionLogger) Progress() {
 }
 
-func NewAction(outs output.Outputs, action, subject string) ActionLogger {
+func NewAction(outs output.Outputs, action, subject string, filterLevel int) ActionLogger {
 	loggerName := fmt.Sprintf("%s(%s)", action, subject)
 
 	// Decorate outputs
@@ -62,7 +61,7 @@ func NewAction(outs output.Outputs, action, subject string) ActionLogger {
 	err = inout.NewFormattingWriter(err, errPrefixedFormatter)
 	decoratedOuts := output.New(log, out, err)
 
-	logger := logz.New(log, loggerName, actionPadding, true, false)
+	logger := logz.New(log, loggerName, actionPadding, true, false, filterLevel)
 	al := ActionLogger{logger, decoratedOuts}
 	return al
 }
@@ -75,15 +74,15 @@ var errAnsiColorMutex = sync.Mutex{}
 func getOutAnsiColor() string {
 	outAnsiColorMutex.Lock()
 	defer outAnsiColorMutex.Unlock()
-        ansiColor := outAnsiColors[outAnsiColorCounter % len(outAnsiColors)]
-        outAnsiColorCounter ++
-        return ansiColor
+	ansiColor := outAnsiColors[outAnsiColorCounter%len(outAnsiColors)]
+	outAnsiColorCounter++
+	return ansiColor
 }
 
 func getErrAnsiColor() string {
 	errAnsiColorMutex.Lock()
 	defer errAnsiColorMutex.Unlock()
-        ansiColor := errAnsiColors[errAnsiColorCounter % len(errAnsiColors)]
-        errAnsiColorCounter ++
-        return ansiColor
+	ansiColor := errAnsiColors[errAnsiColorCounter%len(errAnsiColors)]
+	errAnsiColorCounter++
+	return ansiColor
 }
