@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mby.fr/mass/internal/version"
+	"mby.fr/mass/version"
 )
 
 // versionCmd represents the version command
