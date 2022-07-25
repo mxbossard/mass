@@ -28,9 +28,11 @@ func ResolveExpression(args ...string) ([]resources.Resource, errorz.Aggregated)
 }
 
 func GetResourcesConfig(args []string) {
+	d := display.Service()
+	d.Info("Config starting ...")
+
 	res, errors := ResolveExpression(args...)
 	printErrors(errors)
-	d := display.Service()
 	for _, r := range res {
 		config, err := resources.MergedConfig(r)
 		if err != nil {
@@ -40,8 +42,8 @@ func GetResourcesConfig(args []string) {
 		footer := "---\n"
 		d.Display(header, *config, footer)
 	}
-	d.Info("Config finished")
 	d.Flush()
+	d.Info("Config finished")
 }
 
 func buildResource(res resources.Resource, onlyIfChange bool, noCache bool, force bool, forcePull bool) error {
@@ -57,7 +59,7 @@ func buildResource(res resources.Resource, onlyIfChange bool, noCache bool, forc
 
 func BuildResources(args []string, noCache bool, forcePull bool) {
 	d := display.Service()
-	d.Info("Starting build ...")
+	d.Info("Build starting ...")
 
 	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
@@ -75,8 +77,8 @@ func BuildResources(args []string, noCache bool, forcePull bool) {
 	}
 	wg.Wait()
 
-	d.Info("Build finished")
 	d.Flush()
+	d.Info("Build finished")
 }
 
 func pullResource(res resources.Resource) error {
@@ -103,7 +105,7 @@ func upResource(res resources.Resource) error {
 
 func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bool) {
 	d := display.Service()
-	d.Info("Starting up ...")
+	d.Info("Uo starting ...")
 
 	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
@@ -137,8 +139,8 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 	}
 	wg.Wait()
 
-	d.Info("Up finished")
 	d.Flush()
+	d.Info("Up finished")
 }
 
 func downResource(res resources.Resource, rmVolumes bool) error {
@@ -153,7 +155,7 @@ func downResource(res resources.Resource, rmVolumes bool) error {
 
 func DownResources(args []string, rmVolumes bool) {
 	d := display.Service()
-	d.Info("Starting down ...")
+	d.Info("Down starting ...")
 
 	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
@@ -171,13 +173,13 @@ func DownResources(args []string, rmVolumes bool) {
 	}
 	wg.Wait()
 
-	d.Info("Down finished")
 	d.Flush()
+	d.Info("Down finished")
 }
 
 func TestResources(args []string) {
 	d := display.Service()
-	d.Info("Starting test ...")
+	d.Info("Test starting ...")
 
 	res, errors := ResolveExpression(args...)
 	printErrors(errors)
@@ -187,6 +189,6 @@ func TestResources(args []string) {
 		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))
 	}
 
-	d.Info("Test finished")
 	d.Flush()
+	d.Info("Test finished")
 }
