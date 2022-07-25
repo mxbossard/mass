@@ -74,6 +74,11 @@ func (r Base) Init() (err error) {
 	return
 }
 
+type Tester interface {
+	Resource
+	TestDir() string
+}
+
 type Testable struct {
 	TestDirectory string `yaml:"testDirectory"`
 }
