@@ -15,6 +15,14 @@ import (
 	"mby.fr/utils/errorz"
 )
 
+var (
+	NoCacheBuild bool
+	//BuildOnlyIfChange bool
+	ForceBuild bool
+	ForcePull  bool
+	RmVolumes  bool
+)
+
 func printErrors(errors errorz.Aggregated) {
 	if errors.GotError() {
 		display := display.Service()
@@ -46,18 +54,18 @@ func GetResourcesConfig(args []string) {
 	d.Info("Config finished")
 }
 
-func buildResource(res resources.Resource, onlyIfChange bool, noCache bool, force bool, forcePull bool) error {
+func buildResource(res resources.Resource) error {
 	builder, err := build.New(res)
 	if err != nil {
 		return err
 	}
 
-	err = builder.Build(onlyIfChange, noCache, force, forcePull)
+	err = builder.Build(!ForceBuild, NoCacheBuild, ForcePull)
 	//fmt.Println("Build finished")
 	return err
 }
 
-func BuildResources(args []string, noCache bool, forcePull bool) {
+func BuildResources(args []string) {
 	d := display.Service()
 	d.Info("Build starting ...")
 
@@ -67,13 +75,15 @@ func BuildResources(args []string, noCache bool, forcePull bool) {
 	var wg sync.WaitGroup
 	for _, r := range res {
 		wg.Add(1)
-		go func(r resources.Resource, noCache bool) {
+		go func(r resources.Resource) {
 			defer wg.Done()
-			err := buildResource(r, true, noCache, true, forcePull)
+			ForceBuild = true
+
+			err := buildResource(r)
 			if err != nil {
 				log.Fatal(err)
 			}
-		}(r, noCache)
+		}(r)
 	}
 	wg.Wait()
 
@@ -103,9 +113,9 @@ func upResource(res resources.Resource) error {
 	return err
 }
 
-func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bool) {
+func UpResources(args []string) {
 	d := display.Service()
-	d.Info("Uo starting ...")
+	d.Info("Up starting ...")
 
 	res, errors := ResolveExpression(args...)
 	//fmt.Println(res)
@@ -115,21 +125,20 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 		wg.Add(1)
 		go func(r resources.Resource) {
 			defer wg.Done()
-			if !forcePull {
+			if ForcePull {
 				// Never build if forcePull
-				err := buildResource(r, false, noCacheBuild, forceBuild, false)
-				if err != nil {
-					d.Error("Encountered error during build phase !")
-					log.Fatal(err)
-				}
-			} else {
 				err := pullResource(r)
 				if err != nil {
 					d.Error("Encountered error during pull phase !")
 					log.Fatal(err)
 				}
+			} else {
+				err := buildResource(r)
+				if err != nil {
+					d.Error("Encountered error during build phase !")
+					log.Fatal(err)
+				}
 			}
-
 			err := upResource(r)
 			if err != nil {
 				d.Error("Encountered error during Up !")
@@ -143,17 +152,17 @@ func UpResources(args []string, noCacheBuild bool, forceBuild bool, forcePull bo
 	d.Info("Up finished")
 }
 
-func downResource(res resources.Resource, rmVolumes bool) error {
+func downResource(res resources.Resource) error {
 	deployer, err := deploy.New(res)
 	if err != nil {
 		return err
 	}
 
-	err = deployer.Undeploy(rmVolumes)
+	err = deployer.Undeploy(RmVolumes)
 	return err
 }
 
-func DownResources(args []string, rmVolumes bool) {
+func DownResources(args []string) {
 	d := display.Service()
 	d.Info("Down starting ...")
 
@@ -165,7 +174,7 @@ func DownResources(args []string, rmVolumes bool) {
 		wg.Add(1)
 		go func(r resources.Resource) {
 			defer wg.Done()
-			err := downResource(r, rmVolumes)
+			err := downResource(r)
 			if err != nil {
 				log.Fatal(err)
 			}

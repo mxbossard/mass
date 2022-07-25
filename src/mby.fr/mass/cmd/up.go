@@ -21,9 +21,6 @@ import (
 	"mby.fr/mass/internal/workspace"
 )
 
-var forceBuild bool
-var forcePull bool
-
 // upCmd represents the up command
 var upCmd = &cobra.Command{
 	Use:   "up <resourceExpr>",
@@ -31,7 +28,7 @@ var upCmd = &cobra.Command{
 	Long:  ``,
 	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.UpResources(args, noCacheBuild, forceBuild, forcePull)
+		workspace.UpResources(args)
 	},
 }
 
@@ -43,9 +40,9 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// upCmd.PersistentFlags().String("foo", "", "A help for foo")
-	upCmd.PersistentFlags().BoolVarP(&noCacheBuild, "no-cache", "", false, "Disable build cache")
-	upCmd.PersistentFlags().BoolVarP(&forceBuild, "build", "b", false, "Force build")
-	upCmd.PersistentFlags().BoolVarP(&forcePull, "pull", "p", false, "Force pull")
+	upCmd.PersistentFlags().BoolVarP(&workspace.NoCacheBuild, "no-cache", "", false, "Disable build cache")
+	upCmd.PersistentFlags().BoolVarP(&workspace.ForceBuild, "build", "b", false, "Force build")
+	upCmd.PersistentFlags().BoolVarP(&workspace.ForcePull, "pull", "p", false, "Force pull")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

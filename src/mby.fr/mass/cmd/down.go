@@ -21,8 +21,6 @@ import (
 	"mby.fr/mass/internal/workspace"
 )
 
-var rmVolumes bool
-
 // downCmd represents the down command
 var downCmd = &cobra.Command{
 	Use:   "down <resourceExpr>",
@@ -30,7 +28,7 @@ var downCmd = &cobra.Command{
 	Long:  ``,
 	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.DownResources(args, rmVolumes)
+		workspace.DownResources(args)
 	},
 }
 
@@ -42,7 +40,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// downCmd.PersistentFlags().String("foo", "", "A help for foo")
-	downCmd.PersistentFlags().BoolVarP(&rmVolumes, "volumes", "", false, "Remove persistent volumes")
+	downCmd.PersistentFlags().BoolVarP(&workspace.RmVolumes, "volumes", "", false, "Remove persistent volumes")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

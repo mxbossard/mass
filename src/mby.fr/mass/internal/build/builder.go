@@ -16,7 +16,7 @@ import (
 var NotBuildableResource error = fmt.Errorf("Not buildable resource")
 
 type Builder interface {
-	Build(onlyIfChange bool, noCache bool, force bool, forcePull bool) error
+	Build(onlyIfChange bool, noCache bool, forcePull bool) error
 }
 
 func New(r resources.Resource) (Builder, error) {
@@ -41,7 +41,7 @@ type DockerBuilder struct {
 	images []resources.Image
 }
 
-func (b DockerBuilder) Build(onlyIfChange bool, noCache bool, force bool, forcePull bool) (err error) {
+func (b DockerBuilder) Build(onlyIfChange bool, noCache bool, forcePull bool) (err error) {
 	buildCount := len(b.images)
 	errors := make(chan error, buildCount*2)
 	var wg sync.WaitGroup

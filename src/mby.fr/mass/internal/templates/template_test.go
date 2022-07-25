@@ -1,12 +1,12 @@
 package templates
 
 import (
-	"testing"
-	"strings"
 	"os"
+	"strings"
+	"testing"
 
-        "github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
 )
@@ -20,8 +20,8 @@ func TestInit(t *testing.T) {
 	err = Init(tempDir)
 	assert.NoError(t, err, "should not error")
 	assert.DirExists(t, tempDir, "should be copied")
-	assert.FileExists(t, tempDir + "/" + testTemplate, "should be copied")
-	assert.FileExists(t, tempDir + "/" + testNewlineTemplate, "should be copied")
+	assert.FileExists(t, tempDir+"/"+testTemplate, "should be copied")
+	assert.FileExists(t, tempDir+"/"+testNewlineTemplate, "should be copied")
 }
 
 func TestInitWithNotExistingDir(t *testing.T) {
@@ -100,7 +100,7 @@ func TestRender(t *testing.T) {
 	builder.Reset()
 	barValue := "baz"
 	expectedRendering := "foo: " + barValue + ".\n"
-	data := struct{ Bar string } { Bar: barValue }
+	data := struct{ Bar string }{Bar: barValue}
 	err = r.Render(testTemplate, &builder, data)
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, builder.String(), "bad rendering")
@@ -119,7 +119,7 @@ func TestRenderToFile(t *testing.T) {
 
 	barValue := "baz"
 	expectedRendering := "foo: " + barValue + ".\n"
-	data := struct{ Bar string } { Bar: barValue }
+	data := struct{ Bar string }{Bar: barValue}
 	err = r.RenderToFile(testTemplate, tempFile, data)
 	require.NoError(t, err, "should not error")
 	require.FileExists(t, tempFile, "should exists")
@@ -127,4 +127,3 @@ func TestRenderToFile(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Equal(t, expectedRendering, string(content), "bad rendering")
 }
-
