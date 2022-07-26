@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	venomImage = "venom:1.0.1"
+	venomImage = "mxbossard/venom:1.0.1"
 
 	venomRunner = container.Runner{
 		Image: venomImage,
@@ -69,7 +69,7 @@ func RunImageVenomTests(d display.Displayer, i resources.Image) (err error) {
 func RunVenomTests(d display.Displayer, res resources.Tester) (err error) {
 	testDirMount := res.TestDir() + ":/venom:ro"
 
-	runner := dummyRunner
+	runner := venomRunner
 	runner.Volumes = []string{testDirMount}
 
 	logger := d.BufferedActionLogger("test", res.QualifiedName())

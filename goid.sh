@@ -22,9 +22,9 @@ relpath() {
     echo "$down${ref##$pos/}"
 }
 
-ctDurationInSec=3600
+#ctDurationInSec=3600
 rootDir=$scriptDir
-rootDirInCt=/tmp/goid
+rootDirInCt=/home/goid
 workDir=$PWD
 workDirInCt=$rootDirInCt/$( relpath $rootDir $workDir/. )
 
@@ -39,11 +39,15 @@ hostModCacheDir="$hostGoDir/pkg/mod"
 mkdir -p "$hostModCacheDir"
 
 #ctImage="golang:1.18-alpine"
-ctImage="golang:1.18"
+#ctImage="golang:1.18"
+ctImage="goid-dev:latest"
 #ctImage="go-dev-image:latest"
 ctName="goid_$( basename $scriptDir )"
 
-runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
+buildCmd="$scriptDir/goid/build.sh"
+
+#runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
+runCmd="docker run --privileged --rm -d --name=$ctName -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
 #echo $runCmd
 
 #>&2 echo "Executing go in a container on workspace: $rootDir within container workdir: $workDirInCt ..."
@@ -51,7 +55,9 @@ runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir
 
 ctId=$( docker ps -f name=$ctName -q )
 if [ -z "$ctId" ]; then
-	ctId=$( $runCmd sleep $ctDurationInSec )
+	#ctId=$( $runCmd sleep $ctDurationInSec )
+    $buildCmd
+	ctId=$( $runCmd )
 fi
 
 #echo $ctId
@@ -60,5 +66,5 @@ fi
 #docker exec -it $ctId "$@"
 #exit 0
 
-#docker exec $ctId go "$@"
-docker exec --workdir=$workDirInCt $ctId go "$@"
+echo "workdir=$workDirInCt"
+docker exec "--workdir=$workDirInCt" "--user=$( id -u ):$( id -g )" "$ctId" go "$@"
