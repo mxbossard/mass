@@ -28,6 +28,7 @@ type Displayer interface {
 	BufferedActionLogger(string, string) logger.ActionLogger
 	ImmediateActionLogger(string, string) logger.ActionLogger
 	Flush() error
+	//Close(logger.ActionLogger)
 }
 
 type StandarDisplay struct {
@@ -128,6 +129,16 @@ func actionLogger(d *StandarDisplay, action, subject string, buffered bool) logg
 	d.flushableOuts = &appended
 	return al
 }
+
+/*
+func closeLogger(d *StandarDisplay, l logger.ActionLogger) {
+	l.End()
+	d.bufferedOuts = filter(d.bufferedOuts, func(o *output.Outputs) bool {
+		return true
+	})
+
+}
+*/
 
 func newInstance() Displayer {
 	var m sync.Mutex
