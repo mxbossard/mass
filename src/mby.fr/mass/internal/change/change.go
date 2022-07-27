@@ -1,7 +1,9 @@
 package change
 
 import (
+	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
@@ -40,6 +42,30 @@ func Init() (err error) {
 	return
 }
 
+func fileTree(rootPath string) (tree string, err error) {
+	files := []string{}
+	fn := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		entry := ""
+		if d.IsDir() {
+			entry += "d"
+		} else {
+			entry += "-"
+		}
+		entry += path
+		files = append(files, entry)
+		return nil
+	}
+	err = filepath.WalkDir(rootPath, fn)
+	if err != nil {
+		return "", err
+	}
+	tree = strings.Join(files, ";")
+	return
+}
+
 func calcImageSignature(res resources.Image) (signature string, err error) {
 	filesToSign := []string{res.BuildFile, res.SourceDir()}
 	filesSignature, err := trust.SignFsContents(filesToSign...)
@@ -51,7 +77,12 @@ func calcImageSignature(res resources.Image) (signature string, err error) {
 	if err != nil {
 		return "", err
 	}
-	signature, err = trust.SignObjects(configs.BuildArgs, filesSignature)
+	fileTree, err := fileTree(res.SourceDir())
+	if err != nil {
+		return "", err
+	}
+
+	signature, err = trust.SignObjects(configs.BuildArgs, filesSignature, fileTree)
 
 	return
 }
