@@ -13,4 +13,11 @@ for pkg in $packages; do
 	go test -cover "$@" ./... || success=false
 done
 
+echo
+if $success; then
+	echo SUCCESS
+else
+	echo FAILURE
+fi
+
 $success

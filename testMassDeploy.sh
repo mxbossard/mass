@@ -94,21 +94,32 @@ configProjects p1 p2 p3
 # Init image configs
 configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
 
-#tree -Ca $workspaceDir
+tree -Ca $workspaceDir
 
 # Display config for env
-echo "##### Testing mass config ..."
+echo "##### Testing mass config i/p2/i21 ..."
 $massCmd config i/p2/i21
 
-echo "##### Testing mass build -vv (DEBUG) ..."
-$massCmd build i/p2/i21 -vv
+echo "##### Testing mass build i/p2/i21 -vv (DEBUG) ..."
+$massCmd build i/p2/i21 p/p3 -vv
 
-echo "##### Testing mass up -vvv (TRACE) ..."
-$massCmd up i/p2/i21 -vvv || true
-
-echo "##### Testing mass test ..."
-$massCmd test i/p2/i21 || true
-$massCmd test p/p2 || true
-
-echo "##### Testing mass down -v (INFO) ..."
+echo "##### Testing mass down i/p2/i21 -v (INFO) ..."
 $massCmd down i/p2/i21 -v
+
+echo "##### Testing mass up i/p2/i21 -vvv (TRACE) ..."
+$massCmd up i/p2/i21 -vvv
+
+echo "##### Testing mass down i/p3/i31 -v (INFO) ..."
+$massCmd down i/p3/i31 -v
+
+echo "##### Testing mass test i/p3/i31 -v (INFO) ..."
+$massCmd test i/p3/i31 -v
+
+#echo "##### Testing mass down p/p1 ..."
+#$massCmd test p/p1 || true
+#
+#echo "##### Testing mass test p/p1 ..."
+#$massCmd test p/p1 || true
+
+echo
+echo SUCCESS

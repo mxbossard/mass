@@ -28,6 +28,7 @@ var buildCmd = &cobra.Command{
 	Long:  ``,
 	//Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		workspace.ForceBuild = true
 		workspace.BuildResources(args)
 	},
 }
