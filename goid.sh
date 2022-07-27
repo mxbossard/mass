@@ -27,6 +27,7 @@ rootDir=$scriptDir
 rootDirInCt=/home/goid
 workDir=$PWD
 workDirInCt=$rootDirInCt/$( relpath $rootDir $workDir/. )
+goUser="$( id -u ):$( id -g )"
 
 export GOBIN="$rootDirInCt/bin"
 export GOCACHE="$rootDirInCt/.cache/go-build"
@@ -42,7 +43,7 @@ mkdir -p "$hostModCacheDir"
 #ctImage="golang:1.18"
 ctImage="goid-dev:latest"
 #ctImage="go-dev-image:latest"
-ctName="goid_$( basename $scriptDir )"
+ctName="goid_$( basename $scriptDir )_$( id -u )"
 
 buildCmd="$scriptDir/goid/build.sh"
 
@@ -58,13 +59,16 @@ if [ -z "$ctId" ]; then
 	#ctId=$( $runCmd sleep $ctDurationInSec )
     $buildCmd
 	ctId=$( $runCmd )
+    #sleep 1
+    docker exec "$ctId" addgroup docker
+    docker exec "$ctId" adduser --no-create-home --system $( id -u )
+    docker exec "$ctId" addgroup $( id -u ) docker
+    echo "Wait Docker dameon started ..."
+    while ! 2>&1 >/dev/null docker exec "--user=$goUser" "$ctId" docker ps; do
+        sleep 1
+        #echo -n "."
+    done
 fi
 
-#echo $ctId
-
-# Debug
-#docker exec -it $ctId "$@"
-#exit 0
-
-echo "workdir=$workDirInCt"
-docker exec "--workdir=$workDirInCt" "--user=$( id -u ):$( id -g )" "$ctId" go "$@"
+#echo "workdir=$workDirInCt"
+docker exec "--workdir=$workDirInCt" "--user=$goUser" "$ctId" go "$@"
