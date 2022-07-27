@@ -171,3 +171,6 @@ done
 echo
 
 $massCmd down --volumes p/wp
+
+echo
+echo SUCCESS
