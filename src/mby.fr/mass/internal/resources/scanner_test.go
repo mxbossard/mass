@@ -3,6 +3,7 @@ package resources
 import (
 	"os"
 	"testing"
+
 	//"path/filepath"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,18 @@ func initRandResource(t *testing.T, parentPath string, kind Kind) (path string) 
 	require.NoError(t, err, "should not error")
 	path = res.Dir()
 	return
+}
+
+func TestPathDepth(t *testing.T) {
+	assert.Equal(t, 0, pathDepth("."))
+	assert.Equal(t, 0, pathDepth("./"))
+	assert.Equal(t, 0, pathDepth(""))
+	assert.Equal(t, 0, pathDepth("foo"))
+	assert.Equal(t, 0, pathDepth("foo/"))
+	assert.Equal(t, 1, pathDepth("foo/bar"))
+	assert.Equal(t, 1, pathDepth("foo/bar/"))
+	assert.Equal(t, 2, pathDepth("foo/bar/baz"))
+	assert.Equal(t, 2, pathDepth("foo/bar/baz/"))
 }
 
 func TestScanBlankPath(t *testing.T) {
@@ -84,6 +97,19 @@ func TestScanProjects(t *testing.T) {
 	res3, err := ScanEnvs(parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
+
+	parentDepth := pathDepth(parentPath)
+	res4, err := ScanProjectsMaxDepth(parentPath, parentDepth+0)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res4, 0, "bad resource count")
+
+	res5, err := ScanProjectsMaxDepth(parentPath, parentDepth+1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res5, 3, "bad resource count")
+
+	res6, err := ScanProjectsMaxDepth(parentPath, parentDepth+2)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res6, 3, "bad resource count")
 }
 
 func TestScanEnvs(t *testing.T) {
@@ -120,6 +146,19 @@ func TestScanEnvs(t *testing.T) {
 	res3, err := ScanImages(parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
+
+	parentDepth := pathDepth(parentPath)
+	res4, err := ScanEnvsMaxDepth(parentPath, parentDepth+0)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res4, 0, "bad resource count")
+
+	res5, err := ScanEnvsMaxDepth(parentPath, parentDepth+1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res5, 3, "bad resource count")
+
+	res6, err := ScanEnvsMaxDepth(parentPath, parentDepth+2)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res6, 3, "bad resource count")
 }
 
 func TestScanImages(t *testing.T) {
@@ -156,4 +195,17 @@ func TestScanImages(t *testing.T) {
 	res3, err := ScanEnvs(parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
+
+	parentDepth := pathDepth(parentPath)
+	res4, err := ScanImagesMaxDepth(parentPath, parentDepth+0)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res4, 0, "bad resource count")
+
+	res5, err := ScanImagesMaxDepth(parentPath, parentDepth+1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res5, 3, "bad resource count")
+
+	res6, err := ScanImagesMaxDepth(parentPath, parentDepth+2)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, res6, 3, "bad resource count")
 }
