@@ -50,35 +50,35 @@ var (
 func initWorkspace(t *testing.T) (path string) {
 	// Build fake workspace with resources tree
 	path, err := test.MkRandTempDir()
-	require.NoError(t, err, "should not error")
+	require.NoError(t, err, "must not error")
 
 	// Init Settings for templates to work
 	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
+	require.NoError(t, err, "must not error")
 	os.Chdir(path)
 
 	// Init envs
 	os.MkdirAll(filepath.Join(path, envDir), 0755)
 	for _, e := range envs {
 		r, err := BuildEnv("env/" + e)
-		require.NoError(t, err, "should not error")
+		require.NoError(t, err, "must not error")
 		err = r.Init()
-		require.NoError(t, err, "should not error")
+		require.NoError(t, err, "must not error")
 	}
 
 	// Init projects
 	for _, p := range projects {
 		r, err := BuildProject(p)
-		require.NoError(t, err, "should not error")
+		require.NoError(t, err, "must not error")
 		err = r.Init()
-		require.NoError(t, err, "should not error")
+		require.NoError(t, err, "must not error")
 
 		// Init project images
 		for _, i := range images[p] {
 			r, err := BuildImage(p + "/" + i)
-			require.NoError(t, err, "should not error")
+			require.NoError(t, err, "must not error")
 			err = r.Init()
-			require.NoError(t, err, "should not error")
+			require.NoError(t, err, "must not error")
 		}
 	}
 
@@ -148,21 +148,27 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath, "", ProjectKind, "", InvalidArgument}, //FIXME: what should return this ?
 		{"", project1, ProjectKind, "", InvalidArgument},
 		{fakeWorkspacePath, project1, ProjectKind, project1, nil},
+		{fakeWorkspacePath, project1, AllKind, project1, nil},
 		{fakeWorkspacePath, project1, EnvKind, "", ResourceNotFound{project1, NewKindSet(EnvKind)}},
 		{fakeWorkspacePath, project1, ImageKind, "", ResourceNotFound{project1, NewKindSet(ImageKind)}},
 		{fakeWorkspacePath + "/" + project1, project1, ProjectKind, project1, nil},
 		{fakeWorkspacePath + "/" + project1, "", ProjectKind, project1, nil},
 		{fakeWorkspacePath + "/" + project1, ".", ProjectKind, project1, nil},
-		{fakeWorkspacePath + "/" + project1, "", AllKind, project1, nil},
+		{fakeWorkspacePath + "/" + project1, "", AllKind, project1, nil}, // case 10
 		{fakeWorkspacePath + "/" + project1, ".", AllKind, project1, nil},
 		{fakeWorkspacePath + "/" + project2, project1, ProjectKind, "", ResourceNotFound{project1, NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath + "/" + envDir + env1, project1, ProjectKind, "", ResourceNotFound{project1, NewKindSet(ProjectKind)}},
 
 		// Env
 		{fakeWorkspacePath, env1, -1, "", InvalidArgument},
-		{fakeWorkspacePath, env1, EnvKind, env1, nil}, // case 10
+		{fakeWorkspacePath, env1, EnvKind, env1, nil}, // case 15
+		{fakeWorkspacePath, env1, AllKind, "", ResourceNotFound{env1, NewKindSet(AllKind)}},
 		{fakeWorkspacePath, env1, ProjectKind, "", ResourceNotFound{env1, NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath, env1, ImageKind, "", ResourceNotFound{env1, NewKindSet(ImageKind)}},
+		{fakeWorkspacePath + "/" + envDir, env1, EnvKind, env1, nil},
+		{fakeWorkspacePath + "/" + envDir, env1, AllKind, env1, nil}, // case 20
+		{fakeWorkspacePath + "/" + envDir, project1, ProjectKind, "", ResourceNotFound{project1, NewKindSet(ProjectKind)}},
+		{fakeWorkspacePath + "/" + envDir, project1, AllKind, "", ResourceNotFound{project1, NewKindSet(AllKind)}},
 		{fakeWorkspacePath + "/" + envDir + "/" + env1, env1, EnvKind, env1, nil},
 		{fakeWorkspacePath + "/" + envDir + "/" + env1, "", EnvKind, env1, nil},
 		{fakeWorkspacePath + "/" + envDir + "/" + env1, ".", EnvKind, env1, nil},
@@ -172,9 +178,15 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath + "/" + project2, env1, EnvKind, "", ResourceNotFound{env1, NewKindSet(EnvKind)}},
 
 		// Image
-		{fakeWorkspacePath, image11, -1, "", InvalidArgument},
+		{fakeWorkspacePath, image11, -1, "", InvalidArgument}, // case 30
 		{fakeWorkspacePath, image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
+		{fakeWorkspacePath, image11, AllKind, "", ResourceNotFound{image11, NewKindSet(AllKind)}},
+		{fakeWorkspacePath + "/" + project1, image11, ImageKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1, image11, AllKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		{fakeWorkspacePath + "/" + project1, project1 + "/" + image11, AllKind, project1 + "/" + image11, nil},
 		{fakeWorkspacePath, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		//{fakeWorkspacePath, project1 + "/" + image11, AllKind, project1 + "/" + image11, nil}, not implemented
 		{fakeWorkspacePath, project1 + "/" + image11, ProjectKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath, project1 + "/" + image11, EnvKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(EnvKind)}}, // case 20
 		{fakeWorkspacePath, project2 + "/" + image11, ImageKind, "", ResourceNotFound{project2 + "/" + image11, NewKindSet(ImageKind)}},
@@ -191,6 +203,7 @@ func TestResolveResourceFrom(t *testing.T) {
 		{fakeWorkspacePath, "notExisting", ProjectKind, "", ResourceNotFound{"notExisting", NewKindSet(ProjectKind)}},
 		{fakeWorkspacePath, "notExisting", EnvKind, "", ResourceNotFound{"notExisting", NewKindSet(EnvKind)}},
 		{fakeWorkspacePath, "notExisting", ImageKind, "", ResourceNotFound{"notExisting", NewKindSet(ImageKind)}}, // case 28
+		{fakeWorkspacePath, "notExisting", AllKind, "", ResourceNotFound{"notExisting", NewKindSet(AllKind)}},
 	}
 
 	for i, c := range cases {
@@ -204,8 +217,10 @@ func TestResolveResourceFrom(t *testing.T) {
 		if c.resNameWanted == "" {
 			assert.Nil(t, r, "should not found a resource for case %d", i)
 		} else {
-			require.NotNil(t, r, "should found a resource for case %d", i)
-			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+			require.NotNil(t, r, "must found a resource for case %d", i)
+			if r != nil {
+				assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+			}
 		}
 	}
 }
@@ -223,6 +238,7 @@ func TestResolveContextualResource(t *testing.T) {
 		{"/", project1, -1, "", InvalidArgument}, // case 0
 		{"/", "", ProjectKind, "", InvalidArgument},
 		{"/", project1, ProjectKind, project1, nil},
+		{"/", project1, AllKind, project1, nil},
 		{"/", project1, EnvKind, "", ResourceNotFound{project1, NewKindSet(EnvKind)}},
 		{"/", project1, ImageKind, "", ResourceNotFound{project1, NewKindSet(ImageKind)}},
 		{"/" + project1, "", ProjectKind, project1, nil},
@@ -236,9 +252,12 @@ func TestResolveContextualResource(t *testing.T) {
 		// Env
 		{"/", env1, -1, "", InvalidArgument},
 		{"/", "", EnvKind, "", InvalidArgument},
-		{"/", env1, EnvKind, env1, nil}, // case 10
+		{"/", env1, EnvKind, env1, nil}, // case 15
 		{"/", env1, ProjectKind, "", ResourceNotFound{env1, NewKindSet(ProjectKind)}},
 		{"/", env1, ImageKind, "", ResourceNotFound{env1, NewKindSet(ImageKind)}},
+		{"/", env1, AllKind, "", ResourceNotFound{env1, NewKindSet(AllKind)}},
+		{"/" + envDir, env1, EnvKind, env1, nil},
+		{"/" + envDir, env1, AllKind, env1, nil}, // case 20
 		{"/" + envDir + "/" + env1, env1, EnvKind, env1, nil},
 		{"/" + envDir + "/" + env1, "", EnvKind, env1, nil},
 		{"/" + envDir + "/" + env1, ".", EnvKind, env1, nil},
@@ -250,12 +269,14 @@ func TestResolveContextualResource(t *testing.T) {
 		// Image absolute
 		{"/", image11, -1, "", InvalidArgument},
 		{"/", "", ImageKind, "", InvalidArgument},
-		{"/", image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
+		{"/", image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}}, // case 30
 		{"/", project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{"/", project1 + "/" + image11, ProjectKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(ProjectKind)}}, // case 20
 		{"/", project1 + "/" + image11, EnvKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(EnvKind)}},
+		{"/", project1 + "/" + image11, AllKind, "", ResourceNotFound{project1 + "/" + image11, NewKindSet(AllKind)}},
 		{"/", project2 + "/" + image11, ImageKind, "", ResourceNotFound{project2 + "/" + image11, NewKindSet(ImageKind)}},
 		{"/" + project1, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		{"/" + project1, project1 + "/" + image11, AllKind, project1 + "/" + image11, nil},
 		{"/" + project1 + "/" + image11, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{"/" + project1 + "/" + image11, "", ImageKind, project1 + "/" + image11, nil},
 		{"/" + project1 + "/" + image11, ".", ImageKind, project1 + "/" + image11, nil},
@@ -266,18 +287,21 @@ func TestResolveContextualResource(t *testing.T) {
 
 		// Image relative
 		{"/" + project1, image11, ImageKind, project1 + "/" + image11, nil},
+		{"/" + project1, image11, AllKind, project1 + "/" + image11, nil},
 		{"/" + project2, image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
+		{"/" + project2, image11, AllKind, "", ResourceNotFound{image11, NewKindSet(AllKind)}},
 
 		// Resolving not existing resources
 		{"/", "notExisting", ProjectKind, "", ResourceNotFound{"notExisting", NewKindSet(ProjectKind)}},
-		{"/", "notExisting", EnvKind, "", ResourceNotFound{"notExisting", NewKindSet(EnvKind)}}, // case 30
+		{"/", "notExisting", EnvKind, "", ResourceNotFound{"notExisting", NewKindSet(EnvKind)}},
 		{"/", "notExisting", ImageKind, "", ResourceNotFound{"notExisting", NewKindSet(ImageKind)}},
+		{"/", "notExisting", AllKind, "", ResourceNotFound{"notExisting", NewKindSet(AllKind)}},
 	}
 
 	for i, c := range cases {
 		path := filepath.Join(fakeWorkspacePath, c.fromPath)
 		err := os.Chdir(path)
-		require.NoError(t, err, "should not error for chdir on case %d", i)
+		require.NoError(t, err, "must not error for chdir on case %d", i)
 		r, err := resolveContextualResource(c.exprIn, c.kindIn)
 		if c.errWanted == nil {
 			assert.NoError(t, err, "should not error on case %d", i)
@@ -288,7 +312,7 @@ func TestResolveContextualResource(t *testing.T) {
 		if c.resNameWanted == "" {
 			assert.Nil(t, r, "should not found a resource for case %d", i)
 		} else {
-			require.NotNil(t, r, "should found a resource for case %d", i)
+			require.NotNil(t, r, "must found a resource for case %d", i)
 			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
 		}
 	}
@@ -306,7 +330,9 @@ func TestResolveResource(t *testing.T) {
 	}{
 		// --- Resolving not typed resource
 		// Project
-		{"/", project1, AllKind, "", InconsistentExpression{project1, NewKindSet(AllKind)}}, // case 0
+		{"/", project1, AllKind, project1, nil}, // case 0
+		{"/", project1, ProjectKind, project1, nil},
+		{"/", project1, ImageKind, "", ResourceNotFound{project1, NewKindSet(ImageKind)}},
 		{"/", project1, ProjectKind, project1, nil},
 		{project1, project1, ProjectKind, project1, nil},
 		{project1, "", ProjectKind, project1, nil},
@@ -319,20 +345,31 @@ func TestResolveResource(t *testing.T) {
 
 		// Env
 		{"/", env1, EnvKind, env1, nil},
+		{"/", env1, AllKind, "", ResourceNotFound{env1, NewKindSet(AllKind)}},
+		{envDir, env1, EnvKind, env1, nil},
+		{envDir, env1, AllKind, env1, nil},
 		{envDir + env1, env1, EnvKind, env1, nil},
+		{envDir + env1, env1, AllKind, env1, nil},
 		{envDir + env1, "", EnvKind, env1, nil},
 		{envDir + env1, ".", EnvKind, env1, nil},
-		{envDir + env1, "", AllKind, env1, nil},
+		{envDir + env1, "", AllKind, env1, nil}, // case 20
 		{envDir + env1, ".", AllKind, env1, nil},
 		{envDir + env2, env1, EnvKind, env1, nil},
 		{project1, env1, EnvKind, env1, nil},
-		{"..", env1, EnvKind, "", settings.PathNotFound}, // case 10
+		{"..", env1, EnvKind, "", settings.PathNotFound},
 
 		// Image
 		{"/", image11, ImageKind, "", ResourceNotFound{image11, NewKindSet(ImageKind)}},
+		{"/", image11, AllKind, "", ResourceNotFound{image11, NewKindSet(AllKind)}},
 		{"/", project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
 		{project1, image11, ImageKind, project1 + "/" + image11, nil},
-		//{project1 + "/" + image11, image11, ImageKind, project1 + "/" + image11, nil},
+		{project1, image11, AllKind, project1 + "/" + image11, nil},
+		{project1, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil}, // case 30
+		{project1, project1 + "/" + image11, AllKind, project1 + "/" + image11, nil},
+		//{project1 + "/" + image11, image11, ImageKind, project1 + "/" + image11, nil}, not implemented yet
+		//{project1 + "/" + image11, image11, AllKind, project1 + "/" + image11, nil}, not implemented yet
+		{project1 + "/" + image11, project1 + "/" + image11, ImageKind, project1 + "/" + image11, nil},
+		{project1 + "/" + image11, project1 + "/" + image11, AllKind, project1 + "/" + image11, nil},
 		{project1 + "/" + image11, "", ImageKind, project1 + "/" + image11, nil},
 		{project1 + "/" + image11, ".", ImageKind, project1 + "/" + image11, nil},
 		{project1 + "/" + image11, "", AllKind, project1 + "/" + image11, nil},
@@ -388,7 +425,7 @@ func TestResolveResource(t *testing.T) {
 	for i, c := range cases {
 		path := filepath.Join(fakeWorkspacePath, c.fromPath)
 		err := os.Chdir(path)
-		require.NoError(t, err, "should not error for chdir on case %d", i)
+		require.NoError(t, err, "must not error for chdir on case %d", i)
 		r, err := resolveResource(c.exprIn, c.kindIn)
 		if c.errWanted == nil {
 			assert.NoError(t, err, "should not error on case %d", i)
@@ -399,7 +436,7 @@ func TestResolveResource(t *testing.T) {
 		if c.resNameWanted == "" {
 			assert.Nil(t, r, "should not found a resource for case %d", i)
 		} else {
-			require.NotNil(t, r, "should found a resource for case %d", i)
+			require.NotNil(t, r, "must found a resource for case %d", i)
 			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
 		}
 	}
@@ -451,8 +488,9 @@ func TestResolveExpression(t *testing.T) {
 		errWanted        error
 	}{
 		// Projects resolution
-		{"/", project1, []Kind{}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}}, // case 0
-		{"/", project1, []Kind{AllKind}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}},
+		{"/", project1, []Kind{}, []string{project1}, nil}, // case 0
+		{"/", project1, []Kind{ProjectKind}, []string{project1}, nil},
+		{"/", project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", "p/" + project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", "p " + project1, []Kind{AllKind}, []string{project1}, nil},
 		{"/", project1, []Kind{ProjectKind}, []string{project1}, nil},
@@ -460,49 +498,59 @@ func TestResolveExpression(t *testing.T) {
 		{"/" + project1, ".", []Kind{ProjectKind}, []string{project1}, nil},
 		{"/" + project1, "", []Kind{AllKind}, []string{project1}, nil},
 		{"/" + project1, ".", []Kind{AllKind}, []string{project1}, nil},
-		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}},
-		{"/", project1 + " " + project2, []Kind{AllKind}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}},
+		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}}, // case 10
+		{"/", project1 + " " + project2, []Kind{AllKind}, []string{project1, project2}, nil},
 		{"/", "p/" + project1 + " p/" + project2, []Kind{AllKind}, []string{project1, project2}, nil},
 		{"/", "p " + project1 + " " + project2, []Kind{AllKind}, []string{project1, project2}, nil},
 		{"/", project1 + " " + project2, []Kind{ProjectKind}, []string{project1, project2}, nil},
 
 		// Envs resolution
-		{"/", env1, []Kind{}, []string{}, InconsistentExpression{env1, NewKindSet(AllKind)}}, // case 10
-		{"/", env1, []Kind{AllKind}, []string{}, InconsistentExpression{env1, NewKindSet(AllKind)}},
+		{"/", env1, []Kind{}, []string{}, ResourceNotFound{env1, NewKindSet(AllKind)}},
+		{"/", env1, []Kind{EnvKind}, []string{env1}, nil},
+		{"/", env1, []Kind{AllKind}, []string{}, ResourceNotFound{env1, NewKindSet(AllKind)}},
 		{"/", "e/" + env1, []Kind{AllKind}, []string{env1}, nil},
 		{"/", "e " + env1, []Kind{AllKind}, []string{env1}, nil},
-		{"/", env1, []Kind{EnvKind}, []string{env1}, nil},
+		{"/", env1, []Kind{EnvKind}, []string{env1}, nil}, // case 20
 		{"/env/" + env1, "", []Kind{EnvKind}, []string{env1}, nil},
 		{"/env/" + env1, ".", []Kind{EnvKind}, []string{env1}, nil},
 		{"/env/" + env1, "", []Kind{AllKind}, []string{env1}, nil},
 		{"/env/" + env1, ".", []Kind{AllKind}, []string{env1}, nil},
-		{"/", env1 + " " + env2, []Kind{AllKind}, []string{}, InconsistentExpression{env2, NewKindSet(AllKind)}},
+		{"/", env1 + " " + env2, []Kind{EnvKind}, []string{env1, env2}, nil},
+		{"/", env1 + " " + env2, []Kind{}, []string{}, ResourceNotFound{env2, NewKindSet(AllKind)}},
+		{"/", env1 + " " + env2, []Kind{AllKind}, []string{}, ResourceNotFound{env2, NewKindSet(AllKind)}},
 		{"/", "e/" + env1 + " e/" + env2, []Kind{AllKind}, []string{env1, env2}, nil},
 		{"/", "e " + env1 + " " + env2, []Kind{AllKind}, []string{env1, env2}, nil},
-		{"/", env1 + " " + env2, []Kind{EnvKind}, []string{env1, env2}, nil},
+		{"/", env1 + " " + env2, []Kind{EnvKind}, []string{env1, env2}, nil}, // case 30
 
 		// Images resolution
-		{"/", project2 + "/" + image21, []Kind{}, []string{}, InconsistentExpression{project2 + "/" + image21, NewKindSet(AllKind)}},
-		{"/", project2 + "/" + image21, []Kind{AllKind}, []string{}, InconsistentExpression{project2 + "/" + image21, NewKindSet(AllKind)}}, // case 20
+		{"/", project2 + "/" + image21, []Kind{}, []string{}, ResourceNotFound{project2 + "/" + image21, NewKindSet(AllKind)}},
+		{"/", project2 + "/" + image21, []Kind{AllKind}, []string{}, ResourceNotFound{project2 + "/" + image21, NewKindSet(AllKind)}},
 		{"/", "i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", project2 + "/" + image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2, image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2, image21, []Kind{}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2, image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2, project2 + "/" + image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		{"/" + project2, project2 + "/" + image21, []Kind{}, []string{project2 + "/" + image21}, nil}, // case 40
+		{"/" + project2, project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2 + "/" + image21, "", []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2 + "/" + image21, ".", []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2 + "/" + image21, "", []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2 + "/" + image21, ".", []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
-		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{}, InconsistentExpression{project2 + "/" + image21, NewKindSet(AllKind)}},
+		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{}, ResourceNotFound{project2 + "/" + image21, NewKindSet(AllKind)}},
+		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{ImageKind}, []string{project2 + "/" + image21, project1 + "/" + image12}, nil},
 		{"/", "i/" + project2 + "/" + image21 + " i/" + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{AllKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
-		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{ImageKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil},
+		{"/", project2 + "/" + image21 + " " + project1 + "/" + image12, []Kind{ImageKind}, []string{project1 + "/" + image12, project2 + "/" + image21}, nil}, // case 50
 
 		// Mixed resolution "AllKind"
 		{"/", "p/" + project1 + " e/" + env2, []Kind{}, []string{project1, env2}, nil},
 		{"/", "all p/" + project1 + " e/" + env2, []Kind{}, []string{project1, env2}, nil},
-		{"/", "all " + project1 + " " + env2, []Kind{}, []string{}, InconsistentExpression{project1, NewKindSet(AllKind)}}, // case 30
+		{"/", "all " + project1 + " " + env2, []Kind{}, []string{project1}, ResourceNotFound{env2, NewKindSet(AllKind)}},
+		{"/", "all " + project1 + " " + env2, []Kind{AllKind}, []string{project1}, ResourceNotFound{env2, NewKindSet(AllKind)}},
 		{"/", "p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1, env2}, nil},
 		{"/", "all p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1, env2}, nil},
-		{"/", "all " + project1 + " " + env2, []Kind{AllKind}, []string{}, InconsistentExpression{env2, NewKindSet(AllKind)}},
 		{"/", "projects p/" + project1 + " e/" + env2, []Kind{AllKind}, []string{project1}, InconsistentExpressionType{"e/" + env2, NewKindSet(ProjectKind)}},
 		{"/", "p " + project1 + " " + env2, []Kind{ProjectKind}, []string{project1}, ResourceNotFound{env2, NewKindSet(ProjectKind)}},
 		{"/", "projects,envs " + project1 + " " + env2, []Kind{AllKind}, []string{project1, env2}, nil},
@@ -539,7 +587,7 @@ func TestResolveExpression(t *testing.T) {
 	for i, c := range cases {
 		path := filepath.Join(fakeWorkspacePath, c.fromPath)
 		err := os.Chdir(path)
-		require.NoError(t, err, "should not error for chdir on case %d", i)
+		require.NoError(t, err, "must not error for chdir on case %d", i)
 		resources, aggErr := ResolveExpression(c.exprIn, c.kindsIn...)
 		if c.errWanted == nil {
 			assert.Error(t, aggErr, "should return no aggregated error on case %d", i)
@@ -554,10 +602,10 @@ func TestResolveExpression(t *testing.T) {
 		if len(c.resNamesWanted) == 0 {
 			assert.Nil(t, resources, "should not found a resource for case %d", i)
 		} else {
-			require.NotNil(t, resources, "should found some resources for case %d", i)
+			require.NotNil(t, resources, "must found some resources for case %d", i)
 			assert.Len(t, resources, len(c.resNamesWanted), "bad resources count returned for case %d", i)
 			for _, res := range resources {
-				require.NotNil(t, res, "should found not nil resource for case %d", i)
+				require.NotNil(t, res, "must found not nil resource for case %d", i)
 				assert.Contains(t, c.resNamesWanted, res.Name(), "Bad resource name [%s] for case %d", res.Name(), i)
 			}
 		}

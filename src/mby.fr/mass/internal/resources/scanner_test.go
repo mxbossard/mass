@@ -98,7 +98,7 @@ func TestScanProjects(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
-	parentDepth := pathDepth(parentPath)
+	parentDepth := 0
 	res4, err := ScanProjectsMaxDepth(parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")
@@ -147,7 +147,7 @@ func TestScanEnvs(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
-	parentDepth := pathDepth(parentPath)
+	parentDepth := 0
 	res4, err := ScanEnvsMaxDepth(parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")
@@ -196,7 +196,7 @@ func TestScanImages(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
-	parentDepth := pathDepth(parentPath)
+	parentDepth := 0
 	res4, err := ScanImagesMaxDepth(parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")

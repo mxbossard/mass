@@ -39,7 +39,11 @@ func buildScanner0(resKind Kind, c chan<- interface{}) fs.WalkDirFunc {
 	return scanner
 }
 
-func buildScanner(resKind Kind, maxDepth int, c chan<- interface{}) fs.WalkDirFunc {
+func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interface{}) fs.WalkDirFunc {
+	if maxDepth >= 0 {
+		rootPathDepth := pathDepth(rootPath)
+		maxDepth += rootPathDepth
+	}
 	scanner := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -79,7 +83,8 @@ func ScanProjectsMaxDepth(path string, maxDepth int) (projects []Project, err er
 		finished <- true
 		close(finished)
 	}()
-	scanner := buildScanner(ProjectKind, maxDepth, c)
+
+	scanner := buildScanner(path, ProjectKind, maxDepth, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -110,7 +115,8 @@ func ScanImagesMaxDepth(path string, maxDepth int) (images []Image, err error) {
 		finished <- true
 		close(finished)
 	}()
-	scanner := buildScanner(ImageKind, maxDepth, c)
+
+	scanner := buildScanner(path, ImageKind, maxDepth, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -141,7 +147,8 @@ func ScanEnvsMaxDepth(path string, maxDepth int) (envs []Env, err error) {
 		finished <- true
 		close(finished)
 	}()
-	scanner := buildScanner(EnvKind, maxDepth, c)
+
+	scanner := buildScanner(path, EnvKind, maxDepth, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, MaxDepthError) {

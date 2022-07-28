@@ -206,11 +206,12 @@ func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
 	if expectedKind == AllKind {
 		expectedKind = kind
 	}
-	if name != "" && name != "." && expectedKind == AllKind {
-		err = InconsistentExpression{expr, NewKindSet(expectedKind)}
-		return
-	}
-
+	/*
+		if name != "" && name != "." && expectedKind == AllKind {
+			err = InconsistentExpression{expr, NewKindSet(expectedKind)}
+			return
+		}
+	*/
 	// Resolve contextual resource
 	r, err = resolveContextualResource(name, expectedKind)
 
@@ -269,6 +270,13 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 	workspaceDir := ss.WorkspaceDir()
 
 	switch kind {
+	case AllKind:
+		// For AllKind always use work dir
+		workDir, err2 := file.WorkDirPath()
+		if err != nil {
+			return r, err2
+		}
+		r, err = resolveResourceFrom(workDir, name, kind)
 	case EnvKind, ProjectKind:
 		r, err = resolveResourceFrom(workspaceDir, name, kind)
 	case ImageKind:
@@ -286,6 +294,7 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 		}
 	}
 
+	// Rewrite ResourceNotFound content
 	if _, ok := err.(ResourceNotFound); err != nil && ok {
 		err = ResourceNotFound{name, NewKindSet(kind)}
 	}
@@ -294,6 +303,7 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 }
 
 // Return one resource matching name and kind in fromDir tree
+// Special case for images : match the name in general but match image name in project dir
 func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error) {
 	if fromDir == "" || !KindExists(kind) {
 		err = InvalidArgument
@@ -308,10 +318,37 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 	if err != nil {
 		return
 	}
+
+	// Filter found resources
+	// Keep only resources matching specified kind
+	// For Image, keep by Name() in general, plus keep by ImageName() if in context of a Project
 	for _, res := range resources {
-		if res.Name() == name && res.Kind() == kind {
-			r = res
-			return
+		if kind == AllKind || kind == res.Kind() {
+			switch v := res.(type) {
+			case Image:
+				if v.Name() == name {
+					// Image general case
+					r = res
+					return
+				}
+
+				fromDirRes, err := Read(fromDir)
+				if err == nil && fromDirRes.Kind() == ProjectKind && v.ImageName() == name {
+					// In Project context
+					return res, nil
+				}
+
+				if err != nil && !IsResourceNotFound(err) {
+					// Swallow ResourceNotFound
+					return r, err
+				}
+
+			default:
+				if v.Name() == name {
+					r = res
+					return
+				}
+			}
 		}
 	}
 	err = ResourceNotFound{name, NewKindSet(kind)}
@@ -322,40 +359,64 @@ func isResourceMatchingExpr(r Resource, expr string) bool {
 	return r.Name() == expr
 }
 
-func scanResourcesFrom(fromDir string, resourceKind Kind) (r []Resource, err error) {
-	if resourceKind == AllKind || resourceKind == EnvKind {
-		envs, err := ScanEnvs(fromDir)
+func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resource, err error) {
+	var envs []Env
+	var projects []Project
+	var images []Image
+	switch resourceKind {
+	case AllKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		projects, err = ScanProjectsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		images, err = ScanImagesMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+
+	case EnvKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, -1)
 		if err != nil {
-			return r, err
+			return
 		}
-		for _, e := range envs {
-			r = append(r, e)
+	case ProjectKind:
+		projects, err = ScanProjectsMaxDepth(fromDir, -1)
+		if err != nil {
+			return
 		}
+	case ImageKind:
+		images, err = ScanImagesMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	default:
+		err = fmt.Errorf("Not supported kind")
+		return
 	}
 
-	if resourceKind == AllKind || resourceKind == ProjectKind {
-		projects, err := ScanProjects(fromDir)
-		if err != nil {
-			return r, err
-		}
-		for _, p := range projects {
-			r = append(r, p)
-		}
+	for _, r := range envs {
+		res = append(res, r)
+	}
+	for _, r := range projects {
+		res = append(res, r)
+	}
+	for _, r := range images {
+		res = append(res, r)
 	}
 
-	if resourceKind == AllKind || resourceKind == ImageKind {
-		images, err := ScanImages(fromDir)
-		if err != nil {
-			return r, err
-		}
-		for _, i := range images {
-			r = append(r, i)
-		}
+	if IsResourceNotFound(err) && len(res) > 0 {
+		// Swallow ResourceNotFound error if found something
+		err = nil
 	}
 
 	return
 }
 
+// Return resource with kind in dir if it exists
 func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
@@ -375,6 +436,7 @@ func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error)
 	return
 }
 
+// Return resource with kind in current dir if it exists
 func getCurrentDirResource(resourceKind Kind) (res Resource, err error) {
 	workDir, err := file.WorkDirPath()
 	if err != nil {

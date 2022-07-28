@@ -200,8 +200,12 @@ func (i Image) SourceDir() string {
 	return i.SourceDirectory
 }
 
+func (i Image) ImageName() string {
+	return i.name
+}
+
 func (i Image) Name() string {
-	return i.Project.Name() + "/" + i.name
+	return i.Project.Name() + "/" + i.ImageName()
 }
 
 func (i Image) FullName() string {

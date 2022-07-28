@@ -1,18 +1,20 @@
 package resources
 
-import(
+import (
 	"fmt"
-	"strings"
 	"sort"
+	"strings"
 )
 
 type Kind int
+
 const (
-    AllKind = Kind(iota)
-    EnvKind
-    ProjectKind
-    ImageKind
+	AllKind = Kind(iota)
+	EnvKind
+	ProjectKind
+	ImageKind
 )
+
 func (k Kind) String() (s string) {
 	switch k {
 	case AllKind:
@@ -24,8 +26,14 @@ func (k Kind) String() (s string) {
 	case ImageKind:
 		s = "image"
 	}
-    return
+	return
 }
+
+/*
+func (k Kind) Match(o Kind) bool {
+	return o == AllKind || k == o
+}
+*/
 
 func (k Kind) MarshalYAML() (interface{}, error) {
 	var s string
@@ -59,6 +67,7 @@ func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	return nil
 }
+
 type KindSet map[Kind]Kind
 
 func (s KindSet) String() string {
@@ -104,11 +113,11 @@ func NewKindSet(kinds ...Kind) *KindSet {
 	return &set
 }
 
-var kindAlias = map[Kind][]string {
-	EnvKind: []string{EnvKind.String()[0:1], EnvKind.String(), EnvKind.String() + "s"},
+var kindAlias = map[Kind][]string{
+	EnvKind:     []string{EnvKind.String()[0:1], EnvKind.String(), EnvKind.String() + "s"},
 	ProjectKind: []string{ProjectKind.String()[0:1], ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind: []string{ImageKind.String()[0:1], ImageKind.String(), ImageKind.String() + "s"},
-	AllKind: []string{AllKind.String()},
+	ImageKind:   []string{ImageKind.String()[0:1], ImageKind.String(), ImageKind.String() + "s"},
+	AllKind:     []string{AllKind.String()},
 }
 
 func KindExists(k Kind) bool {
@@ -134,4 +143,3 @@ func IsKindIn(kind Kind, kinds []Kind) bool {
 	}
 	return false
 }
-
