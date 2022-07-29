@@ -76,7 +76,7 @@ func (r Base) Init() (err error) {
 
 type Tester interface {
 	Resource
-	TestDir() string
+	AbsTestDir() string
 }
 
 type Testable struct {
@@ -84,14 +84,13 @@ type Testable struct {
 	TestDirectory string `yaml:"testDirectory"`
 }
 
-func (t Testable) TestDir() string {
-	//var err error = nil
-	return t.TestDirectory
+func (t Testable) AbsTestDir() string {
+	return absResourvePath(t.Dir(), t.TestDirectory)
 }
 
 func (t Testable) Init() (err error) {
 	// Create test dir
-	err = os.MkdirAll(t.TestDir(), 0755)
+	err = os.MkdirAll(t.AbsTestDir(), 0755)
 	return
 }
 
@@ -146,6 +145,10 @@ func (p Project) AbsoluteName() (name string, err error) {
 	return
 }
 
+func (p Project) AbsDeployFile() string {
+	return absResourvePath(p.Dir(), p.DeployFile)
+}
+
 func (p *Project) Images() ([]Image, error) {
 	var err error = nil
 	if len(p.images) == 0 {
@@ -182,7 +185,7 @@ func (i Image) Init() (err error) {
 	//_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
 
 	// Init source directory
-	err = os.MkdirAll(i.SourceDir(), 0755)
+	err = os.MkdirAll(i.AbsSourceDir(), 0755)
 
 	// Init Build file
 	buildfileContent := ""
@@ -196,8 +199,12 @@ func (i Image) Init() (err error) {
 	return
 }
 
-func (i Image) SourceDir() string {
-	return i.SourceDirectory
+func (i Image) AbsSourceDir() string {
+	return absResourvePath(i.Dir(), i.SourceDirectory)
+}
+
+func (i Image) AbsBuildFile() string {
+	return absResourvePath(i.Dir(), i.BuildFile)
 }
 
 func (i Image) ImageName() string {
@@ -236,11 +243,7 @@ func buildBase(kind Kind, path string) (b Base, err error) {
 }
 
 func buildTestable(kind Kind, path string) (t Testable, err error) {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return
-	}
-	testDir := filepath.Join(absPath, DefaultTestDir)
+	testDir := DefaultTestDir
 	base, err := buildBase(kind, path)
 	if err != nil {
 		return
@@ -289,7 +292,7 @@ func BuildProject(path string) (r Project, err error) {
 		return
 	}
 
-	deployfile := filepath.Join(testable.Dir(), DefaultDeployFile)
+	deployfile := DefaultDeployFile
 
 	r = Project{Testable: testable, DeployFile: deployfile}
 	return
@@ -302,8 +305,8 @@ func BuildImage(path string) (r Image, err error) {
 	}
 
 	version := DefaultInitialVersion
-	buildfile := filepath.Join(testable.Dir(), DefaultBuildFile)
-	sourceDir := filepath.Join(testable.Dir(), DefaultSourceDir)
+	buildfile := DefaultBuildFile
+	sourceDir := DefaultSourceDir
 
 	projectPath := filepath.Dir(path)
 	project, err := BuildProject(projectPath)
@@ -414,4 +417,24 @@ func Write(r Resource) (err error) {
 
 func resourceName(path string) string {
 	return filepath.Base(path)
+}
+
+// Return a resource relative path from an absolute path
+func relResourcePath(resRootPath string, resPath string) (path string, err error) {
+	resPath, err = filepath.Abs(resPath)
+	if err != nil {
+		return
+	}
+	resRootPath, err = filepath.Abs(resRootPath)
+	if err != nil {
+		return
+	}
+	path = strings.TrimPrefix(resPath, resRootPath)
+	return
+}
+
+// Return a absolute path from a relative resource path
+func absResourvePath(relRootPath string, resPath string) (path string) {
+	path = filepath.Join(relRootPath, resPath)
+	return
 }

@@ -64,7 +64,7 @@ func TestCalcImageSignature(t *testing.T) {
 	assert.Equal(t, signature2, signature2b, "signature should stay the same")
 
 	// Add empty source dir shoud change signature
-	subSrcDir := filepath.Join(r.SourceDir(), "subSrcDir")
+	subSrcDir := filepath.Join(r.AbsSourceDir(), "subSrcDir")
 	err = os.MkdirAll(subSrcDir, 0755)
 	require.NoError(t, err, "should not error")
 
@@ -75,7 +75,7 @@ func TestCalcImageSignature(t *testing.T) {
 	assert.NotEqual(t, signature2, signature3a, "two signatures should differ adding empty source dir")
 
 	// Add source file shoud change signature
-	srcFile := filepath.Join(r.SourceDir(), "srcFile")
+	srcFile := filepath.Join(r.AbsSourceDir(), "srcFile")
 	err = os.WriteFile(srcFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 
@@ -123,7 +123,7 @@ func TestCalcImageSignature(t *testing.T) {
 	assert.Equal(t, signature3, signature4, "two signatures should be identical adding non source file")
 
 	// Change in test dir shoud not change signature
-	testFile := filepath.Join(r.TestDir(), "testFile")
+	testFile := filepath.Join(r.AbsTestDir(), "testFile")
 	err = os.WriteFile(testFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 
@@ -164,7 +164,7 @@ func TestDoesImageChanged(t *testing.T) {
 	assert.False(t, test, "image should not be changed")
 
 	// Add source file shoud change signature
-	srcFile := filepath.Join(r.SourceDir(), "srcFile")
+	srcFile := filepath.Join(r.AbsSourceDir(), "srcFile")
 	err = os.WriteFile(srcFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 

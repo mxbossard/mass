@@ -67,7 +67,7 @@ func RunImageVenomTests(d display.Displayer, i resources.Image) (err error) {
 }
 
 func RunVenomTests(d display.Displayer, res resources.Tester) (err error) {
-	testDirMount := res.TestDir() + ":/venom:ro"
+	testDirMount := res.AbsTestDir() + ":/venom:ro"
 
 	runner := venomRunner
 	runner.Volumes = []string{testDirMount}

@@ -235,6 +235,10 @@ func splitExpression(expr string) (kind Kind, name string) {
 			name = strings.Join(res[1:], "/")
 		}
 	}
+
+	// Filter name
+	name = strings.TrimSuffix(name, "/")
+
 	return
 }
 

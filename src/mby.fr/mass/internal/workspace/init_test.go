@@ -2,10 +2,11 @@ package workspace
 
 import (
 	//"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	//"mby.fr/utils/test"
 	"mby.fr/mass/internal/commontest"
@@ -86,10 +87,10 @@ func TestReInitProject(t *testing.T) {
 //	assert.Equal(t, imageName, image.Name(), "bad image name")
 //	assert.Equal(t, path + "/" + imageName, image.Dir(), "bad image dir")
 //	assert.DirExists(t, image.Dir(), "image dir does not exists")
-//	assert.Equal(t, imagePath + "/src", image.SourceDir(), "bad image source dir")
-//	assert.DirExists(t, image.SourceDir(), "image source dir does not exists")
-//	assert.Equal(t, imagePath + "/test", image.TestDir(), "bad image test dir")
-//	assert.DirExists(t, image.TestDir(), "image test dir does not exists")
+//	assert.Equal(t, imagePath + "/src", image.AbsSourceDir(), "bad image source dir")
+//	assert.DirExists(t, image.AbsSourceDir(), "image source dir does not exists")
+//	assert.Equal(t, imagePath + "/test", image.AbsTestDir(), "bad image test dir")
+//	assert.DirExists(t, image.AbsTestDir(), "image test dir does not exists")
 //	assert.Equal(t, imagePath + "/Dockerfile", image.Buildfile, "bad image build file")
 //	assert.FileExists(t, image.Buildfile, "image buildfile does not exists")
 //	assert.Equal(t, resources.DefaultInitialVersion, image.Version, "bad image version")

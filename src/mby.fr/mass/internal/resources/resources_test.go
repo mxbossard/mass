@@ -62,8 +62,9 @@ func TestWriteThenRead(t *testing.T) {
 	loadedImage := res.(Image)
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
-	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.SourceDir(), "bad source dir")
-	assert.Equal(t, path+"/"+DefaultBuildFile, loadedImage.BuildFile, "bad build file")
+	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.AbsSourceDir(), "bad source dir")
+	assert.Equal(t, DefaultBuildFile, loadedImage.BuildFile, "bad build file")
+	assert.Equal(t, path+"/"+DefaultBuildFile, loadedImage.AbsBuildFile(), "bad build file")
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
@@ -85,11 +86,11 @@ func assertBaseFs(t *testing.T, b Base) {
 }
 
 func assertTestableContent(t *testing.T, path string, r Testable) {
-	assert.Equal(t, path+"/"+DefaultTestDir, r.TestDir(), "bad resource dir")
+	assert.Equal(t, path+"/"+DefaultTestDir, r.AbsTestDir(), "bad resource dir")
 }
 
 func assertTestableFs(t *testing.T, r Testable) {
-	assert.DirExists(t, r.TestDir(), "should exists")
+	assert.DirExists(t, r.AbsTestDir(), "should exists")
 }
 
 func TestBuildEnv(t *testing.T) {
@@ -173,8 +174,8 @@ func TestBuildImage(t *testing.T) {
 	assertTestableContent(t, path, r.Testable)
 
 	assert.Equal(t, ImageKind, r.Kind(), "bad resource kind")
-	assert.Equal(t, path+"/"+DefaultSourceDir, r.SourceDir(), "bad source dir")
-	assert.Equal(t, path+"/"+DefaultBuildFile, r.BuildFile, "bad buildfile")
+	assert.Equal(t, path+"/"+DefaultSourceDir, r.AbsSourceDir(), "bad source dir")
+	assert.Equal(t, path+"/"+DefaultBuildFile, r.AbsBuildFile(), "bad buildfile")
 	assert.Equal(t, DefaultInitialVersion, r.Version, "bad version")
 
 	parentDir := filepath.Dir(path)
@@ -201,7 +202,7 @@ func TestInitImage(t *testing.T) {
 	assertBaseFs(t, r.Base)
 	assertTestableFs(t, r.Testable)
 
-	assert.DirExists(t, r.SourceDir(), "source dir should exists")
+	assert.DirExists(t, r.AbsSourceDir(), "source dir should exists")
 	assert.FileExists(t, r.BuildFile, "source dir should exists")
 }
 
