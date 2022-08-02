@@ -536,6 +536,7 @@ func TestResolveExpression(t *testing.T) {
 		{"/", "i/" + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", "i " + project2 + "/" + image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},
 		{"/", project2 + "/" + image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
+		//{"/" + project2, "", []Kind{ImageKind}, []string{project2 + "/" + image21, project2 + "/" + image22, project2 + "/" + image23}, nil}, //not implemented yet
 		{"/" + project2, image21, []Kind{ImageKind}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2, image21, []Kind{}, []string{project2 + "/" + image21}, nil},
 		{"/" + project2, image21, []Kind{AllKind}, []string{project2 + "/" + image21}, nil},

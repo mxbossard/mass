@@ -63,6 +63,17 @@ func IsRc(version string) (res bool, err error) {
 	return
 }
 
+func Dev(version string) (res string, err error) {
+	v, err := parse(version)
+	if err != nil {
+		return
+	}
+
+	bumped, err := v.SetPrerelease("dev")
+	res = bumped.String()
+	return
+}
+
 func NextDev(version string) (res string, err error) {
 	v, err := parse(version)
 	if err != nil {

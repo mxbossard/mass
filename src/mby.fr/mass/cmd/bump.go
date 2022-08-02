@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,35 +16,34 @@ limitations under the License.
 package cmd
 
 import (
-	//"fmt"
-	//"log"
-
 	"github.com/spf13/cobra"
 
 	"mby.fr/mass/internal/workspace"
 )
 
-// configCmd represents the config command
-var configCmd = &cobra.Command{
-	Use:   "config [resourceExpr]",
-	Short: "Display resource config",
-	Long:  ``,
-	//Args: cobra.MinimumNArgs(1),
+// bumpCmd represents the bump command
+var bumpCmd = &cobra.Command{
+	Use:   "bump <resourceExpr>",
+	Short: "bump resources",
+	Long: ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.DisplayResourcesConfig(args)
+		workspace.BumpResourcesVersion(args)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(bumpCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// configCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// bumpCmd.PersistentFlags().String("foo", "", "A help for foo")
+	bumpCmd.Flags().BoolVarP(&workspace.BumpMajor, "major", "", false, "Bump major version")
+	bumpCmd.Flags().BoolVarP(&workspace.BumpMinor, "minor", "", false, "Bump minor version")
+	bumpCmd.MarkFlagsMutuallyExclusive("major", "minor")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// configCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// bumpCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

@@ -10,6 +10,7 @@ import (
 	"mby.fr/mass/internal/deploy"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
+	"mby.fr/mass/version"
 	"mby.fr/mass/testing"
 	"mby.fr/utils/concurrent"
 	"mby.fr/utils/errorz"
@@ -20,6 +21,8 @@ var (
 	ForceBuild   bool
 	ForcePull    bool
 	RmVolumes    bool
+	BumpMinor	 bool
+	BumpMajor	 bool
 )
 
 func printErrors(errors errorz.Aggregated) {
@@ -29,21 +32,22 @@ func printErrors(errors errorz.Aggregated) {
 	}
 }
 
-func ResolveExpression(args ...string) ([]resources.Resource, errorz.Aggregated) {
+func ResolveExpression(args []string, kinds ...resources.Kind) ([]resources.Resource) {
 	resourceExpr := strings.Join(args, " ")
-	return resources.ResolveExpression(resourceExpr)
+	res, errors := resources.ResolveExpression(resourceExpr, kinds...)
+	printErrors(errors)
+	return res
 }
 
-func GetResourcesConfig(args []string) {
+func DisplayResourcesConfig(args []string) {
 	d := display.Service()
 	d.Info("Config starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
+	res := ResolveExpression(args, resources.AllKind)
 	for _, r := range res {
 		config, err := resources.MergedConfig(r)
 		if err != nil {
-			printErrors(errors)
+			d.Error(fmt.Sprintf("Error merging config: %s !", err))
 		}
 		header := fmt.Sprintf("--- Config of %s\n", r.QualifiedName())
 		footer := "---\n"
@@ -51,6 +55,80 @@ func GetResourcesConfig(args []string) {
 	}
 	d.Flush()
 	d.Info("Config finished")
+}
+
+func DisplayResourcesVersion(args []string) {
+	d := display.Service()
+	d.Info("Version starting ...")
+
+	res := ResolveExpression(args, resources.ImageKind)
+	for _, r := range res {
+		var msg string
+		switch v := r.(type) {
+		case resources.Image:
+			msg = fmt.Sprintf("Version of %s: %s\n", v.QualifiedName(), v.Version)
+		default:
+			msg = fmt.Sprintf("Resource %s is not versionable.\n", r.QualifiedName())
+		}
+		d.Display(msg)
+		
+	}
+	d.Flush()
+	d.Info("Version finished")
+}
+
+func bumpResource(res resources.Resource, bumpMinor, bumpMajor bool) (err error) {
+	d := display.Service()
+	var fromVer, toVer string
+	switch v := res.(type) {
+	case resources.Image:
+		fromVer = v.Version
+		if bumpMajor {
+			toVer, err = version.NextMajor(fromVer)
+			if err != nil {
+				return
+			}
+			toVer, err = version.Dev(toVer)
+		} else if bumpMinor {
+			toVer, err = version.NextMinor(fromVer)
+			if err != nil {
+				return
+			}
+			toVer, err = version.Dev(toVer)
+		} else {
+			toVer, err = version.NextDev(fromVer)
+		}
+		if err != nil {
+			return
+		}
+		v.Version = toVer
+		err = resources.Write(v)
+	default:
+		err = fmt.Errorf("Resource %s is not versionable.\n", res.QualifiedName())
+	}
+	if err != nil {
+		return
+	}
+
+	msg := fmt.Sprintf("Bumped resource %s: %s => %s\n", res.QualifiedName(), fromVer, toVer)
+	d.Display(msg)
+	return
+}
+
+func BumpResourcesVersion(args []string) {
+	d := display.Service()
+	d.Info("Bump starting ...")
+
+	res := ResolveExpression(args, resources.ImageKind)
+	for _, r := range res {
+		err := bumpResource(r, BumpMinor, BumpMajor)
+		if err != nil {
+			d.Fatal(fmt.Sprintf("Error bumping resource: %s\n", r.QualifiedName()))
+		}
+	}
+
+	d.Flush()
+	d.Info("Bump finished")
 }
 
 func buildResource(res resources.Resource) error {
@@ -67,9 +145,7 @@ func BuildResources(args []string) {
 	d := display.Service()
 	d.Info("Build starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
-
+	res := ResolveExpression(args, resources.AllKind)
 	builder := func(r resources.Resource) (void interface{}, err error) {
 		err = buildResource(r)
 		return
@@ -98,9 +174,7 @@ func PullResources(args []string) {
 	d := display.Service()
 	d.Info("Pull starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
-
+	res := ResolveExpression(args, resources.AllKind)
 	puller := func(r resources.Resource) (void interface{}, err error) {
 		err = pullResource(r)
 		return
@@ -135,9 +209,7 @@ func UpResources(args []string) {
 	d := display.Service()
 	d.Info("Up starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
-
+	res := ResolveExpression(args, resources.AllKind)
 	upper := func(r resources.Resource) (void interface{}, err error) {
 		err = upResource(r)
 		return
@@ -165,9 +237,7 @@ func DownResources(args []string) {
 	d := display.Service()
 	d.Info("Down starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
-
+	res := ResolveExpression(args, resources.AllKind)
 	downer := func(r resources.Resource) (void interface{}, err error) {
 		err = downResource(r)
 		return
@@ -187,9 +257,7 @@ func TestResources(args []string) {
 	d := display.Service()
 	d.Info("Test starting ...")
 
-	res, errors := ResolveExpression(args...)
-	printErrors(errors)
-
+	res := ResolveExpression(args, resources.AllKind)
 	d.Info(fmt.Sprintf("Will test resources:"))
 	for _, r := range res {
 		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))

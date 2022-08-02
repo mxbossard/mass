@@ -17,7 +17,7 @@ import (
 const DefaultSourceDir = "src"
 const DefaultTestDir = "test"
 const DefaultVersionFile = "version.txt"
-const DefaultInitialVersion = "0.0.1"
+const DefaultInitialVersion = "0.0.1-dev"
 const DefaultBuildFile = "Dockerfile"
 const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"
@@ -97,6 +97,10 @@ func (t Testable) Init() (err error) {
 	// Create test dir
 	err = os.MkdirAll(t.AbsTestDir(), 0755)
 	return
+}
+
+type Versioner interface {
+	Version() string
 }
 
 type Env struct {
