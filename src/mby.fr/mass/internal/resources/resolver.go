@@ -206,12 +206,7 @@ func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
 	if expectedKind == AllKind {
 		expectedKind = kind
 	}
-	/*
-		if name != "" && name != "." && expectedKind == AllKind {
-			err = InconsistentExpression{expr, NewKindSet(expectedKind)}
-			return
-		}
-	*/
+
 	// Resolve contextual resource
 	r, err = resolveContextualResource(name, expectedKind)
 
@@ -263,38 +258,31 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 		return
 	}
 
-	if name == "" || name == "." {
-		return getCurrentDirResource(kind)
-	}
-
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
 	workspaceDir := ss.WorkspaceDir()
 
+	workDir, err2 := file.WorkDirPath()
+	if err != nil {
+		return r, err2
+	}
+
 	switch kind {
 	case AllKind:
 		// For AllKind always use work dir
-		workDir, err2 := file.WorkDirPath()
-		if err != nil {
-			return r, err2
-		}
 		r, err = resolveResourceFrom(workDir, name, kind)
-	case EnvKind, ProjectKind:
-		r, err = resolveResourceFrom(workspaceDir, name, kind)
-	case ImageKind:
-		// Special case: if image name does not have project prefix, can be resolve from work dir
-		project, image := splitImageName(name)
-		if project == "" {
-			workDir, err2 := file.WorkDirPath()
-			if err2 != nil {
-				return r, err2
-			}
-			image = filepath.Base(workDir) + "/" + image
-			r, err = resolveResourceFrom(workDir, image, kind)
-		} else {
+	case EnvKind, ProjectKind, ImageKind:
+		r, err = resolveResourceFrom(workDir, name, kind)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		} else if err != nil {
+			// Try to resolve from workspace dir
 			r, err = resolveResourceFrom(workspaceDir, name, kind)
+		}
+		if (err != nil) {
+			return
 		}
 	}
 
@@ -314,10 +302,33 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 		return
 	}
 
-	if name == "" || name == "." {
-		return getDirResource(fromDir, kind)
+	ss, err := settings.GetSettingsService()
+	if err != nil {
+		return
 	}
 
+	// 1- Attempt to resolve resource name as path
+	nameAsPath := filepath.Join(fromDir, name)
+
+	if nameAsPath == ss.WorkspaceDir() {
+		// If in root workspace dir return what ?
+		err = InvalidArgument
+		return
+	}
+
+	res, err := getDirResource(nameAsPath, kind)
+	if err == nil && (kind == AllKind || kind == res.Kind()) {
+		return res, err
+	}
+	// If error swallow it.
+
+	// 2- Attempt to resolve resource name in fromDir
+	res, err = getDirResource(fromDir, kind)
+	if err == nil && res.Match(name, kind) {
+		return res, err
+	}
+
+	// 3- Scan to find resource
 	resources, err := scanResourcesFrom(fromDir, kind)
 	if err != nil {
 		return
@@ -422,21 +433,16 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resource, err e
 
 // Return resource with kind in dir if it exists
 func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error) {
-	ss, err := settings.GetSettingsService()
+	r, err := Read(fromDir)
 	if err != nil {
 		return
 	}
-
-	if fromDir == ss.WorkspaceDir() {
-		// If in root workspace dir return what ?
-		err = InvalidArgument
-		return
-	}
-
-	r, err := Read(fromDir)
 	if resourceKind == AllKind || resourceKind == r.Kind() {
 		res = r
+	} else {
+		err = ResourceNotFound{fromDir, NewKindSet(resourceKind)}
 	}
+
 	return
 }
 

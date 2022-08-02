@@ -29,6 +29,7 @@ type Resource interface {
 	Dir() string
 	Config() (config.Config, error)
 	Init() error
+	Match(string, Kind) bool
 }
 
 type Base struct {
@@ -72,6 +73,10 @@ func (r Base) Init() (err error) {
 	}
 
 	return
+}
+
+func (r Base) Match(name string, k Kind) bool {
+	return name == r.Name() && (k == AllKind || k == r.Kind())
 }
 
 type Tester interface {
@@ -232,6 +237,10 @@ func (i Image) AbsoluteName() (name string, err error) {
 	return
 }
 
+func (i Image) Match(name string, k Kind) bool {
+	return i.Base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
+}
+
 func buildBase(kind Kind, path string) (b Base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -376,10 +385,6 @@ func Read(path string) (r Resource, err error) {
 		r = res
 	default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
-		return
-	}
-
-	if err != nil {
 		return
 	}
 
