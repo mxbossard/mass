@@ -172,7 +172,7 @@ func InitRandProject(t *testing.T, workspacePath string) (name, path string) {
 func InitRandImage(t *testing.T, projectDir string) (name, path string) {
 	name = test.RandSeq(6)
 	path = filepath.Join(projectDir, name)
-	err := createEmptyFiles(path, "config.yaml", "resource.yaml", "test/foo")
+	err := createEmptyFiles(path, "config.yaml", "resource.yaml", "version.txt", "Dockerfile", "src/empty", "test/empty")
 	require.NoError(t, err, "Init temp files should not error")
 	initConfigFile(t, path)
 	initResourceFile(t, path, imageKind)

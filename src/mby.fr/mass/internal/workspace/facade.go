@@ -10,7 +10,6 @@ import (
 	"mby.fr/mass/internal/deploy"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
-	"mby.fr/mass/version"
 	"mby.fr/mass/testing"
 	"mby.fr/utils/concurrent"
 	"mby.fr/utils/errorz"
@@ -66,7 +65,7 @@ func DisplayResourcesVersion(args []string) {
 		var msg string
 		switch v := r.(type) {
 		case resources.Image:
-			msg = fmt.Sprintf("Version of %s: %s\n", v.QualifiedName(), v.Version)
+			msg = fmt.Sprintf("Version of %s: %s\n", v.QualifiedName(), v.Version())
 		default:
 			msg = fmt.Sprintf("Resource %s is not versionable.\n", r.QualifiedName())
 		}
@@ -77,53 +76,25 @@ func DisplayResourcesVersion(args []string) {
 	d.Info("Version finished")
 }
 
-func bumpResource(res resources.Resource, bumpMinor, bumpMajor bool) (err error) {
-	d := display.Service()
-	var fromVer, toVer string
-	switch v := res.(type) {
-	case resources.Image:
-		fromVer = v.Version
-		if bumpMajor {
-			toVer, err = version.NextMajor(fromVer)
-			if err != nil {
-				return
-			}
-			toVer, err = version.Dev(toVer)
-		} else if bumpMinor {
-			toVer, err = version.NextMinor(fromVer)
-			if err != nil {
-				return
-			}
-			toVer, err = version.Dev(toVer)
-		} else {
-			toVer, err = version.NextDev(fromVer)
-		}
-		if err != nil {
-			return
-		}
-		v.Version = toVer
-		err = resources.Write(v)
-	default:
-		err = fmt.Errorf("Resource %s is not versionable.\n", res.QualifiedName())
-	}
-	if err != nil {
-		return
-	}
-
-	msg := fmt.Sprintf("Bumped resource %s: %s => %s\n", res.QualifiedName(), fromVer, toVer)
-	d.Display(msg)
-	return
-}
-
 func BumpResourcesVersion(args []string) {
 	d := display.Service()
 	d.Info("Bump starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
 	for _, r := range res {
-		err := bumpResource(r, BumpMinor, BumpMajor)
-		if err != nil {
-			d.Fatal(fmt.Sprintf("Error bumping resource: %s\n", r.QualifiedName()))
+		//var i interface{} = r
+		versioner, ok := r.(resources.Versioner)
+		if ok {
+			msg, err := versioner.Bump(BumpMinor, BumpMajor)
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error bumping resource: %s\n", r.QualifiedName()))
+			} else {
+				msg := fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
+				d.Display(msg)
+			}
+		} else {
+			msg := fmt.Sprintf("Resource %s is not versioned.\n", r.QualifiedName())
+			d.Display(msg)
 		}
 	}
 

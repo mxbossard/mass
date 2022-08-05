@@ -99,10 +99,6 @@ func (t Testable) Init() (err error) {
 	return
 }
 
-type Versioner interface {
-	Version() string
-}
-
 type Env struct {
 	Base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
 }
@@ -173,9 +169,10 @@ func (p *Project) Images() ([]Image, error) {
 type Image struct {
 	//Base            `yaml:"base,inline"`
 	Testable        `yaml:"testable,inline"`
+	Versionable		`yaml:"versionable,inline"`
 	SourceDirectory string  `yaml:"sourceDirectory"`
 	BuildFile       string  `yaml:"buildFile"`
-	Version         string  `yaml:"version"`
+	//Version         string  `yaml:"version"`
 	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
@@ -225,8 +222,8 @@ func (i Image) Name() string {
 }
 
 func (i Image) FullName() string {
-	if i.Version != "" {
-		return strings.ToLower(i.Name()) + ":" + i.Version
+	if i.Version() != "" {
+		return strings.ToLower(i.Name()) + ":" + i.Version()
 	} else {
 		return strings.ToLower(i.Name()) + ":latest"
 	}
@@ -262,6 +259,11 @@ func buildTestable(kind Kind, path string) (t Testable, err error) {
 		return
 	}
 	t = Testable{base, testDir}
+	return
+}
+
+func buildVersionable(version string) (v Versionable) {
+	v = Versionable{version}
 	return
 }
 
@@ -327,9 +329,11 @@ func BuildImage(path string) (r Image, err error) {
 		return
 	}
 
+	versionable := buildVersionable(version)
+
 	r = Image{
 		Testable:        testable,
-		Version:         version,
+		Versionable:     versionable,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
 		Project:         project,
