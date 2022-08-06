@@ -71,14 +71,14 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 	return scanner
 }
 
-func ScanProjectsMaxDepth(path string, maxDepth int) (projects []Project, err error) {
+func ScanProjectsMaxDepth(path string, maxDepth int) (projects []*Project, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
 			//fmt.Println("Consuming project")
-			projects = append(projects, r.(Project))
+			projects = append(projects, r.(*Project))
 		}
 		finished <- true
 		close(finished)
@@ -99,18 +99,18 @@ func ScanProjectsMaxDepth(path string, maxDepth int) (projects []Project, err er
 	return
 }
 
-func ScanProjects(path string) (projects []Project, err error) {
+func ScanProjects(path string) (projects []*Project, err error) {
 	return ScanProjectsMaxDepth(path, -1)
 }
 
-func ScanImagesMaxDepth(path string, maxDepth int) (images []Image, err error) {
+func ScanImagesMaxDepth(path string, maxDepth int) (images []*Image, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
 			//fmt.Println("Consuming image")
-			images = append(images, r.(Image))
+			images = append(images, r.(*Image))
 		}
 		finished <- true
 		close(finished)
@@ -131,18 +131,18 @@ func ScanImagesMaxDepth(path string, maxDepth int) (images []Image, err error) {
 	return
 }
 
-func ScanImages(path string) (images []Image, err error) {
+func ScanImages(path string) (images []*Image, err error) {
 	return ScanImagesMaxDepth(path, -1)
 }
 
-func ScanEnvsMaxDepth(path string, maxDepth int) (envs []Env, err error) {
+func ScanEnvsMaxDepth(path string, maxDepth int) (envs []*Env, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
 			//fmt.Println("Consuming env")
-			envs = append(envs, r.(Env))
+			envs = append(envs, r.(*Env))
 		}
 		finished <- true
 		close(finished)
@@ -163,6 +163,63 @@ func ScanEnvsMaxDepth(path string, maxDepth int) (envs []Env, err error) {
 	return
 }
 
-func ScanEnvs(path string) (envs []Env, err error) {
+func ScanEnvs(path string) (envs []*Env, err error) {
 	return ScanEnvsMaxDepth(path, -1)
+}
+
+func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resource, err error) {
+	var envs []*Env
+	var projects []*Project
+	var images []*Image
+	switch resourceKind {
+	case AllKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		projects, err = ScanProjectsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		images, err = ScanImagesMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+
+	case EnvKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	case ProjectKind:
+		projects, err = ScanProjectsMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	case ImageKind:
+		images, err = ScanImagesMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	default:
+		err = fmt.Errorf("Not supported kind")
+		return
+	}
+
+	for _, r := range envs {
+		res = append(res, r)
+	}
+	for _, r := range projects {
+		res = append(res, r)
+	}
+	for _, r := range images {
+		res = append(res, r)
+	}
+
+	if IsResourceNotFound(err) && len(res) > 0 {
+		// Swallow ResourceNotFound error if found something
+		err = nil
+	}
+
+	return
 }

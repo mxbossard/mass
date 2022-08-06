@@ -374,63 +374,6 @@ func isResourceMatchingExpr(r Resource, expr string) bool {
 	return r.Name() == expr
 }
 
-func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resource, err error) {
-	var envs []Env
-	var projects []Project
-	var images []Image
-	switch resourceKind {
-	case AllKind:
-		envs, err = ScanEnvsMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-		projects, err = ScanProjectsMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-		images, err = ScanImagesMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-
-	case EnvKind:
-		envs, err = ScanEnvsMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	case ProjectKind:
-		projects, err = ScanProjectsMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	case ImageKind:
-		images, err = ScanImagesMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	default:
-		err = fmt.Errorf("Not supported kind")
-		return
-	}
-
-	for _, r := range envs {
-		res = append(res, r)
-	}
-	for _, r := range projects {
-		res = append(res, r)
-	}
-	for _, r := range images {
-		res = append(res, r)
-	}
-
-	if IsResourceNotFound(err) && len(res) > 0 {
-		// Swallow ResourceNotFound error if found something
-		err = nil
-	}
-
-	return
-}
-
 // Return resource with kind in dir if it exists
 func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error) {
 	r, err := Read(fromDir)

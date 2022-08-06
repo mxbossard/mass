@@ -115,7 +115,7 @@ func (e Env) Init() (err error) {
 type Project struct {
 	//Base       `yaml:"base,inline"`
 	Testable   `yaml:"testable,inline"`
-	images     []Image
+	images     []*Image
 	DeployFile string `yaml:"deployFile"`
 }
 
@@ -154,12 +154,12 @@ func (p Project) AbsDeployFile() string {
 	return absResourvePath(p.Dir(), p.DeployFile)
 }
 
-func (p *Project) Images() ([]Image, error) {
+func (p *Project) Images() ([]*Image, error) {
 	var err error = nil
 	if len(p.images) == 0 {
 		images, err := ScanImages(p.Dir())
 		if err != nil {
-			return []Image{}, err
+			return []*Image{}, err
 		}
 		p.images = images
 	}
@@ -374,7 +374,7 @@ func Read(path string) (r Resource, err error) {
 		}
 		//res.Base = base
 		err = yaml.Unmarshal(content, &res)
-		r = res
+		r = &res
 	case ProjectKind:
 		res, err := BuildProject(base.Dir())
 		if err != nil {
@@ -382,7 +382,7 @@ func Read(path string) (r Resource, err error) {
 		}
 		//res := Project{Base: base}
 		err = yaml.Unmarshal(content, &res)
-		r = res
+		r = &res
 	case ImageKind:
 		res, err := BuildImage(base.Dir())
 		if err != nil {
@@ -390,7 +390,7 @@ func Read(path string) (r Resource, err error) {
 		}
 		//res := Image{Base: base}
 		err = yaml.Unmarshal(content, &res)
-		r = res
+		r = &res
 	default:
 		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
 		return

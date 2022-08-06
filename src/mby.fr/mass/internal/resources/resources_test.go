@@ -59,7 +59,7 @@ func TestWriteThenRead(t *testing.T) {
 
 	res, err := Read(path)
 	require.NoError(t, err, "should not error")
-	loadedImage := res.(Image)
+	loadedImage := res.(*Image)
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
 	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.AbsSourceDir(), "bad source dir")

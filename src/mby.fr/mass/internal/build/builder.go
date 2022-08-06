@@ -21,12 +21,14 @@ type Builder interface {
 
 func New(r resources.Resource) (Builder, error) {
 	var images []resources.Image
-	var err error
 	switch res := r.(type) {
 	case resources.Project:
-		images, err = res.Images()
+		imgs, err := res.Images()
 		if err != nil {
 			return nil, err
+		}
+		for _, i := range imgs {
+			images = append(images, *i)
 		}
 	case resources.Image:
 		images = append(images, res)

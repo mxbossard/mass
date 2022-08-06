@@ -37,9 +37,9 @@ func RunProjectVenomTests(d display.Displayer, p resources.Project) (err error) 
 	errors := make(chan error, len(images))
 	for _, i := range images {
 		wg.Add(1)
-		go func(i resources.Image) {
+		go func(i *resources.Image) {
 			defer wg.Done()
-			err = RunImageVenomTests(d, i)
+			err = RunImageVenomTests(d, *i)
 			if err != nil {
 				errors <- err
 			}

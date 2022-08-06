@@ -505,8 +505,8 @@ func TestResolveExpression(t *testing.T) {
 		{"/" + project1, ".", []Kind{ProjectKind}, []string{project1}, nil},
 		{"/" + project1, "", []Kind{AllKind}, []string{project1}, nil},
 		{"/" + project1, ".", []Kind{AllKind}, []string{project1}, nil},
-		{"/env/", project1, []Kind{ProjectKind}, []string{project1}, nil},
-		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}}, // case 10
+		{"/env/", project1, []Kind{ProjectKind}, []string{project1}, nil}, // case 10
+		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}}, 
 
 		{"/", "p/" + project1 + " p/" + project2, []Kind{AllKind}, []string{project1, project2}, nil},
 		{"/", "p " + project1 + " " + project2, []Kind{AllKind}, []string{project1, project2}, nil},

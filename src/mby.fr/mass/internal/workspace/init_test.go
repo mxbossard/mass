@@ -51,7 +51,7 @@ func TestReInitProject(t *testing.T) {
 	// editing project
 	//newVersion := "0.2.1"
 	//p1.Version = newVersion
-	err = resources.Write(p1)
+	err = resources.Write(*p1)
 	require.NoError(t, err, "should not error")
 
 	// reinit edited project
