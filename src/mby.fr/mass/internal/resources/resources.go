@@ -169,11 +169,11 @@ func (p *Project) Images() ([]*Image, error) {
 type Image struct {
 	//Base            `yaml:"base,inline"`
 	Testable        `yaml:"testable,inline"`
-	Versionable		`yaml:"versionable,inline"`
-	SourceDirectory string  `yaml:"sourceDirectory"`
-	BuildFile       string  `yaml:"buildFile"`
+	Versionable     `yaml:"versionable,inline"`
+	SourceDirectory string `yaml:"sourceDirectory"`
+	BuildFile       string `yaml:"buildFile"`
 	//Version         string  `yaml:"version"`
-	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
+	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) Init() (err error) {
@@ -407,12 +407,8 @@ func Write(r Resource) (err error) {
 
 	var content []byte
 	switch r := r.(type) {
-	case Env, Project, Image:
+	case Env, *Env, Project, *Project, Image, *Image:
 		content, err = yaml.Marshal(r)
-	//case Project:
-	//content, err = yaml.Marshal(r)
-	//case Image:
-	//content, err = yaml.Marshal(r)
 	default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
 		return

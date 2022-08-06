@@ -27,6 +27,10 @@ type Deployer interface {
 
 func New(r resources.Resource) (Deployer, error) {
 	switch res := r.(type) {
+	case *resources.Project:
+		return New(*res)
+	case *resources.Image:
+		return New(*res)
 	case resources.Project:
 		return DockerComposeProjectsDeployer{"docker", []string{}, []resources.Project{res}}, nil
 	case resources.Image:

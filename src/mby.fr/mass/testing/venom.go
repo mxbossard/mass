@@ -81,6 +81,10 @@ func RunVenomTests(d display.Displayer, res resources.Tester) (err error) {
 
 func VenomTests(d display.Displayer, res resources.Resource) (err error) {
 	switch v := res.(type) {
+	case *resources.Project:
+		return VenomTests(d, *v)
+	case *resources.Image:
+		return VenomTests(d, *v)
 	case resources.Project:
 		RunProjectVenomTests(d, v)
 	case resources.Image:

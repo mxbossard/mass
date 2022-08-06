@@ -22,6 +22,10 @@ type Builder interface {
 func New(r resources.Resource) (Builder, error) {
 	var images []resources.Image
 	switch res := r.(type) {
+	case *resources.Project:
+		return New(*res)
+	case *resources.Image:
+		return New(*res)
 	case resources.Project:
 		imgs, err := res.Images()
 		if err != nil {
