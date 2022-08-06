@@ -27,7 +27,7 @@ var bumpCmd = &cobra.Command{
 	Short: "bump resources",
 	Long: ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspace.BumpResourcesVersion(args)
+		workspace.BumpResources(args)
 	},
 }
 

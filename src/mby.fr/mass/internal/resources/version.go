@@ -5,14 +5,15 @@ import(
 	"mby.fr/mass/version"
 )
 
-var AlreadyBumped = fmt.Errorf("Resource already bumped")
-var AlreadyPromoted = fmt.Errorf("Resource already promoted")
-var AlreadyReleased = fmt.Errorf("Resource already released")
+var AlreadyBumped = fmt.Errorf("resource already bumped")
+var AlreadyPromoted = fmt.Errorf("resource already promoted")
+var NotPromoted = fmt.Errorf("resource not promoted yet")
+var AlreadyReleased = fmt.Errorf("resource already released")
 
 type Versioner interface {
 	Resource
 	Version() string
-	//FullName() string
+	FullName() string
 	Bump(bool, bool) (string, error)
 	Promote() (string, error)
 	Release() (string, error)
@@ -27,10 +28,12 @@ func (v Versionable) Version() string {
 }
 
 func writeVersionable(v *Versionable) (err error) {
-	var i interface{} = v
+	var i interface{} = *v
 	res, ok := i.(Resource)
 	if ok {
 		err = Write(res)
+	} else {
+		err = fmt.Errorf("unable to write Versionable")
 	}
 	return
 }
@@ -134,6 +137,13 @@ func (v *Versionable) Release() (msg string, err error) {
 			return
 		}
 	} else {
+		isDev, err := version.IsDev(fromVer) 
+		if err != nil {
+			return "", err
+		}
+		if isDev {
+			return "", NotPromoted
+		}
 		return "", AlreadyReleased
 	}
 

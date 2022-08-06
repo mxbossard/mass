@@ -64,7 +64,7 @@ func DisplayResourcesVersion(args []string) {
 	for _, r := range res {
 		var msg string
 		switch v := r.(type) {
-		case resources.Image:
+		case *resources.Image:
 			msg = fmt.Sprintf("Version of %s: %s\n", v.QualifiedName(), v.Version())
 		default:
 			msg = fmt.Sprintf("Resource %s is not versionable.\n", r.QualifiedName())
@@ -76,18 +76,17 @@ func DisplayResourcesVersion(args []string) {
 	d.Info("Version finished")
 }
 
-func BumpResourcesVersion(args []string) {
+func BumpResources(args []string) {
 	d := display.Service()
 	d.Info("Bump starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
 	for _, r := range res {
-		//var i interface{} = r
 		versioner, ok := r.(resources.Versioner)
 		if ok {
 			msg, err := versioner.Bump(BumpMinor, BumpMajor)
 			if err != nil {
-				d.Warn(fmt.Sprintf("Error bumping resource: %s\n", r.QualifiedName()))
+				d.Warn(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
 			} else {
 				msg := fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
 				d.Display(msg)
@@ -100,6 +99,56 @@ func BumpResourcesVersion(args []string) {
 
 	d.Flush()
 	d.Info("Bump finished")
+}
+
+func PromoteResources(args []string) {
+	d := display.Service()
+	d.Info("Promote starting ...")
+
+	resAddrs := ResolveExpression(args, resources.ImageKind)
+	for _, res := range resAddrs {
+		versioner, ok := res.(resources.Versioner)
+		if ok {
+			msg, err := versioner.Promote()
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error promoting resource %s: %s\n", res.QualifiedName(), err))
+			} else {
+				msg := fmt.Sprintf("Promoted resource %s: %s\n", res.QualifiedName(), msg)
+				d.Display(msg)
+			}
+		} else {
+			msg := fmt.Sprintf("Resource %s is not versioned.\n", res.QualifiedName())
+			d.Display(msg)
+		}
+	}
+
+	d.Flush()
+	d.Info("Promote finished")
+}
+
+func ReleaseResources(args []string) {
+	d := display.Service()
+	d.Info("Release starting ...")
+
+	resAddrs := ResolveExpression(args, resources.ImageKind)
+	for _, res := range resAddrs {
+		versioner, ok := res.(resources.Versioner)
+		if ok {
+			msg, err := versioner.Release()
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error releasing resource %s: %s\n", res.QualifiedName(), err))
+			} else {
+				msg := fmt.Sprintf("Released resource %s: %s\n", res.QualifiedName(), msg)
+				d.Display(msg)
+			}
+		} else {
+			msg := fmt.Sprintf("Resource %s is not versioned.\n", res.QualifiedName())
+			d.Display(msg)
+		}
+	}
+
+	d.Flush()
+	d.Info("Release finished")
 }
 
 func buildResource(res resources.Resource) error {

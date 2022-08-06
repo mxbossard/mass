@@ -10,22 +10,31 @@ import (
 	"mby.fr/mass/internal/commontest"
 )
 
+func TestType(t *testing.T) {
+	wksPath := commontest.InitTempWorkspace(t)
+	defer os.RemoveAll(wksPath)
+	_, imagePath := commontest.InitRandImage(t, wksPath)
+	image, err := BuildImage(imagePath)
+	require.NoError(t, err, "should not return an error")
+
+	assert.Implements(t, (*Versioner)(nil), &image, "image pointer should implements Versioner")
+}
+
 func TestBump(t *testing.T) {
 	wksPath := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(wksPath)
 	_, imagePath := commontest.InitRandImage(t, wksPath)
 	image, err := BuildImage(imagePath)
-	assert.NoError(t, err, "should not return an error")
+	require.NoError(t, err, "should not return an error")
 	assert.Equal(t, "0.0.1-dev", image.Version(), "Bad initial version")
 
-	var v Versioner = &image
-	msg, err := v.Bump(false, false)
+	msg, err := image.Bump(false, false)
 	require.Error(t, err, "Bump must return an error")
 	assert.Equal(t, AlreadyBumped, err, "Bad bump error")
 	assert.Equal(t, "", msg, "Bad bumped message")
 
 	image.Versionable.Ver = "2.0.1-rc3"
-	msg, err = v.Bump(false, false)
+	msg, err = image.Bump(false, false)
 	require.NoError(t, err, "Bump must not return an error")
 	assert.Equal(t, "2.0.1-rc4", image.Version(), "Bad bumped version")
 	assert.Equal(t, "2.0.1-rc3 => 2.0.1-rc4", msg, "Bad bumped message")
@@ -80,7 +89,7 @@ func TestPromote(t *testing.T) {
 	defer os.RemoveAll(wksPath)
 	_, imagePath := commontest.InitRandImage(t, wksPath)
 	image, err := BuildImage(imagePath)
-	assert.NoError(t, err, "should not return an error")
+	require.NoError(t, err, "should not return an error")
 
 	msg, err := image.Promote()
 	require.NoError(t, err, "must not return an error")
@@ -105,11 +114,11 @@ func TestRelease(t *testing.T) {
 	defer os.RemoveAll(wksPath)
 	_, imagePath := commontest.InitRandImage(t, wksPath)
 	image, err := BuildImage(imagePath)
-	assert.NoError(t, err, "should not return an error")
+	require.NoError(t, err, "should not return an error")
 
 	msg, err := image.Release()
 	require.Error(t, err, "must return an error")
-	assert.Equal(t, AlreadyReleased, err, "Bad release error")
+	assert.Equal(t, NotPromoted, err, "Bad release error")
 	assert.Equal(t, "", msg, "Bad release message")
 
 	image.Versionable.Ver = "2.0.1-rc3"
