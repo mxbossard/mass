@@ -281,7 +281,7 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 			// Try to resolve from workspace dir
 			r, err = resolveResourceFrom(workspaceDir, name, kind)
 		}
-		if (err != nil) {
+		if err != nil {
 			return
 		}
 	}
@@ -340,7 +340,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 	for _, res := range resources {
 		if kind == AllKind || kind == res.Kind() {
 			switch v := res.(type) {
-			case Image:
+			case *Image:
 				if v.Name() == name {
 					// Image general case
 					r = res

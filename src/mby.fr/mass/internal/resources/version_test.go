@@ -2,10 +2,10 @@ package resources
 
 import (
 	//"fmt"
-	"testing"
-	"os"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"testing"
 
 	"mby.fr/mass/internal/commontest"
 )
@@ -17,7 +17,7 @@ func TestType(t *testing.T) {
 	image, err := BuildImage(imagePath)
 	require.NoError(t, err, "should not return an error")
 
-	assert.Implements(t, (*Versioner)(nil), &image, "image pointer should implements Versioner")
+	assert.Implements(t, (*VersionBumper)(nil), &image, "image pointer should implements Versioner")
 }
 
 func TestBump(t *testing.T) {
@@ -100,7 +100,7 @@ func TestPromote(t *testing.T) {
 	image, err := BuildImage(imagePath)
 	require.NoError(t, err, "should not return an error")
 
-	msg, err := image.Promote()
+	msg, err := Promote(&image)
 	require.NoError(t, err, "must not return an error")
 	assert.Equal(t, "0.0.1-rc1", image.Version(), "Bad promoted version")
 	assert.Equal(t, "0.0.1-dev => 0.0.1-rc1", msg, "Bad promoted message")
@@ -114,7 +114,7 @@ func TestPromote(t *testing.T) {
 	image.Versionable.ver = "3.0.3"
 	msg, err = image.Promote()
 	require.Error(t, err, "must return an error")
-	assert.Equal(t, AlreadyPromoted, err, "Bad promote error")
+	assert.Equal(t, NotPromotable, err, "Bad promote error")
 	assert.Equal(t, "", msg, "Bad promote message")
 }
 
@@ -125,7 +125,7 @@ func TestRelease(t *testing.T) {
 	image, err := BuildImage(imagePath)
 	require.NoError(t, err, "should not return an error")
 
-	msg, err := image.Release()
+	msg, err := Release(&image)
 	require.Error(t, err, "must return an error")
 	assert.Equal(t, NotPromoted, err, "Bad release error")
 	assert.Equal(t, "", msg, "Bad release message")

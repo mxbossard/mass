@@ -208,10 +208,6 @@ func Write(r Resource) (err error) {
 	switch r := r.(type) {
 	case Env, *Env, Project, *Project, Image, *Image:
 		content, err = yaml.Marshal(r)
-	//case Project:
-	//content, err = yaml.Marshal(r)
-	//case Image:
-	//content, err = yaml.Marshal(r)
 	default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
 		return

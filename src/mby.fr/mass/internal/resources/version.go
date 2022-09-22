@@ -1,21 +1,29 @@
 package resources
 
-import(
+import (
 	"fmt"
+
 	"mby.fr/mass/version"
 )
 
 var AlreadyBumped = fmt.Errorf("resource already bumped")
 var AlreadyPromoted = fmt.Errorf("resource already promoted")
 var NotPromoted = fmt.Errorf("resource not promoted yet")
+var NotPromotable = fmt.Errorf("resource not promotable")
 var AlreadyReleased = fmt.Errorf("resource already released")
 
 type Versioner interface {
+<<<<<<< HEAD
 	//Resource
 	//GetVersionable() *Versionable
 	//SetVersionable(Versionable)
+=======
+>>>>>>> 2223fc632d38df17b1d5c08b25e436e89ba2d7b0
 	Version() string
-	FullName() string
+	//FullName() string
+}
+
+type VersionBumper interface {
 	Bump(bool, bool) (string, error)
 	Promote() (string, error)
 	Release() (string, error)
@@ -52,7 +60,7 @@ func (v Versionable) version() string {
 }
 
 // Bump res version always set qualifier to dev except if qualifier is rc
-// Version lifecycle : 
+// Version lifecycle :
 // - 1.0.0 -> 1.0.1-dev
 // - 1.0.0-rc1 -> 1.0.0-rc2
 // - 1.0.3-dev -> 1.0.3-dev
@@ -79,7 +87,7 @@ func (v *Versionable) bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 		if isDev {
 			return "", AlreadyBumped
 		}
-		isRc, err := version.IsRc(fromVer) 
+		isRc, err := version.IsRc(fromVer)
 		if err != nil {
 			return "", err
 		}
@@ -120,6 +128,8 @@ func (v *Versionable) promote() (msg string, err error) {
 		}
 	} else {
 		return "", AlreadyPromoted
+	} else {
+		return "", NotPromotable
 	}
 
 	msg = fmt.Sprintf("%s => %s", fromVer, toVer)
@@ -146,7 +156,7 @@ func (v *Versionable) release() (msg string, err error) {
 			return
 		}
 	} else {
-		isDev, err := version.IsDev(fromVer) 
+		isDev, err := version.IsDev(fromVer)
 		if err != nil {
 			return "", err
 		}

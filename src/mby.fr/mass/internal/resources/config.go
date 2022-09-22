@@ -39,6 +39,14 @@ func MergedConfig(res Resource) (conf *config.Config, err error) {
 	}
 
 	switch r := res.(type) {
+	//case *Env, *Project, *Image:
+	//	return MergedConfig(*r)
+	case *Env:
+		return MergedConfig(*r)
+	case *Project:
+		return MergedConfig(*r)
+	case *Image:
+		return MergedConfig(*r)
 	case Env:
 		ec, err := r.Config()
 		if errors.Is(err, fs.ErrNotExist) {
