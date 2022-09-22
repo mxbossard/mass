@@ -13,12 +13,9 @@ var NotPromotable = fmt.Errorf("resource not promotable")
 var AlreadyReleased = fmt.Errorf("resource already released")
 
 type Versioner interface {
-<<<<<<< HEAD
 	//Resource
 	//GetVersionable() *Versionable
 	//SetVersionable(Versionable)
-=======
->>>>>>> 2223fc632d38df17b1d5c08b25e436e89ba2d7b0
 	Version() string
 	//FullName() string
 }
@@ -27,7 +24,6 @@ type VersionBumper interface {
 	Bump(bool, bool) (string, error)
 	Promote() (string, error)
 	Release() (string, error)
-	
 }
 
 func writeVersionable(v *Versionable) (err error) {
@@ -111,7 +107,7 @@ func (v *Versionable) bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 func (v *Versionable) promote() (msg string, err error) {
 	var fromVer, toVer string
 	fromVer = v.ver
-	isDev, err := version.IsDev(fromVer) 
+	isDev, err := version.IsDev(fromVer)
 	if err != nil {
 		return "", err
 	}
@@ -123,14 +119,18 @@ func (v *Versionable) promote() (msg string, err error) {
 
 		v.ver = toVer
 		err = writeVersionable(v)
-		if err != nil {
-			return
-		}
-	} else {
-		return "", AlreadyPromoted
-	} else {
-		return "", NotPromotable
+		return
 	}
+
+	isRc, err := version.IsRc(fromVer)
+	if err != nil {
+		return "", err
+	}
+	if isRc {
+		return "", AlreadyPromoted
+	}
+
+	return "", NotPromotable
 
 	msg = fmt.Sprintf("%s => %s", fromVer, toVer)
 	return
@@ -140,7 +140,7 @@ func (v *Versionable) promote() (msg string, err error) {
 func (v *Versionable) release() (msg string, err error) {
 	var fromVer, toVer string
 	fromVer = v.ver
-	isRc, err := version.IsRc(fromVer) 
+	isRc, err := version.IsRc(fromVer)
 	if err != nil {
 		return "", err
 	}

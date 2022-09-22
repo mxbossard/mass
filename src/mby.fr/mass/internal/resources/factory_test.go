@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/file"
 	"mby.fr/utils/test"
 )
 
@@ -27,6 +28,8 @@ func TestFromPath(t *testing.T) {
 	require.NoError(t, err, "should not error")
 
 	assertBaseFs(t, r.Base)
+
+	file.Print(path + "/resource.yaml")
 
 	envAddr, err := FromPath[*Env](path)
 	require.NoError(t, err, "should not error")

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
-	"reflect"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,11 +32,11 @@ func buildBase(kind Kind, path string) (b Base, err error) {
 func buildTestable(res Resource, path string) (t Testable, err error) {
 	testDir := DefaultTestDir
 	/*
-	base, err := buildBase(kind, path)
-	if err != nil {
-		return
-	}
-	t = Testable{base, testDir}
+		base, err := buildBase(kind, path)
+		if err != nil {
+			return
+		}
+		t = Testable{base, testDir}
 	*/
 	t = Testable{Resource: res, testDirectory: testDir}
 	return
@@ -80,7 +80,7 @@ func BuildEnv(path string) (r Env, err error) {
 
 func BuildProject(path string) (p Project, err error) {
 	deployfile := DefaultDeployFile
-	
+
 	b, err := buildBase(ProjectKind, path)
 	if err != nil {
 		return
@@ -116,11 +116,11 @@ func BuildImage(path string) (r Image, err error) {
 	}
 
 	r = Image{
-		Resourcer: 			t,
-		Versionable:     	versionable,
-		BuildFile:       	buildfile,
-		SourceDirectory: 	sourceDir,
-		Project:         	project,
+		Resourcer:       t,
+		Versionable:     versionable,
+		BuildFile:       buildfile,
+		SourceDirectory: sourceDir,
+		Project:         project,
 	}
 
 	return
@@ -205,9 +205,13 @@ func Write(r Resource) (err error) {
 	defer writeLock.Unlock()
 
 	var content []byte
-	switch r := r.(type) {
-	case Env, *Env, Project, *Project, Image, *Image:
-		content, err = yaml.Marshal(r)
+	switch res := r.(type) {
+	case *Env, *Project, *Image:
+		fmt.Printf("Debug: resource pointer [%T] content: [%s] ...\n", res, res)
+		content, err = yaml.Marshal(res)
+	case Env, Project, Image:
+		fmt.Printf("Debug: resource [%T] content: [%v] ...\n", res, res)
+		content, err = yaml.Marshal(&res)
 	default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
 		return
@@ -218,6 +222,7 @@ func Write(r Resource) (err error) {
 	}
 
 	resourceFilepath := filepath.Join(r.Dir(), DefaultResourceFile)
+	fmt.Printf("Debug: writing content: [%s] ...\n", content)
 	err = os.WriteFile(resourceFilepath, content, 0644)
 
 	return

@@ -100,7 +100,7 @@ func TestPromote(t *testing.T) {
 	image, err := BuildImage(imagePath)
 	require.NoError(t, err, "should not return an error")
 
-	msg, err := Promote(&image)
+	msg, err := image.Promote()
 	require.NoError(t, err, "must not return an error")
 	assert.Equal(t, "0.0.1-rc1", image.Version(), "Bad promoted version")
 	assert.Equal(t, "0.0.1-dev => 0.0.1-rc1", msg, "Bad promoted message")
@@ -125,7 +125,7 @@ func TestRelease(t *testing.T) {
 	image, err := BuildImage(imagePath)
 	require.NoError(t, err, "should not return an error")
 
-	msg, err := Release(&image)
+	msg, err := image.Release()
 	require.Error(t, err, "must return an error")
 	assert.Equal(t, NotPromoted, err, "Bad release error")
 	assert.Equal(t, "", msg, "Bad release message")
