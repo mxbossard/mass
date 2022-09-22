@@ -66,8 +66,13 @@ func RunImageVenomTests(d display.Displayer, i resources.Image) (err error) {
 	return RunVenomTests(d, i)
 }
 
-func RunVenomTests(d display.Displayer, res resources.Tester) (err error) {
-	testDirMount := res.AbsTestDir() + ":/venom:ro"
+func RunVenomTests(d display.Displayer, res resources.Resourcer) (err error) {
+	tester, ok := res.(resources.Tester)
+	if !ok {
+		return fmt.Errorf("Resource of type %T does not implements Tester !", res)
+	}
+	
+	testDirMount := tester.AbsTestDir() + ":/venom:ro"
 
 	runner := venomRunner
 	runner.Volumes = []string{testDirMount}

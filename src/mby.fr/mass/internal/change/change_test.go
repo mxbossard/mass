@@ -123,7 +123,8 @@ func TestCalcImageSignature(t *testing.T) {
 	assert.Equal(t, signature3, signature4, "two signatures should be identical adding non source file")
 
 	// Change in test dir shoud not change signature
-	testFile := filepath.Join(r.AbsTestDir(), "testFile")
+	testable, _ := r.(resources.Testable)
+	testFile := filepath.Join(testable.AbsTestDir(), "testFile")
 	err = os.WriteFile(testFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 
