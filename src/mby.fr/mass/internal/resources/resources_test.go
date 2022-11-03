@@ -61,7 +61,7 @@ func TestBuildEnv(t *testing.T) {
 	r, err := BuildEnv(path)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
-	assertBaseContent(t, path, r.Base)
+	assertBaseContent(t, path, r.base)
 
 	assert.Equal(t, EnvKind, r.Kind(), "bad resource kind")
 }
@@ -81,7 +81,7 @@ func TestInitEnv(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err, "should not error")
 
-	assertBaseFs(t, r.Base)
+	assertBaseFs(t, r.base)
 }
 
 func TestBuildProject(t *testing.T) {

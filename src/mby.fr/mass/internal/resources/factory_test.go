@@ -27,7 +27,7 @@ func TestFromPath(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err, "should not error")
 
-	assertBaseFs(t, r.Base)
+	assertBaseFs(t, r.base)
 
 	file.Print(path + "/resource.yaml")
 

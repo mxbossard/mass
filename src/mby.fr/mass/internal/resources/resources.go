@@ -15,17 +15,17 @@ const DefaultBuildFile = "Dockerfile"
 const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"
 
-func buildBase(kind Kind, path string) (b Base, err error) {
+func buildBase(kind Kind, path string) (b base, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return
 	}
 	name := resourceName(path)
-	b = Base{ResourceKind: kind, name: name, dir: absPath}
+	b = base{ResourceKind: kind, name: name, dir: absPath}
 	return
 }
 
-func buildTestable(res Resource, path string) (t Testable, err error) {
+func buildTestable(res Resourcer, path string) (t Testable, err error) {
 	testDir := DefaultTestDir
 	/*
 		base, err := buildBase(kind, path)
@@ -70,7 +70,7 @@ func BuildEnv(path string) (r Env, err error) {
 		return
 	}
 
-	r = Env{Base: base}
+	r = Env{base: base}
 	return
 }
 
@@ -81,7 +81,7 @@ func BuildProject(path string) (p Project, err error) {
 	if err != nil {
 		return
 	}
-	p = Project{Base: b, DeployFile: deployfile}
+	p = Project{base: b, DeployFile: deployfile}
 
 	t, err := buildTestable(b, path)
 	if err != nil {
@@ -111,7 +111,7 @@ func BuildImage(path string) (r Image, err error) {
 	}
 
 	r = Image{
-		Base:            b,
+		base:            b,
 		Versionable:     versionable,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,

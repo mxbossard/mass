@@ -20,41 +20,33 @@ type Resourcer interface {
 	Match(string, Kind) bool
 }
 
-type Resource interface {
-	Resourcer
-}
-
-type trunk struct {
-	Resourcer
-}
-
-type Base struct {
+type base struct {
 	ResourceKind Kind `yaml:"resourceKind"`
 	name, dir    string
 }
 
-func (r Base) Kind() Kind {
+func (r base) Kind() Kind {
 	return r.ResourceKind
 }
 
-func (r Base) Name() string {
+func (r base) Name() string {
 	return r.name
 }
 
-func (r Base) QualifiedName() string {
+func (r base) QualifiedName() string {
 	return fmt.Sprintf("%s/%s", r.Kind(), r.Name())
 }
 
-func (r Base) Dir() string {
+func (r base) Dir() string {
 	return r.dir
 }
 
-func (r Base) Config() (config.Config, error) {
+func (r base) Config() (config.Config, error) {
 	c, err := config.Read(r.Dir())
 	return c, err
 }
 
-func (r Base) Init() (err error) {
+func (r base) Init() (err error) {
 	// Create resource dir
 	err = os.MkdirAll(r.Dir(), 0755)
 	if err != nil {
@@ -70,7 +62,7 @@ func (r Base) Init() (err error) {
 	return
 }
 
-func (r Base) Match(name string, k Kind) bool {
+func (r base) Match(name string, k Kind) bool {
 	return name == r.Name() && (k == AllKind || k == r.Kind())
 }
 
@@ -94,11 +86,11 @@ func (t Testable) Init() (err error) {
 }
 
 type Env struct {
-	Base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
+	base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
 }
 
 func (e Env) Init() (err error) {
-	err = e.Base.Init()
+	err = e.base.Init()
 	if err != nil {
 		return
 	}
@@ -109,7 +101,7 @@ func (e Env) Init() (err error) {
 type Project struct {
 	//Resourcer //`yaml:"base,inline"`
 
-	Base     `yaml:"base,inline"`
+	base     `yaml:"base,inline"`
 	Testable `yaml:"testable,inline"`
 
 	images     []*Image
@@ -117,7 +109,7 @@ type Project struct {
 }
 
 func (p Project) Init() (err error) {
-	err = p.Base.Init()
+	err = p.base.Init()
 	if err != nil {
 		return
 	}
@@ -162,7 +154,7 @@ func (p *Project) Images() ([]*Image, error) {
 type Image struct {
 	//Resourcer //`yaml:"base,inline"`
 
-	Base        `yaml:"base,inline"`
+	base        `yaml:"base,inline"`
 	Testable    `yaml:"testable,inline"`
 	Versionable `yaml:"versionable,inline"`
 
@@ -173,7 +165,7 @@ type Image struct {
 }
 
 func (i Image) Init() (err error) {
-	err = i.Base.Init()
+	err = i.base.Init()
 	if err != nil {
 		return
 	}
@@ -206,7 +198,7 @@ func (i Image) AbsBuildFile() string {
 }
 
 func (i Image) ImageName() string {
-	return i.Base.Name()
+	return i.base.Name()
 }
 
 func (i Image) Name() string {
@@ -231,7 +223,7 @@ func (i Image) AbsoluteName() (name string, err error) {
 }
 
 func (i Image) Match(name string, k Kind) bool {
-	return i.Base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
+	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
 
 func (i Image) GetVersionable() *Versionable {

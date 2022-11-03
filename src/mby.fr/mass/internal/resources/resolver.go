@@ -32,7 +32,7 @@ var InvalidArgument error = fmt.Errorf("Invalid argument error")
 // project1/image2 project1/image3
 // project1 image2 image3
 // project1
-func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []Resource, aggErr errorz.Aggregated) {
+func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []Resourcer, aggErr errorz.Aggregated) {
 	splittedExpr, exprKinds, err := splitExpressions(expressions)
 	if err != nil {
 		aggErr.Add(err)
@@ -133,7 +133,7 @@ func splitExpressions(expressions string) (strippedExpressions []string, kinds [
 // If a NotFoundError for a kind return it
 // If InconsistentExpressionType for all kinds it wins
 // Else return all errors
-func resolveExpresionForKinds(expr string, kinds KindSet) (res Resource, aggErr errorz.Aggregated) {
+func resolveExpresionForKinds(expr string, kinds KindSet) (res Resourcer, aggErr errorz.Aggregated) {
 	kindInExpr, name := splitExpression(expr)
 	if kindInExpr != AllKind {
 		if !kinds.Contains(kindInExpr) {
@@ -192,7 +192,7 @@ func resolveExpresionForKinds(expr string, kinds KindSet) (res Resource, aggErr 
 // project1 project/project1 projects/project1
 // project1/image2 image/project1/image2
 //
-func resolveResource(expr string, expectedKind Kind) (r Resource, err error) {
+func resolveResource(expr string, expectedKind Kind) (r Resourcer, err error) {
 	if !KindExists(expectedKind) {
 		err = InvalidArgument
 		return
@@ -252,7 +252,7 @@ func splitImageName(name string) (project, image string) {
 // project1 project2
 // env1 env2
 // project1/image1 image2
-func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
+func resolveContextualResource(name string, kind Kind) (r Resourcer, err error) {
 	if !KindExists(kind) {
 		err = InvalidArgument
 		return
@@ -296,7 +296,7 @@ func resolveContextualResource(name string, kind Kind) (r Resource, err error) {
 
 // Return one resource matching name and kind in fromDir tree
 // Special case for images : match the name in general but match image name in project dir
-func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error) {
+func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err error) {
 	if fromDir == "" || !KindExists(kind) {
 		err = InvalidArgument
 		return
@@ -370,12 +370,12 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resource, err error
 	return
 }
 
-func isResourceMatchingExpr(r Resource, expr string) bool {
+func isResourceMatchingExpr(r Resourcer, expr string) bool {
 	return r.Name() == expr
 }
 
 // Return resource with kind in dir if it exists
-func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error) {
+func getDirResource(fromDir string, resourceKind Kind) (res Resourcer, err error) {
 	r, err := Read(fromDir)
 	if err != nil {
 		return
@@ -390,7 +390,7 @@ func getDirResource(fromDir string, resourceKind Kind) (res Resource, err error)
 }
 
 // Return resource with kind in current dir if it exists
-func getCurrentDirResource(resourceKind Kind) (res Resource, err error) {
+func getCurrentDirResource(resourceKind Kind) (res Resourcer, err error) {
 	workDir, err := file.WorkDirPath()
 	if err != nil {
 		return

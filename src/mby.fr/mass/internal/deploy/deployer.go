@@ -25,7 +25,7 @@ type Deployer interface {
 	Undeploy(rmVolumes bool) error
 }
 
-func New(r resources.Resource) (Deployer, error) {
+func New(r resources.Resourcer) (Deployer, error) {
 	switch res := r.(type) {
 	case *resources.Project:
 		return New(*res)

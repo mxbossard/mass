@@ -9,7 +9,7 @@ import (
 	"mby.fr/utils/errorz"
 )
 
-func MergedConfig(res Resource) (conf *config.Config, err error) {
+func MergedConfig(res Resourcer) (conf *config.Config, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func MergedConfig(res Resource) (conf *config.Config, err error) {
 	return
 }
 
-func MergedConfigs(resources []Resource) (configs []config.Config, errors errorz.Aggregated) {
+func MergedConfigs(resources []Resourcer) (configs []config.Config, errors errorz.Aggregated) {
 	for _, res := range resources {
 		c, err := MergedConfig(res)
 		if err != nil {

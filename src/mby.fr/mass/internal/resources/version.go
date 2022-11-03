@@ -28,7 +28,7 @@ type VersionBumper interface {
 
 func writeVersionable(v *Versionable) (err error) {
 	var i interface{} = *v
-	res, ok := i.(Resource)
+	res, ok := i.(Resourcer)
 	if ok {
 		err = Write(res)
 	} else {
@@ -38,7 +38,7 @@ func writeVersionable(v *Versionable) (err error) {
 }
 
 func writeVersioner(v Versioner) (err error) {
-	res, ok := v.(Resource)
+	res, ok := v.(Resourcer)
 	if ok {
 		err = Write(res)
 	} else {

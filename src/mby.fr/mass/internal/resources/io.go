@@ -12,7 +12,7 @@ import (
 
 var writeLock = &sync.Mutex{}
 
-func Write(r Resource) (err error) {
+func Write(r Resourcer) (err error) {
 	writeLock.Lock()
 	defer writeLock.Unlock()
 
@@ -21,7 +21,7 @@ func Write(r Resource) (err error) {
 	case *Env, *Project, *Image:
 		fmt.Printf("Debug: resource pointer [%T] content: [%s] ...\n", res, res)
 		content, err = yaml.Marshal(res)
-	case Env, Project, Image, Base:
+	case Env, Project, Image, base:
 		fmt.Printf("Debug: resource [%T] content: [%v] ...\n", res, res)
 		content, err = yaml.Marshal(&res)
 	default:
@@ -55,7 +55,7 @@ func Read(path string) (r Resourcer, err error) {
 	}
 	fmt.Println("Debug: READING ResourceFile content:", string(content))
 
-	base := Base{}
+	base := base{}
 	err = yaml.Unmarshal(content, &base)
 	if err != nil {
 		return

@@ -19,7 +19,7 @@ type Builder interface {
 	Build(onlyIfChange bool, noCache bool, forcePull bool) error
 }
 
-func New(r resources.Resource) (Builder, error) {
+func New(r resources.Resourcer) (Builder, error) {
 	var images []resources.Image
 	switch res := r.(type) {
 	case *resources.Project:

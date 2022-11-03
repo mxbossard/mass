@@ -71,7 +71,7 @@ func RunVenomTests(d display.Displayer, res resources.Resourcer) (err error) {
 	if !ok {
 		return fmt.Errorf("Resource of type %T does not implements Tester !", res)
 	}
-	
+
 	testDirMount := tester.AbsTestDir() + ":/venom:ro"
 
 	runner := venomRunner
@@ -84,7 +84,7 @@ func RunVenomTests(d display.Displayer, res resources.Resourcer) (err error) {
 	return
 }
 
-func VenomTests(d display.Displayer, res resources.Resource) (err error) {
+func VenomTests(d display.Displayer, res resources.Resourcer) (err error) {
 	switch v := res.(type) {
 	case *resources.Project:
 		return VenomTests(d, *v)

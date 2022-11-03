@@ -15,7 +15,7 @@ type ResPtr interface {
 }
 */
 
-func FromPath[T Resource] (path string) (res T, err error) {
+func FromPath[T Resourcer](path string) (res T, err error) {
 	r, err := Read(path)
 	if err != nil {
 		return

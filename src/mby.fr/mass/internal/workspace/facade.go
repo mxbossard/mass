@@ -31,7 +31,7 @@ func printErrors(errors errorz.Aggregated) {
 	}
 }
 
-func ResolveExpression(args []string, kinds ...resources.Kind) []resources.Resource {
+func ResolveExpression(args []string, kinds ...resources.Kind) []resources.Resourcer {
 	resourceExpr := strings.Join(args, " ")
 	res, errors := resources.ResolveExpression(resourceExpr, kinds...)
 	printErrors(errors)
@@ -145,7 +145,7 @@ func ReleaseResources(args []string) {
 	d.Info("Release finished")
 }
 
-func buildResource(res resources.Resource) error {
+func buildResource(res resources.Resourcer) error {
 	builder, err := build.New(res)
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func BuildResources(args []string) {
 	d.Info("Build starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
-	builder := func(r resources.Resource) (void interface{}, err error) {
+	builder := func(r resources.Resourcer) (void interface{}, err error) {
 		err = buildResource(r)
 		return
 	}
@@ -173,7 +173,7 @@ func BuildResources(args []string) {
 	d.Info("Build finished")
 }
 
-func pullResource(res resources.Resource) error {
+func pullResource(res resources.Resourcer) error {
 	deployer, err := deploy.New(res)
 	if err != nil {
 		return err
@@ -189,7 +189,7 @@ func PullResources(args []string) {
 	d.Info("Pull starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
-	puller := func(r resources.Resource) (void interface{}, err error) {
+	puller := func(r resources.Resourcer) (void interface{}, err error) {
 		err = pullResource(r)
 		return
 	}
@@ -202,7 +202,7 @@ func PullResources(args []string) {
 	d.Info("Pull finished")
 }
 
-func upResource(res resources.Resource) error {
+func upResource(res resources.Resourcer) error {
 	deployer, err := deploy.New(res)
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func UpResources(args []string) {
 	d.Info("Up starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
-	upper := func(r resources.Resource) (void interface{}, err error) {
+	upper := func(r resources.Resourcer) (void interface{}, err error) {
 		err = upResource(r)
 		return
 	}
@@ -237,7 +237,7 @@ func UpResources(args []string) {
 	d.Info("Up finished")
 }
 
-func downResource(res resources.Resource) error {
+func downResource(res resources.Resourcer) error {
 	deployer, err := deploy.New(res)
 	if err != nil {
 		return err
@@ -252,7 +252,7 @@ func DownResources(args []string) {
 	d.Info("Down starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
-	downer := func(r resources.Resource) (void interface{}, err error) {
+	downer := func(r resources.Resourcer) (void interface{}, err error) {
 		err = downResource(r)
 		return
 	}
@@ -277,7 +277,7 @@ func TestResources(args []string) {
 		d.Info(fmt.Sprintf(" - %s", r.QualifiedName()))
 	}
 
-	tester := func(r resources.Resource) (void interface{}, err error) {
+	tester := func(r resources.Resourcer) (void interface{}, err error) {
 		err = testing.VenomTests(d, r)
 		return
 	}

@@ -167,7 +167,7 @@ func ScanEnvs(path string) (envs []*Env, err error) {
 	return ScanEnvsMaxDepth(path, -1)
 }
 
-func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resource, err error) {
+func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resourcer, err error) {
 	var envs []*Env
 	var projects []*Project
 	var images []*Image
