@@ -28,51 +28,6 @@ func TestBuildResources(t *testing.T) {
 	assert.Equal(t, ProjectKind, pr.Kind(), "bad resource kind")
 }
 
-func TestWrite(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	os.MkdirAll(path, 0755)
-	defer os.RemoveAll(path)
-
-	pr, err := BuildProject(path)
-	require.NoError(t, err, "should not error")
-
-	err = Write(pr)
-	require.NoError(t, err, "should not error")
-
-	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
-	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
-}
-
-func TestWriteThenRead(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	os.MkdirAll(path, 0755)
-	defer os.RemoveAll(path)
-
-	i, err := BuildImage(path)
-	require.NoError(t, err, "should not error")
-
-	err = Write(i)
-	require.NoError(t, err, "should not error")
-
-	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
-	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
-
-	res, err := Read(path)
-	require.NoError(t, err, "should not error")
-	loadedImage := res.(*Image)
-	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
-	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
-	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.AbsSourceDir(), "bad source dir")
-	assert.Equal(t, DefaultBuildFile, loadedImage.BuildFile, "bad build file")
-	assert.Equal(t, path+"/"+DefaultBuildFile, loadedImage.AbsBuildFile(), "bad build file")
-	assert.Equal(t, DefaultInitialVersion, loadedImage.Version(), "bad version")
-
-	parentDir := filepath.Dir(path)
-	assert.NotNil(t, loadedImage.Project, "bad parent project")
-	assert.Equal(t, ProjectKind, loadedImage.Project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, loadedImage.Project.Dir(), "bad parent project dir")
-}
-
 func assertBaseContent(t *testing.T, path string, b Resourcer) {
 	expectedName := filepath.Base(path)
 	assert.Equal(t, expectedName, b.Name(), "bad resource name")

@@ -82,12 +82,16 @@ func BumpResources(args []string) {
 
 	res := ResolveExpression(args, resources.ImageKind)
 	for _, r := range res {
-		msg, err := resources.Bump(r, BumpMinor, BumpMajor)
-		if err != nil {
-			d.Warn(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
-		} else {
-			msg := fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
-			d.Display(msg)
+		var i interface{} = r
+		vb, ok := i.(resources.VersionBumper)
+		if ok {
+			msg, err := vb.Bump(BumpMinor, BumpMajor)
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
+			} else {
+				msg := fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
+				d.Display(msg)
+			}
 		}
 	}
 
@@ -101,12 +105,16 @@ func PromoteResources(args []string) {
 
 	res := ResolveExpression(args, resources.ImageKind)
 	for _, r := range res {
-		msg, err := resources.Promote(r)
-		if err != nil {
-			d.Warn(fmt.Sprintf("Error promoting resource %s: %s\n", r.QualifiedName(), err))
-		} else {
-			msg := fmt.Sprintf("Promoted resource %s: %s\n", r.QualifiedName(), msg)
-			d.Display(msg)
+		var i interface{} = r
+		vb, ok := i.(resources.VersionBumper)
+		if ok {
+			msg, err := vb.Promote()
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error promoting resource %s: %s\n", r.QualifiedName(), err))
+			} else {
+				msg := fmt.Sprintf("Promoted resource %s: %s\n", r.QualifiedName(), msg)
+				d.Display(msg)
+			}
 		}
 	}
 
@@ -120,12 +128,16 @@ func ReleaseResources(args []string) {
 
 	res := ResolveExpression(args, resources.ImageKind)
 	for _, r := range res {
-		msg, err := resources.Release(r)
-		if err != nil {
-			d.Warn(fmt.Sprintf("Error releasing resource %s: %s\n", r.QualifiedName(), err))
-		} else {
-			msg := fmt.Sprintf("Released resource %s: %s\n", r.QualifiedName(), msg)
-			d.Display(msg)
+		var i interface{} = r
+		vb, ok := i.(resources.VersionBumper)
+		if ok {
+			msg, err := vb.Release()
+			if err != nil {
+				d.Warn(fmt.Sprintf("Error releasing resource %s: %s\n", r.QualifiedName(), err))
+			} else {
+				msg := fmt.Sprintf("Released resource %s: %s\n", r.QualifiedName(), msg)
+				d.Display(msg)
+			}
 		}
 	}
 

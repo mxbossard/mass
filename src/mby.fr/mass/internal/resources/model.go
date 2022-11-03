@@ -10,7 +10,7 @@ import (
 	"mby.fr/utils/file"
 )
 
-type Resource interface {
+type Resourcer interface {
 	Kind() Kind
 	Name() string
 	QualifiedName() string
@@ -20,17 +20,21 @@ type Resource interface {
 	Match(string, Kind) bool
 }
 
-type Resourcer interface {
-	Resource
+type Resource interface {
+	Resourcer
+}
+
+type trunk struct {
+	Resourcer
 }
 
 type Base struct {
-	resourceKind Kind `yaml:"resourceKind"`
+	ResourceKind Kind `yaml:"resourceKind"`
 	name, dir    string
 }
 
 func (r Base) Kind() Kind {
-	return r.resourceKind
+	return r.ResourceKind
 }
 
 func (r Base) Name() string {
@@ -75,12 +79,12 @@ type Tester interface {
 }
 
 type Testable struct {
-	Resource 					//`yaml:"base,inline"`
-	testDirectory 	string 		`yaml:"testDirectory"`
+	resource      Resourcer //`yaml:"base,inline"`
+	testDirectory string    `yaml:"testDirectory"`
 }
 
 func (t Testable) AbsTestDir() string {
-	return absResourvePath(t.Resource.Dir(), t.testDirectory)
+	return absResourvePath(t.resource.Dir(), t.testDirectory)
 }
 
 func (t Testable) Init() (err error) {
@@ -103,17 +107,17 @@ func (e Env) Init() (err error) {
 }
 
 type Project struct {
-	Resourcer			//`yaml:"base,inline"`
+	//Resourcer //`yaml:"base,inline"`
 
-	//Base       `yaml:"base,inline"`
-	//Testable   `yaml:"testable,inline"`
+	Base     `yaml:"base,inline"`
+	Testable `yaml:"testable,inline"`
 
 	images     []*Image
-	DeployFile string 	`yaml:"deployFile"`
+	DeployFile string `yaml:"deployFile"`
 }
 
 func (p Project) Init() (err error) {
-	err = p.Resourcer.Init()
+	err = p.Base.Init()
 	if err != nil {
 		return
 	}
@@ -156,20 +160,20 @@ func (p *Project) Images() ([]*Image, error) {
 }
 
 type Image struct {
-	Resourcer				//`yaml:"base,inline"`
+	//Resourcer //`yaml:"base,inline"`
 
-	//Base            		`yaml:"base,inline"`
-	//Testable        		`yaml:"testable,inline"`
-	Versionable				`yaml:"versionable,inline"`
+	Base        `yaml:"base,inline"`
+	Testable    `yaml:"testable,inline"`
+	Versionable `yaml:"versionable,inline"`
 
-	SourceDirectory string  `yaml:"sourceDirectory"`
-	BuildFile       string  `yaml:"buildFile"`
+	SourceDirectory string `yaml:"sourceDirectory"`
+	BuildFile       string `yaml:"buildFile"`
 	//Version         string  `yaml:"version"`
-	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
+	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) Init() (err error) {
-	err = i.Resourcer.Init()
+	err = i.Base.Init()
 	if err != nil {
 		return
 	}
@@ -202,7 +206,7 @@ func (i Image) AbsBuildFile() string {
 }
 
 func (i Image) ImageName() string {
-	return i.Resourcer.Name()
+	return i.Base.Name()
 }
 
 func (i Image) Name() string {
@@ -227,7 +231,7 @@ func (i Image) AbsoluteName() (name string, err error) {
 }
 
 func (i Image) Match(name string, k Kind) bool {
-	return i.Resourcer.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
+	return i.Base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
 
 func (i Image) GetVersionable() *Versionable {

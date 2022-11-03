@@ -10,7 +10,9 @@ for pkg in $packages; do
 	>&2 echo "Testing package(s) $pkg ..."
 	cd $scriptDir/$pkg
 	go mod tidy || true
-	go test -cover "$@" ./... || success=false
+	cmd="go test -cover "$@" ./..."
+	>&2 echo "Running [ $cmd ] in dir [ $pkg ] ..."
+	$cmd || success=false
 done
 
 echo
