@@ -25,7 +25,7 @@ func buildBase(kind Kind, path string) (b base, err error) {
 	return
 }
 
-func buildTestable(res Resourcer, path string) (t Testable, err error) {
+func buildTestable(res Resourcer, path string) (t testable, err error) {
 	testDir := DefaultTestDir
 	/*
 		base, err := buildBase(kind, path)
@@ -34,12 +34,12 @@ func buildTestable(res Resourcer, path string) (t Testable, err error) {
 		}
 		t = Testable{base, testDir}
 	*/
-	t = Testable{resource: res, testDirectory: testDir}
+	t = testable{resource: res, testDirectory: testDir}
 	return
 }
 
-func buildVersionable(version string) (v Versionable) {
-	v = Versionable{version}
+func buildVersionable(version string) (v versionable) {
+	v = versionable{version}
 	return
 }
 
@@ -87,7 +87,7 @@ func BuildProject(path string) (p Project, err error) {
 	if err != nil {
 		return
 	}
-	p.Testable = t
+	p.testable = t
 
 	return
 }
@@ -112,7 +112,7 @@ func BuildImage(path string) (r Image, err error) {
 
 	r = Image{
 		base:            b,
-		Versionable:     versionable,
+		versionable:     versionable,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
 		Project:         project,
@@ -122,7 +122,7 @@ func BuildImage(path string) (r Image, err error) {
 	if err != nil {
 		return
 	}
-	r.Testable = t
+	r.testable = t
 
 	return
 }
@@ -140,6 +140,7 @@ func Undecorate[T any](o any, t T) (r T, ok bool) {
 	}
 	return r, false
 }
+
 func resourceName(path string) string {
 	return filepath.Base(path)
 }
