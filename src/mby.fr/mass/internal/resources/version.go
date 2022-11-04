@@ -26,7 +26,7 @@ type VersionBumper interface {
 	Release() (string, error)
 }
 
-func writeVersionable(v *Versionable) (err error) {
+func writeVersionable(v *versionable) (err error) {
 	var i interface{} = *v
 	res, ok := i.(Resourcer)
 	if ok {
@@ -47,11 +47,11 @@ func writeVersioner(v Versioner) (err error) {
 	return
 }
 
-type Versionable struct {
+type versionable struct {
 	ver string `yaml:"version"`
 }
 
-func (v Versionable) version() string {
+func (v versionable) Version() string {
 	return v.ver
 }
 
@@ -60,7 +60,7 @@ func (v Versionable) version() string {
 // - 1.0.0 -> 1.0.1-dev
 // - 1.0.0-rc1 -> 1.0.0-rc2
 // - 1.0.3-dev -> 1.0.3-dev
-func (v *Versionable) bump(bumpMinor, bumpMajor bool) (msg string, err error) {
+func (v *versionable) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 	var fromVer, toVer string
 	fromVer = v.ver
 	if bumpMajor {
@@ -104,7 +104,7 @@ func (v *Versionable) bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 }
 
 // Promote res version from dev to rc.
-func (v *Versionable) promote() (msg string, err error) {
+func (v *versionable) Promote() (msg string, err error) {
 	var fromVer, toVer string
 	fromVer = v.ver
 	isDev, err := version.IsDev(fromVer)
@@ -137,7 +137,7 @@ func (v *Versionable) promote() (msg string, err error) {
 }
 
 // Release res version from rc to release
-func (v *Versionable) release() (msg string, err error) {
+func (v *versionable) Release() (msg string, err error) {
 	var fromVer, toVer string
 	fromVer = v.ver
 	isRc, err := version.IsRc(fromVer)

@@ -41,14 +41,14 @@ func assertBaseFs(t *testing.T, b Resourcer) {
 }
 
 func assertTestableContent(t *testing.T, path string, r Resourcer) {
-	tester, _ := Undecorate(r, Testable{})
+	tester, _ := Undecorate(r, testable{})
 	//require.Implements(t, (*Tester)(nil), r, "Should implements Tester")
 	//tester, _ := r.(Tester)
 	assert.Equal(t, path+"/"+DefaultTestDir, tester.AbsTestDir(), "bad resource dir")
 }
 
 func assertTestableFs(t *testing.T, r Resourcer) {
-	tester, _ := Undecorate(r, Testable{})
+	tester, _ := Undecorate(r, testable{})
 	//require.Implements(t, (*Tester)(nil), r, "Should implements Tester")
 	//tester, _ := r.(Tester)
 	assert.DirExists(t, tester.AbsTestDir(), "should exists")

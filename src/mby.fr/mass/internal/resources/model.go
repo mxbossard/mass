@@ -70,16 +70,16 @@ type Tester interface {
 	AbsTestDir() string
 }
 
-type Testable struct {
+type testable struct {
 	resource      Resourcer //`yaml:"base,inline"`
 	testDirectory string    `yaml:"testDirectory"`
 }
 
-func (t Testable) AbsTestDir() string {
+func (t testable) AbsTestDir() string {
 	return absResourvePath(t.resource.Dir(), t.testDirectory)
 }
 
-func (t Testable) Init() (err error) {
+func (t testable) Init() (err error) {
 	// Create test dir
 	err = os.MkdirAll(t.AbsTestDir(), 0755)
 	return
@@ -102,7 +102,7 @@ type Project struct {
 	//Resourcer //`yaml:"base,inline"`
 
 	base     `yaml:"base,inline"`
-	Testable `yaml:"testable,inline"`
+	testable `yaml:"testable,inline"`
 
 	images     []*Image
 	DeployFile string `yaml:"deployFile"`
@@ -155,8 +155,8 @@ type Image struct {
 	//Resourcer //`yaml:"base,inline"`
 
 	base        `yaml:"base,inline"`
-	Testable    `yaml:"testable,inline"`
-	Versionable `yaml:"versionable,inline"`
+	testable    `yaml:"testable,inline"`
+	versionable `yaml:"versionable,inline"`
 
 	SourceDirectory string `yaml:"sourceDirectory"`
 	BuildFile       string `yaml:"buildFile"`
@@ -226,16 +226,17 @@ func (i Image) Match(name string, k Kind) bool {
 	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
 
-func (i Image) GetVersionable() *Versionable {
-	return &(i.Versionable)
+/*
+func (i Image) GetVersionable() *versionable {
+	return &(i.versionable)
 }
 
-func (i *Image) SetVersionable(v Versionable) {
+func (i *Image) SetVersionable(v versionable) {
 	i.Versionable = v
 }
 
 func (i Image) Version() string {
-	return i.Versionable.version()
+	return i.versionable.version()
 }
 
 func (i *Image) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
@@ -255,3 +256,4 @@ func (i *Image) Release() (msg string, err error) {
 	Write(i)
 	return
 }
+*/

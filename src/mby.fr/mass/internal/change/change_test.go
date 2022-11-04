@@ -124,7 +124,7 @@ func TestCalcImageSignature(t *testing.T) {
 
 	// Change in test dir shoud not change signature
 	var i interface{} = r
-	testable, _ := i.(resources.Testable)
+	testable, _ := i.(resources.Tester)
 	testFile := filepath.Join(testable.AbsTestDir(), "testFile")
 	err = os.WriteFile(testFile, []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
