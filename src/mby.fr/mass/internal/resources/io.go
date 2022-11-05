@@ -6,8 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"gopkg.in/yaml.v2"
-	//"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 var writeLock = &sync.Mutex{}
@@ -65,35 +64,11 @@ func Read(path string) (r Resourcer, err error) {
 	base.dir = path
 
 	kind := base.Kind()
-	switch kind {
-	case EnvKind:
-		res, err := BuildEnv(base.Dir())
-		if err != nil {
-			return r, err
-		}
-		//res.Base = base
-		err = yaml.Unmarshal(content, &res)
-		r = &res
-	case ProjectKind:
-		res, err := BuildProject(base.Dir())
-		if err != nil {
-			return r, err
-		}
-		//res := Project{Base: base}
-		err = yaml.Unmarshal(content, &res)
-		r = &res
-	case ImageKind:
-		res, err := BuildImage(base.Dir())
-		if err != nil {
-			return r, err
-		}
-		//res := Image{Base: base}
-		err = yaml.Unmarshal(content, &res)
-		r = &res
-	default:
-		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", resourceFilepath, kind)
+	r, err = FromKind(kind, path)
+	if err != nil {
 		return
 	}
 
+	err = yaml.Unmarshal(content, r)
 	return
 }
