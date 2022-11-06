@@ -18,10 +18,10 @@ func Write(r Resourcer) (err error) {
 	var content []byte
 	switch res := r.(type) {
 	case *Env, *Project, *Image:
-		fmt.Printf("Debug: resource pointer [%T] content: [%s] ...\n", res, res)
+		//fmt.Printf("Debug: resource pointer [%T] content: [%s] ...\n", res, res)
 		content, err = yaml.Marshal(res)
 	case Env, Project, Image, base:
-		fmt.Printf("Debug: resource [%T] content: [%v] ...\n", res, res)
+		//fmt.Printf("Debug: resource [%T] content: [%v] ...\n", res, res)
 		content, err = yaml.Marshal(&res)
 	default:
 		err = fmt.Errorf("Unable to write Resource ! Not supported kind property: [%T].", r)
@@ -33,7 +33,7 @@ func Write(r Resourcer) (err error) {
 	}
 
 	resourceFilepath := filepath.Join(r.Dir(), DefaultResourceFile)
-	fmt.Printf("Debug: WRITING content: [%s] in file: [%s] ...\n", content, resourceFilepath)
+	//fmt.Printf("Debug: WRITING content: [%s] in file: [%s] ...\n", content, resourceFilepath)
 	err = os.WriteFile(resourceFilepath, content, 0644)
 
 	return
@@ -52,7 +52,7 @@ func Read(path string) (r Resourcer, err error) {
 		}
 		return
 	}
-	fmt.Println("Debug: READING ResourceFile content:", string(content))
+	//fmt.Println("Debug: READING ResourceFile content:", string(content))
 
 	base := base{}
 	err = yaml.Unmarshal(content, &base)

@@ -1,7 +1,7 @@
 package resources
 
 import (
-	"fmt"
+	//"fmt"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -40,27 +40,6 @@ func buildTestable(res Resourcer, path string) (t testable, err error) {
 
 func buildVersionable(version string) (v versionable) {
 	v = versionable{version}
-	return
-}
-
-func Init(path string, kind Kind) (r Resourcer, err error) {
-	switch kind {
-	case EnvKind:
-		var r Env
-		r, err = BuildEnv(path)
-		r.Init()
-	case ProjectKind:
-		var p Project
-		r, err = BuildProject(path)
-		p.Init()
-	case ImageKind:
-		var i Image
-		r, err = BuildImage(path)
-		i.Init()
-	default:
-		err = fmt.Errorf("Unable to load Resource from path: %s ! Not supported kind property: [%s].", path, kind)
-	}
-
 	return
 }
 
@@ -160,7 +139,7 @@ func relResourcePath(resRootPath string, resPath string) (path string, err error
 }
 
 // Return a absolute path from a relative resource path
-func absResourvePath(relRootPath string, resPath string) (path string) {
+func absResourcePath(relRootPath string, resPath string) (path string) {
 	path = filepath.Join(relRootPath, resPath)
 	return
 }

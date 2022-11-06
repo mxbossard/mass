@@ -76,7 +76,7 @@ type testable struct {
 }
 
 func (t testable) AbsTestDir() string {
-	return absResourvePath(t.resource.Dir(), t.testDirectory)
+	return absResourcePath(t.resource.Dir(), t.testDirectory)
 }
 
 func (t testable) Init() (err error) {
@@ -136,7 +136,7 @@ func (p Project) AbsoluteName() (name string, err error) {
 }
 
 func (p Project) AbsDeployFile() string {
-	return absResourvePath(p.Dir(), p.DeployFile)
+	return absResourcePath(p.Dir(), p.DeployFile)
 }
 
 func (p *Project) Images() ([]*Image, error) {
@@ -190,11 +190,11 @@ func (i Image) Init() (err error) {
 }
 
 func (i Image) AbsSourceDir() string {
-	return absResourvePath(i.Dir(), i.SourceDirectory)
+	return absResourcePath(i.Dir(), i.SourceDirectory)
 }
 
 func (i Image) AbsBuildFile() string {
-	return absResourvePath(i.Dir(), i.BuildFile)
+	return absResourcePath(i.Dir(), i.BuildFile)
 }
 
 func (i Image) ImageName() string {

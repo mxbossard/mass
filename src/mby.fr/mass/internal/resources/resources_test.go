@@ -41,16 +41,18 @@ func assertBaseFs(t *testing.T, b Resourcer) {
 }
 
 func assertTestableContent(t *testing.T, path string, r Resourcer) {
-	tester, _ := Undecorate(r, testable{})
+	//tester, _ := Undecorate(r, testable{})
 	//require.Implements(t, (*Tester)(nil), r, "Should implements Tester")
-	//tester, _ := r.(Tester)
+	tester, ok := r.(Tester)
+	require.True(t, ok, "Should implements Tester !")
 	assert.Equal(t, path+"/"+DefaultTestDir, tester.AbsTestDir(), "bad resource dir")
 }
 
 func assertTestableFs(t *testing.T, r Resourcer) {
-	tester, _ := Undecorate(r, testable{})
+	//tester, _ := Undecorate(r, testable{})
 	//require.Implements(t, (*Tester)(nil), r, "Should implements Tester")
-	//tester, _ := r.(Tester)
+	tester, ok := r.(Tester)
+	require.True(t, ok, "Should implements Tester !")
 	assert.DirExists(t, tester.AbsTestDir(), "should exists")
 }
 
@@ -104,7 +106,8 @@ func TestInitProject(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	r, err := BuildProject(path)
+	//r, err := Init2[Project](ProjectKind, path)
+	r, err := Init3[Project](path)
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work

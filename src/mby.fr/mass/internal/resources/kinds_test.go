@@ -2,11 +2,28 @@ package resources
 
 import(
 	"testing"
+	"reflect"
 
 	"github.com/stretchr/testify/assert"
         //"github.com/stretchr/testify/require"
 )
 
+func TestTypeFromKind(t *testing.T) {
+	typ := TypeFromKind(EnvKind)
+	assert.Equal(t, reflect.TypeOf((*Env)(nil)).Elem(), typ, "bad type for env kind")
+}
+
+func TestKindFromType(t *testing.T) {
+	typ := TypeFromKind(EnvKind)
+	kind := KindFromType(typ)
+	assert.Equal(t, EnvKind, kind, "bad kind for Env type")
+}
+
+func TestKindFromResource(t *testing.T) {
+	var env Env
+	kind := KindFromResource(env)
+	assert.Equal(t, EnvKind, kind, "bad kind for Env resource")
+}
 
 func TestEmptyKindSet(t *testing.T) {
 	s := *NewKindSet()

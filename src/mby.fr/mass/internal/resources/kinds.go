@@ -2,8 +2,10 @@ package resources
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strings"
+	"reflect"
 )
 
 type Kind int
@@ -13,18 +15,59 @@ const (
 	EnvKind
 	ProjectKind
 	ImageKind
+	kindLimit
 )
+
+func TypeFromKind(kind Kind) (t reflect.Type) {
+	switch kind {
+	case EnvKind:
+		t = reflect.TypeOf((*Env)(nil)).Elem()
+	case ProjectKind:
+		t = reflect.TypeOf((*Project)(nil)).Elem()
+	case ImageKind:
+		t = reflect.TypeOf((*Image)(nil)).Elem()
+	default:
+		log.Fatalf("Resource type not found for kind %s !", kind)
+	}
+	return
+}
+
+func KindFromResource(res Resourcer) (k Kind) {
+	t := reflect.TypeOf(res)
+	return KindFromType(t)
+	//return KindFromType(any)(res).(type))
+	// Iterate over all kinds
+	/*
+	for k = Kind(0); i < kindLimit; i++ {
+		if (interface{})(res).(type) == k.ResourceType() {
+			return 
+		}
+	}
+	log.Fatalf("Resource kind not found for type %T !", res)
+	*/
+}
+
+func KindFromType(t reflect.Type) (k Kind) {
+	// Iterate over all kinds
+	for k = Kind(1); k < kindLimit; k++ {
+		if (t == k.ResourceType()) {
+			return 
+		}
+	}
+	log.Fatalf("Resource kind not found for type %s !", t)
+	return
+}
+
+func (k Kind) ResourceType() (t reflect.Type) {
+	return TypeFromKind(k)
+}
 
 func (k Kind) String() (s string) {
 	switch k {
 	case AllKind:
 		s = "all"
-	case EnvKind:
-		s = "env"
-	case ProjectKind:
-		s = "project"
-	case ImageKind:
-		s = "image"
+	default:
+		s = strings.ToLower(k.ResourceType().Name())
 	}
 	return
 }

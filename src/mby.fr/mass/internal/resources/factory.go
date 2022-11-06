@@ -67,3 +67,41 @@ func FromKind(kind Kind, baseDir string) (res Resourcer, err error) {
 	
 	return
 }
+
+func Init(kind Kind, path string) (res Resourcer, err error) {
+	res, err = FromKind(kind, path)
+	if err != nil {
+		return
+	}
+	res.Init()
+
+	
+	return
+}
+
+func Init2[T Resourcer](kind Kind, path string) (res T, err error) {
+	_, err = Init(kind, path)
+	if err != nil {
+		return
+	}
+	res, err = FromPath[T](path)
+	return
+}
+
+func Init3[T Resourcer](path string) (res T, err error) {
+	var kind Kind
+	switch (interface{})(res).(type) {
+	case Env, *Env:
+		kind = EnvKind
+	case Project, *Project:
+		kind = ProjectKind
+	case Image, *Image:
+		kind = ImageKind
+	}
+	_, err = Init(kind, path)
+	if err != nil {
+		return
+	}
+	res, err = FromPath[T](path)
+	return
+}

@@ -10,7 +10,9 @@ for pkg in $packages; do
 	>&2 echo "Testing package(s) $pkg ..."
 	cd $scriptDir/$pkg
 	go mod tidy || true
-	cmd="go test -cover "$@" ./..."
+	cmd="go test -cover $@"
+	# check if go files or pathes were supplied in args or launch all tests
+	echo "$cmd" | egrep '.*\.go|./' > /dev/null || cmd="$cmd ./..."
 	>&2 echo "Running [ $cmd ] in dir [ $pkg ] ..."
 	$cmd || success=false
 done
