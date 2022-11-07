@@ -64,7 +64,7 @@ func Read(path string) (r Resourcer, err error) {
 	base.dir = path
 
 	kind := base.Kind()
-	r, err = FromKind(kind, path)
+	r, err = BuildResourcer(kind, path)
 	if err != nil {
 		return
 	}

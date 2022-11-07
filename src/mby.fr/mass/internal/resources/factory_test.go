@@ -16,7 +16,7 @@ func TestFromKind(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	res, err := FromKind(EnvKind, path)
+	res, err := BuildResourcer(EnvKind, path)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, res, "bad type")
 	assert.Equal(t, EnvKind, res.Kind(), "bad kind")
