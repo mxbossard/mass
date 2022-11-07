@@ -52,23 +52,35 @@ func Read(path string) (r Resourcer, err error) {
 		}
 		return
 	}
-	fmt.Println("Debug: READING ResourceFile content:", string(content))
+	//fmt.Println("Debug: READING ResourceFile content:", string(content))
 
 	base := base{}
 	err = yaml.Unmarshal(content, &base)
 	if err != nil {
 		return
 	}
-
-	base.name = filepath.Base(path)
-	base.dir = path
+	//base.name = filepath.Base(path)
+	//base.dir = path
 
 	kind := base.Kind()
-	r, err = BuildResourcer(kind, path)
+	res, err := BuildAny(kind, path)
+	//res, err := Build[any](path)
 	if err != nil {
 		return
 	}
+	fmt.Printf("Build any: %T for kind: %s\n", res, kind)
+	switch re := res.(type) {
+	case Env:
+		err = yaml.Unmarshal(content, &re)
+	case Image:
+		err = yaml.Unmarshal(content, &re)
+	case Project:
+		err = yaml.Unmarshal(content, &re)
+	default:
+		err = yaml.Unmarshal(content, &res)
+	}
 
-	err = yaml.Unmarshal(content, &r)
+	fmt.Printf("Unmarshal any: %T for kind: %s\n", res, kind)
+	r = (res).(Resourcer)
 	return
 }

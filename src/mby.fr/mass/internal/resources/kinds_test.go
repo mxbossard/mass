@@ -122,7 +122,8 @@ func TestMarshalYAML(t *testing.T) {
 func TestUnmarshalYAML(t *testing.T) {
 	var k Kind
 	unmarshal := func(i interface{}) error {
-		i = EnvKind.String()
+		s := EnvKind.String()
+		i = &s
 		return nil
 	}
 	err := k.UnmarshalYAML(unmarshal)

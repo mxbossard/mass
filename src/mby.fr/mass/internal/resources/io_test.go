@@ -78,16 +78,16 @@ func TestWriteThenRead(t *testing.T) {
 
 	i, err := BuildImage(path)
 	require.NoError(t, err, "should not error")
-
+	//i.Init()
 	err = Write(i)
 	require.NoError(t, err, "should not error")
 
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 
-	res, err := Read(path)
+	loadedImage, err := FromPath[Image](path)
 	require.NoError(t, err, "should not error")
-	loadedImage := res.(*Image)
+	//loadedImage := res.(*Image)
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
 	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.AbsSourceDir(), "bad source dir")
