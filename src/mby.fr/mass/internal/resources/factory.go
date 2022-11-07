@@ -39,43 +39,49 @@ func FromPath[T Resourcer](path string) (res T, err error) {
 }
 
 // Return pointer to resource
-//func FromKind[T Resourcer](kind Kind, baseDir string) (res T, err error) {
-func FromKind(kind Kind, baseDir string) (res Resourcer, err error) {
+func FromKind[T Resourcer](kind Kind, baseDir string) (res T, err error) {
+	//func FromKind(kind Kind, baseDir string) (res Resourcer, err error) {
+	var r Resourcer
 	switch kind {
 	case EnvKind:
-		r, err := BuildEnv(baseDir)
+		r, err = BuildEnv(baseDir)
 		if err != nil {
 			return res, err
 		}
-		res = &r
 	case ProjectKind:
-		r, err := BuildProject(baseDir)
+		r, err = BuildProject(baseDir)
 		if err != nil {
 			return res, err
 		}
-		res = &r
 	case ImageKind:
-		r, err := BuildImage(baseDir)
+		r, err = BuildImage(baseDir)
 		if err != nil {
 			return res, err
 		}
-		res = &r
 	default:
 		err = fmt.Errorf("Unable to build Resource with base dir: %s ! Not supported kind property: [%s].", baseDir, kind)
 		return
 	}
-	
+	res = (any)(r).(T)
+
+	return
+}
+
+func Build[T Resourcer](path string) (r T, err error) {
+	kind := KindFromResource(r)
+	res, err := FromKind[T](kind, path)
+	r = (any)(res).(T)
 	return
 }
 
 func Init(kind Kind, path string) (res Resourcer, err error) {
-	res, err = FromKind(kind, path)
+	typ := TypeFromKind(kind)
+	res, err = FromKind[typ](kind, path)
 	if err != nil {
 		return
 	}
 	res.Init()
 
-	
 	return
 }
 

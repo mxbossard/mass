@@ -107,7 +107,7 @@ func TestInitProject(t *testing.T) {
 	require.NoError(t, err, "should not error")
 
 	//r, err := Init2[Project](ProjectKind, path)
-	r, err := Init3[Project](path)
+	r, err := FromPath[Project](path)
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work

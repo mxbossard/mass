@@ -8,9 +8,31 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/file"
+	//"mby.fr/utils/file"
 	"mby.fr/utils/test"
 )
+
+func TestFromKind(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	res, err := FromKind(EnvKind, path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Env{}, res, "bad type")
+	assert.Equal(t, EnvKind, res.Kind(), "bad kind")
+	assert.Equal(t, path, res.Dir(), "bad dir")
+}
+
+func TestBuild(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	e, err := Build[Env](path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Env{}, e, "bad type")
+	assert.Equal(t, EnvKind, e.Kind(), "bad kind")
+	assert.Equal(t, path, e.Dir(), "bad dir")
+}
 
 func TestFromPath(t *testing.T) {
 	path, err := test.BuildRandTempPath()
@@ -29,15 +51,15 @@ func TestFromPath(t *testing.T) {
 
 	assertBaseFs(t, r.base)
 
-	file.Print(path + "/resource.yaml")
-
-	envAddr, err := FromPath[*Env](path)
-	require.NoError(t, err, "should not error")
-	assert.IsType(t, &Env{}, envAddr, "bad resource type")
+	//file.Print(path + "/resource.yaml")
 
 	envVal, err := FromPath[Env](path)
 	assert.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, envVal, "bad resource type")
+
+	envAddr, err := FromPath[*Env](path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, &Env{}, envAddr, "bad resource type")
 
 	_, err = FromPath[Project](path)
 	assert.Error(t, err, "should error")

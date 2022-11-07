@@ -3,9 +3,9 @@ package resources
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"sort"
 	"strings"
-	"reflect"
 )
 
 type Kind int
@@ -38,20 +38,20 @@ func KindFromResource(res Resourcer) (k Kind) {
 	//return KindFromType(any)(res).(type))
 	// Iterate over all kinds
 	/*
-	for k = Kind(0); i < kindLimit; i++ {
-		if (interface{})(res).(type) == k.ResourceType() {
-			return 
+		for k = Kind(0); i < kindLimit; i++ {
+			if (interface{})(res).(type) == k.ResourceType() {
+				return
+			}
 		}
-	}
-	log.Fatalf("Resource kind not found for type %T !", res)
+		log.Fatalf("Resource kind not found for type %T !", res)
 	*/
 }
 
 func KindFromType(t reflect.Type) (k Kind) {
 	// Iterate over all kinds
 	for k = Kind(1); k < kindLimit; k++ {
-		if (t == k.ResourceType()) {
-			return 
+		if t == k.ResourceType() {
+			return
 		}
 	}
 	log.Fatalf("Resource kind not found for type %s !", t)
@@ -81,19 +81,15 @@ func (k Kind) Match(o Kind) bool {
 func (k Kind) MarshalYAML() (interface{}, error) {
 	var s string
 	switch k {
-	case EnvKind:
-		s = "env"
-	case ProjectKind:
-		s = "project"
-	case ImageKind:
-		s = "image"
+	case AllKind:
+		return "", fmt.Errorf("AllKind not marshallable !")
 	default:
-		return "", fmt.Errorf("Unable to marshal kind: %s", k)
+		s = k.String()
 	}
 	return s, nil
 }
 
-func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (k *Kind) UnmarshalYAML0(unmarshal func(interface{}) error) error {
 	var s string
 	if err := unmarshal(&s); err != nil {
 		return err
@@ -109,6 +105,22 @@ func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Unable to unmarshal kind: %s", s)
 	}
 	return nil
+}
+
+func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	// Iterate over all kinds
+	for kind := Kind(1); kind < kindLimit; kind++ {
+		if s == kind.String() {
+			*k = kind
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Unable to unmarshal kind: %s", s)
 }
 
 type KindSet map[Kind]Kind

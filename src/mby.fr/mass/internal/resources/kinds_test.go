@@ -1,11 +1,11 @@
 package resources
 
-import(
-	"testing"
+import (
 	"reflect"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
-        //"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTypeFromKind(t *testing.T) {
@@ -62,10 +62,10 @@ func TestKindSetString(t *testing.T) {
 	s = *NewKindSet(EnvKind)
 	assert.Equal(t, "env", s.String())
 
-	s = *NewKindSet(EnvKind,ProjectKind)
+	s = *NewKindSet(EnvKind, ProjectKind)
 	assert.Equal(t, "env,project", s.String())
 
-	s = *NewKindSet(EnvKind,ProjectKind,ImageKind)
+	s = *NewKindSet(EnvKind, ProjectKind, ImageKind)
 	assert.Equal(t, "env,image,project", s.String())
 }
 
@@ -86,7 +86,7 @@ func TestKindFromAlias(t *testing.T) {
 }
 
 func TestKindSetContains(t *testing.T) {
-	s := *NewKindSet(EnvKind,ProjectKind)
+	s := *NewKindSet(EnvKind, ProjectKind)
 	test := s.Contains(AllKind)
 	assert.False(t, test)
 
@@ -111,4 +111,21 @@ func TestKindSetContains(t *testing.T) {
 
 	test = s.Contains(ImageKind)
 	assert.True(t, test)
+}
+
+func TestMarshalYAML(t *testing.T) {
+	yaml, err := EnvKind.MarshalYAML()
+	require.NoError(t, err, "should not error")
+	assert.Equal(t, EnvKind.String(), yaml)
+}
+
+func TestUnmarshalYAML(t *testing.T) {
+	var k Kind
+	unmarshal := func(i interface{}) error {
+		i = EnvKind.String()
+		return nil
+	}
+	err := k.UnmarshalYAML(unmarshal)
+	require.NoError(t, err, "should not error")
+	assert.Equal(t, EnvKind, k, "bad kind")
 }

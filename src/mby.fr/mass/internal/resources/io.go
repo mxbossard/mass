@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 var writeLock = &sync.Mutex{}
@@ -52,7 +52,7 @@ func Read(path string) (r Resourcer, err error) {
 		}
 		return
 	}
-	//fmt.Println("Debug: READING ResourceFile content:", string(content))
+	fmt.Println("Debug: READING ResourceFile content:", string(content))
 
 	base := base{}
 	err = yaml.Unmarshal(content, &base)
@@ -69,6 +69,6 @@ func Read(path string) (r Resourcer, err error) {
 		return
 	}
 
-	err = yaml.Unmarshal(content, r)
+	err = yaml.Unmarshal(content, &r)
 	return
 }
