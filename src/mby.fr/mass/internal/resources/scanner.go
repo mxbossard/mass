@@ -62,7 +62,7 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 				return err
 			}
 			if res.Kind() == resKind {
-				c <- res
+				c <- &res
 				return fs.SkipDir
 			}
 		}

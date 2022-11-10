@@ -14,43 +14,6 @@ type ResPtr interface {
 }
 */
 
-func Build[T Resourcer](path string) (r T, err error) {
-	kind := KindFromResource(r)
-	res, err := BuildResourcer(kind, path)
-	r = (any)(res).(T)
-	return
-}
-
-func Init[T Resourcer](path string) (r T, err error) {
-	r, err = Build[T](path)
-	r.Init()
-	return
-}
-
-func FromPath[T Resourcer](path string) (r T, err error) {
-	res, err := Read(path)
-	if err != nil {
-		return
-	}
-
-	r, ok := res.(T)
-	/*
-		if reflect.ValueOf(r).Kind() != reflect.Ptr {
-			// Expect resource value
-			// In this case, res is a pointer and we want to return a value, but the type cast don't return ok.
-			resPtrType := reflect.PointerTo(reflect.TypeOf(r))
-			if reflect.TypeOf(res) == resPtrType {
-				// Right type so res was rightly type cast
-				return r, err
-			}
-		}
-	*/
-	if !ok {
-		err = fmt.Errorf("bad resource type for path %s. Expected type %T but got %T", path, r, res)
-	}
-	return r, err
-}
-
 func BuildAny(kind Kind, baseDir string) (res any, err error) {
 	switch kind {
 	case EnvKind:
@@ -72,6 +35,13 @@ func BuildResourcer(kind Kind, baseDir string) (res Resourcer, err error) {
 	return
 }
 
+func Build[T Resourcer](path string) (r T, err error) {
+	kind := KindFromResource(r)
+	res, err := BuildResourcer(kind, path)
+	r = (any)(res).(T)
+	return
+}
+
 func InitResourcer(kind Kind, path string) (res Resourcer, err error) {
 	res, err = BuildResourcer(kind, path)
 	if err != nil {
@@ -82,7 +52,24 @@ func InitResourcer(kind Kind, path string) (res Resourcer, err error) {
 	return
 }
 
-func FromPathResourcer(path string) (res Resourcer, err error) {
-	res, err = Read(path)
+func Init[T Resourcer](path string) (r T, err error) {
+	r, err = Build[T](path)
+	r.Init()
 	return
+}
+
+type ResourceCallFunc[T Resourcer, K any] = func(T) (K, error)
+
+func CallFuncOnResource[K any](r T, f ResourceCallFunc[T, K]) (a K, err error) {
+	switch res := r.(type) {
+	case Env:
+		return f(r)
+	case Image:
+		return f(r)
+	case Project:
+		return f(r)
+	default:
+		err = fmt.Errorf("Type %T not supported yet !", res)
+		return
+	}
 }

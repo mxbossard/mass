@@ -1,26 +1,34 @@
 package resources
 
 import (
-	"os"
+	//"os"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/mass/internal/settings"
+	//"mby.fr/mass/internal/settings"
 	//"mby.fr/utils/file"
 	"mby.fr/utils/test"
 )
 
-func TestFromKind(t *testing.T) {
+func TestBuildAny(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	res, err := Build[Env](path)
+	e, err := BuildAny(EnvKind, path)
 	require.NoError(t, err, "should not error")
-	assert.IsType(t, Env{}, res, "bad type")
-	assert.Equal(t, EnvKind, res.Kind(), "bad kind")
-	assert.Equal(t, path, res.Dir(), "bad dir")
+	assert.IsType(t, Env{}, e, "bad type")
+}
+
+func TestBuildResourcer(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	e, err := BuildResourcer(EnvKind, path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Env{}, e, "bad type")
 }
 
 func TestBuild(t *testing.T) {
@@ -34,39 +42,19 @@ func TestBuild(t *testing.T) {
 	assert.Equal(t, path, e.Dir(), "bad dir")
 }
 
-func TestFromPath(t *testing.T) {
+func TestCallFuncOnResource(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	r, err := BuildEnv(path)
+	e, err := Build[Env](path)
+	call := func(r Resourcer) (res Resourcer, err error) {
+		fmt.Printf("call on type: %T", r)
+		res = r
+		return
+	}
+	r, err := CallFuncOnResource[Env](e, call)
 	require.NoError(t, err, "should not error")
-
-	// Init Settings for templates to work
-	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
-	os.Chdir(path)
-
-	err = r.Init()
-	require.NoError(t, err, "should not error")
-
-	assertBaseFs(t, r.base)
-
-	//file.Print(path + "/resource.yaml")
-
-	envVal, err := FromPath[Env](path)
-	assert.NoError(t, err, "should not error")
-	assert.IsType(t, Env{}, envVal, "bad resource type")
-
-	//envAddr, err := FromPath[Env](path)
-	//require.NoError(t, err, "should not error")
-	//assert.IsType(t, &Env{}, envAddr, "bad resource type")
-	assert.IsType(t, &Env{}, &envVal, "bad resource type")
-
-	_, err = FromPath[Project](path)
-	assert.Error(t, err, "should error")
-
-	_, err = FromPath[*Project](path)
-	assert.Error(t, err, "should error")
+	assert.Equal(t, e.Name(), r.Name())
 }
 
 /*

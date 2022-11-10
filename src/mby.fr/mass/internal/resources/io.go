@@ -39,7 +39,7 @@ func Write(r Resourcer) (err error) {
 	return
 }
 
-func Read(path string) (r Resourcer, err error) {
+func ReadAny(path string) (r any, err error) {
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return
@@ -72,15 +72,50 @@ func Read(path string) (r Resourcer, err error) {
 	switch re := res.(type) {
 	case Env:
 		err = yaml.Unmarshal(content, &re)
+		return re, nil
 	case Image:
 		err = yaml.Unmarshal(content, &re)
+		return re, nil
 	case Project:
 		err = yaml.Unmarshal(content, &re)
+		return re, nil
 	default:
 		err = yaml.Unmarshal(content, &res)
+		return
 	}
 
 	fmt.Printf("Unmarshal any: %T for kind: %s\n", res, kind)
-	r = (res).(Resourcer)
+	//r = (res).(Resourcer)
+	r = res
 	return
+}
+
+func ReadResourcer(path string) (res Resourcer, err error) {
+	r, err := ReadAny(path)
+	res = r.(Resourcer)
+	return
+}
+
+func Read[T Resourcer](path string) (r T, err error) {
+	res, err := ReadResourcer(path)
+	if err != nil {
+		return
+	}
+
+	r, ok := res.(T)
+	/*
+		if reflect.ValueOf(r).Kind() != reflect.Ptr {
+			// Expect resource value
+			// In this case, res is a pointer and we want to return a value, but the type cast don't return ok.
+			resPtrType := reflect.PointerTo(reflect.TypeOf(r))
+			if reflect.TypeOf(res) == resPtrType {
+				// Right type so res was rightly type cast
+				return r, err
+			}
+		}
+	*/
+	if !ok {
+		err = fmt.Errorf("bad resource type for path %s. Expected type %T but got %T", path, r, res)
+	}
+	return r, err
 }

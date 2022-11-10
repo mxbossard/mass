@@ -71,6 +71,80 @@ func TestWriteProject(t *testing.T) {
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 }
 
+func TestReadAny(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	os.MkdirAll(path, 0755)
+	defer os.RemoveAll(path)
+
+	envContent := "resourceKind: env\n"
+	err = os.WriteFile(path, []byte(envContent), 0644)
+
+	r, err := ReadAny(path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Env{}, r, "bad type")
+}
+
+func TestReadResourcer(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	os.MkdirAll(path, 0755)
+	defer os.RemoveAll(path)
+
+	envContent := "resourceKind: project\n"
+	err = os.WriteFile(path, []byte(envContent), 0644)
+
+	r, err := ReadResourcer(path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Project{}, r, "bad type")
+
+	expectedName := filepath.Base(path)
+	assert.Equal(t, expectedName, r.Name())
+
+	if p, ok := r.(Project); ok {
+		expectedName := filepath.Base(path)
+		assert.Equal(t, expectedName, p.Name(), "bad name")
+		testFunc := func() {
+			p.Images()
+		}
+		assert.Panics(t, testFunc, "should panic")
+
+		assert.Equal(t, expectedName, (&p).Name())
+		testFunc = func() {
+			(&p).Images()
+		}
+		assert.NotPanics(t, testFunc, "should not panic")
+	}
+}
+
+func TestRead(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	os.MkdirAll(path, 0755)
+	defer os.RemoveAll(path)
+
+	envContent := "resourceKind: project\n"
+	err = os.WriteFile(path, []byte(envContent), 0644)
+
+	_, err = Read[Env](path)
+	assert.Error(t, err, "should error")
+
+	p, err := Read[Project](path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Project{}, p, "bad type")
+
+	expectedName := filepath.Base(path)
+	assert.Equal(t, expectedName, p.Name(), "bad name")
+	testFunc := func() {
+		p.Images()
+	}
+	assert.Panics(t, testFunc, "should panic")
+
+	ePtr, err := Read[*Project](path)
+	require.NoError(t, err, "should not error")
+	assert.IsType(t, Project{}, ePtr, "bad type")
+
+	assert.Equal(t, expectedName, ePtr.Name())
+	assert.NotPanics(t, testFunc, "should not panic")
+}
+
 func TestWriteThenRead(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
@@ -85,7 +159,7 @@ func TestWriteThenRead(t *testing.T) {
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 
-	loadedImage, err := FromPath[Image](path)
+	loadedImage, err := Read[Image](path)
 	require.NoError(t, err, "should not error")
 	//loadedImage := res.(*Image)
 	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")

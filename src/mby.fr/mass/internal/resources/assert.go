@@ -1,10 +1,9 @@
 package resources
 
-import(
+import (
 	"fmt"
 	"strings"
 	//"path/filepath"
-
 	//"mby.fr/utils/file"
 )
 
@@ -12,14 +11,16 @@ type BadResourceName struct {
 	kind Kind
 	name string
 }
+
 func (e BadResourceName) Error() string {
 	return fmt.Sprintf("bad %s name: %s", e.kind, e.name)
 }
 
 type NotResourceDir struct {
 	kind Kind
-	dir string
+	dir  string
 }
+
 func (e NotResourceDir) Error() string {
 	return fmt.Sprintf("directory: %s is not a %s", e.dir, e.kind)
 }
@@ -39,7 +40,7 @@ func AssertResourceName(kind Kind, name string) error {
 }
 
 func AssertResourceDir(kind Kind, dir string) error {
-	r, err := Read(dir)
+	r, err := ReadResourcer(dir)
 	if err != nil {
 		return err
 	}
@@ -48,4 +49,3 @@ func AssertResourceDir(kind Kind, dir string) error {
 	}
 	return nil
 }
-

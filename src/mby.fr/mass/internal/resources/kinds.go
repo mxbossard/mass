@@ -114,6 +114,7 @@ func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	// Iterate over all kinds
 	for kind := Kind(1); kind < kindLimit; kind++ {
+		//fmt.Printf("Test if %s == %s ?\n", s, kind)
 		if s == kind.String() {
 			*k = kind
 			return nil
