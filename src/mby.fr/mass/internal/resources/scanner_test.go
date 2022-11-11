@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	//"path/filepath"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -15,7 +13,7 @@ import (
 func initRandResource(t *testing.T, parentPath string, kind Kind) (path string) {
 	resDir, err := test.MkRandSubDir(parentPath)
 	require.NoError(t, err, "should not error")
-	res, err := BuildResourcer(kind, resDir)
+	res, err := InitResourcer(kind, resDir)
 	require.NoError(t, err, "should not error")
 	path = res.Dir()
 	return
@@ -35,30 +33,30 @@ func TestPathDepth(t *testing.T) {
 
 func TestScanBlankPath(t *testing.T) {
 	path := ""
-	projects, err := ScanProjects(path)
+	projects, err := Scan[Project](path)
 	require.NoError(t, err, "should not error")
 	assert.Empty(t, projects, "should be empty")
 
-	images, err := ScanImages(path)
+	images, err := Scan[Image](path)
 	require.NoError(t, err, "should not error")
 	assert.Empty(t, images, "should be empty")
 
-	envs, err := ScanEnvs(path)
+	envs, err := Scan[Env](path)
 	require.NoError(t, err, "should not error")
 	assert.Empty(t, envs, "should be empty")
 }
 
 func TestScanNotExistingDir(t *testing.T) {
 	path := "notExistingDirZzz"
-	projects, err := ScanProjects(path)
+	projects, err := Scan[Project](path)
 	assert.NoError(t, err, "should error")
 	assert.Empty(t, projects, "should be empty")
 
-	images, err := ScanImages(path)
+	images, err := Scan[Image](path)
 	assert.NoError(t, err, "should error")
 	assert.Empty(t, images, "should be empty")
 
-	envs, err := ScanEnvs(path)
+	envs, err := Scan[Env](path)
 	assert.NoError(t, err, "should error")
 	assert.Empty(t, envs, "should be empty")
 }
@@ -67,7 +65,7 @@ func TestScanProjects(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
-	res, err := ScanProjects(parentPath)
+	res, err := Scan[Project](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
@@ -86,28 +84,28 @@ func TestScanProjects(t *testing.T) {
 	test.MkRandSubDir(parentPath)
 	test.MkRandSubDir(parentPath)
 
-	res, err = ScanProjects(parentPath)
+	res, err = Scan[Project](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 3, "bad resource count")
 
-	res2, err := ScanImages(parentPath)
+	res2, err := Scan[Image](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res2, 1, "bad resource count")
 
-	res3, err := ScanEnvs(parentPath)
+	res3, err := Scan[Env](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
 	parentDepth := 0
-	res4, err := ScanProjectsMaxDepth(parentPath, parentDepth+0)
+	res4, err := ScanMaxDepth[Project](parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")
 
-	res5, err := ScanProjectsMaxDepth(parentPath, parentDepth+1)
+	res5, err := ScanMaxDepth[Project](parentPath, parentDepth+1)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res5, 3, "bad resource count")
 
-	res6, err := ScanProjectsMaxDepth(parentPath, parentDepth+2)
+	res6, err := ScanMaxDepth[Project](parentPath, parentDepth+2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res6, 3, "bad resource count")
 }
@@ -116,7 +114,7 @@ func TestScanEnvs(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
-	res, err := ScanEnvs(parentPath)
+	res, err := Scan[Env](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
@@ -135,28 +133,28 @@ func TestScanEnvs(t *testing.T) {
 	test.MkRandSubDir(parentPath)
 	test.MkRandSubDir(parentPath)
 
-	res, err = ScanEnvs(parentPath)
+	res, err = Scan[Env](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 3, "bad resource count")
 
-	res2, err := ScanProjects(parentPath)
+	res2, err := Scan[Project](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res2, 1, "bad resource count")
 
-	res3, err := ScanImages(parentPath)
+	res3, err := Scan[Image](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
 	parentDepth := 0
-	res4, err := ScanEnvsMaxDepth(parentPath, parentDepth+0)
+	res4, err := ScanMaxDepth[Env](parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")
 
-	res5, err := ScanEnvsMaxDepth(parentPath, parentDepth+1)
+	res5, err := ScanMaxDepth[Env](parentPath, parentDepth+1)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res5, 3, "bad resource count")
 
-	res6, err := ScanEnvsMaxDepth(parentPath, parentDepth+2)
+	res6, err := ScanMaxDepth[Env](parentPath, parentDepth+2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res6, 3, "bad resource count")
 }
@@ -165,7 +163,7 @@ func TestScanImages(t *testing.T) {
 	parentPath, err := test.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
-	res, err := ScanImages(parentPath)
+	res, err := Scan[Image](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
@@ -184,28 +182,28 @@ func TestScanImages(t *testing.T) {
 	test.MkRandSubDir(parentPath)
 	test.MkRandSubDir(parentPath)
 
-	res, err = ScanImages(parentPath)
+	res, err = Scan[Image](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 3, "bad resource count")
 
-	res2, err := ScanProjects(parentPath)
+	res2, err := Scan[Project](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res2, 1, "bad resource count")
 
-	res3, err := ScanEnvs(parentPath)
+	res3, err := Scan[Env](parentPath)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res3, 1, "bad resource count")
 
 	parentDepth := 0
-	res4, err := ScanImagesMaxDepth(parentPath, parentDepth+0)
+	res4, err := ScanMaxDepth[Image](parentPath, parentDepth+0)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res4, 0, "bad resource count")
 
-	res5, err := ScanImagesMaxDepth(parentPath, parentDepth+1)
+	res5, err := ScanMaxDepth[Image](parentPath, parentDepth+1)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res5, 3, "bad resource count")
 
-	res6, err := ScanImagesMaxDepth(parentPath, parentDepth+2)
+	res6, err := ScanMaxDepth[Image](parentPath, parentDepth+2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res6, 3, "bad resource count")
 }

@@ -60,24 +60,18 @@ func initWorkspace(t *testing.T) (path string) {
 	// Init envs
 	os.MkdirAll(filepath.Join(path, envDir), 0755)
 	for _, e := range envs {
-		r, err := BuildEnv("env/" + e)
-		require.NoError(t, err, "must not error")
-		err = r.Init()
+		_, err := Init[Env]("env/" + e)
 		require.NoError(t, err, "must not error")
 	}
 
 	// Init projects
 	for _, p := range projects {
-		r, err := BuildProject(p)
-		require.NoError(t, err, "must not error")
-		err = r.Init()
+		_, err := Init[Project](p)
 		require.NoError(t, err, "must not error")
 
 		// Init project images
 		for _, i := range images[p] {
-			r, err := BuildImage(p + "/" + i)
-			require.NoError(t, err, "must not error")
-			err = r.Init()
+			_, err := Init[Image](p + "/" + i)
 			require.NoError(t, err, "must not error")
 		}
 	}

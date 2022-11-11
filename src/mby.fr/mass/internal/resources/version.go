@@ -21,34 +21,28 @@ type Versioner interface {
 }
 
 type VersionBumper interface {
-	Bump(bool, bool) (string, error)
-	Promote() (string, error)
-	Release() (string, error)
+	Bump(bool, bool) (string, string, error)
+	Promote() (string, string, error)
+	Release() (string, string, error)
 }
 
-func writeVersionable(v *versionable) (err error) {
-	var i interface{} = *v
-	res, ok := i.(Resourcer)
-	if ok {
-		err = Write(res)
-	} else {
-		err = fmt.Errorf("unable to write Versionable of type %T", v)
-	}
-	return
-}
-
-func writeVersioner(v Versioner) (err error) {
-	res, ok := v.(Resourcer)
-	if ok {
-		err = Write(res)
-	} else {
-		err = fmt.Errorf("unable to write Versioner of type %T", v)
-	}
+func writeVersionable(v versionable) (err error) {
+	err = Write(v.resource)
 	return
 }
 
 type versionable struct {
+	resource Resourcer
 	ver string `yaml:"version"`
+}
+
+func buildVersionable(res Resourcer, version string) (v versionable) {
+	v = versionable{resource: res, ver: version}
+	return
+}
+
+func (v versionable) init() error {
+	return nil
 }
 
 func (v versionable) Version() string {
@@ -60,9 +54,9 @@ func (v versionable) Version() string {
 // - 1.0.0 -> 1.0.1-dev
 // - 1.0.0-rc1 -> 1.0.0-rc2
 // - 1.0.3-dev -> 1.0.3-dev
-func (v *versionable) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
-	var fromVer, toVer string
+func (v *versionable) Bump(bumpMinor, bumpMajor bool) (toVer, fromVer string, err error) {
 	fromVer = v.ver
+	var isDev, isRc bool
 	if bumpMajor {
 		toVer, err = version.NextMajor(fromVer)
 		if err != nil {
@@ -76,16 +70,17 @@ func (v *versionable) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 		}
 		toVer, err = version.Dev(toVer)
 	} else {
-		isDev, err := version.IsDev(fromVer)
+		isDev, err = version.IsDev(fromVer)
 		if err != nil {
-			return "", err
+			return
 		}
 		if isDev {
-			return "", AlreadyBumped
+			err = AlreadyBumped
+			return
 		}
-		isRc, err := version.IsRc(fromVer)
+		isRc, err = version.IsRc(fromVer)
 		if err != nil {
-			return "", err
+			return
 		}
 		if isRc {
 			toVer, err = version.NextRc(fromVer)
@@ -98,94 +93,71 @@ func (v *versionable) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
 	}
 
 	v.ver = toVer
-
-	msg = fmt.Sprintf("%s => %s", fromVer, toVer)
 	return
 }
 
 // Promote res version from dev to rc.
-func (v *versionable) Promote() (msg string, err error) {
-	var fromVer, toVer string
+func (v *versionable) Promote() (toVer, fromVer string, err error) {
 	fromVer = v.ver
-	isDev, err := version.IsDev(fromVer)
+	var isDev, isRc bool
+	isDev, err = version.IsDev(fromVer)
 	if err != nil {
-		return "", err
+		return
 	}
 	if isDev {
 		toVer, err = version.NextRc(fromVer)
 		if err != nil {
-			return "", err
+			return
 		}
 
 		v.ver = toVer
-		err = writeVersionable(v)
+		err = writeVersionable(*v)
 		return
 	}
 
-	isRc, err := version.IsRc(fromVer)
+	isRc, err = version.IsRc(fromVer)
 	if err != nil {
-		return "", err
+		return
 	}
 	if isRc {
-		return "", AlreadyPromoted
+		err = AlreadyPromoted
+		return
 	}
 
-	return "", NotPromotable
-
-	msg = fmt.Sprintf("%s => %s", fromVer, toVer)
+	err = NotPromotable
 	return
 }
 
 // Release res version from rc to release
-func (v *versionable) Release() (msg string, err error) {
-	var fromVer, toVer string
+func (v *versionable) Release() (toVer, fromVer string, err error) {
+	var isDev, isRc bool
 	fromVer = v.ver
-	isRc, err := version.IsRc(fromVer)
+	isRc, err = version.IsRc(fromVer)
 	if err != nil {
-		return "", err
+		return
 	}
 	if isRc {
 		toVer, err = version.Release(fromVer)
 		if err != nil {
-			return "", err
+			return
 		}
 
 		v.ver = toVer
-		err = writeVersionable(v)
+		err = writeVersionable(*v)
 		if err != nil {
 			return
 		}
 	} else {
-		isDev, err := version.IsDev(fromVer)
+		isDev, err = version.IsDev(fromVer)
 		if err != nil {
-			return "", err
+			return
 		}
 		if isDev {
-			return "", NotPromoted
+			err = NotPromoted
+			return
 		}
-		return "", AlreadyReleased
-	}
-
-	msg = fmt.Sprintf("%s => %s", fromVer, toVer)
-	return
-}
-
-/*
-func Bump(v Versioner, bumpMinor, bumpMajor bool) (msg string, err error) {
-	versionablePtr := v.GetVersionable()
-	//versionablePtr.Ver = toVer
-	msg, err = versionablePtr.Bump(bumpMinor, bumpMajor)
-	if err != nil {
+		err = AlreadyReleased
 		return
 	}
-
-	v.SetVersionable(*versionablePtr)
-
-	err = writeVersioner(v)
-	if err != nil {
-		return
-	}
-
 	return
 }
-*/

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/config"
-	"mby.fr/mass/internal/settings"
+	//"mby.fr/mass/internal/settings"
 	"mby.fr/utils/test"
 )
 
@@ -29,8 +29,8 @@ func TestBuildResources(t *testing.T) {
 }
 
 func assertBaseContent(t *testing.T, path string, b Resourcer) {
-	expectedName := filepath.Base(path)
-	assert.Equal(t, expectedName, b.Name(), "bad resource name")
+	//expectedName := filepath.Base(path)
+	//assert.Equal(t, expectedName, b.Name(), "bad resource name")
 	assert.Equal(t, path, b.Dir(), "bad resource dir")
 }
 
@@ -68,24 +68,6 @@ func TestBuildEnv(t *testing.T) {
 	assert.Equal(t, EnvKind, r.Kind(), "bad resource kind")
 }
 
-func TestInitEnv(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	require.NoError(t, err, "should not error")
-
-	r, err := BuildEnv(path)
-	require.NoError(t, err, "should not error")
-
-	// Init Settings for templates to work
-	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
-	os.Chdir(path)
-
-	err = r.Init()
-	require.NoError(t, err, "should not error")
-
-	assertBaseFs(t, r.base)
-}
-
 func TestBuildProject(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
@@ -100,30 +82,6 @@ func TestBuildProject(t *testing.T) {
 
 	_, err = r.Images()
 	require.NoError(t, err, "should not error")
-}
-
-func TestInitProject(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	require.NoError(t, err, "should not error")
-
-	//r, err := Init2[Project](ProjectKind, path)
-	r, err := Read[Project](path)
-	require.NoError(t, err, "should not error")
-
-	// Init Settings for templates to work
-	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
-	os.Chdir(path)
-
-	err = r.Init()
-	require.NoError(t, err, "should not error")
-
-	assertBaseFs(t, r)
-	assertTestableFs(t, r)
-
-	images, err := r.Images()
-	require.NoError(t, err, "should not error")
-	assert.Len(t, images, 0, "should not have any image")
 }
 
 func TestBuildImage(t *testing.T) {
@@ -146,63 +104,4 @@ func TestBuildImage(t *testing.T) {
 	assert.NotNil(t, r.Project, "bad parent project")
 	assert.Equal(t, ProjectKind, r.Project.Kind(), "bad parent project kind")
 	assert.Equal(t, parentDir, r.Project.Dir(), "bad parent project dir")
-}
-
-func TestInitImage(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	require.NoError(t, err, "should not error")
-
-	r, err := BuildImage(path)
-	require.NoError(t, err, "should not error")
-
-	// Init Settings for templates to work
-	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
-	os.Chdir(path)
-
-	err = r.Init()
-	require.NoError(t, err, "should not error")
-
-	assertBaseFs(t, r)
-	assertTestableFs(t, r)
-
-	assert.DirExists(t, r.AbsSourceDir(), "source dir should exists")
-	assert.FileExists(t, r.BuildFile, "source dir should exists")
-}
-
-func TestInitProjectWithImages(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	require.NoError(t, err, "should not error")
-
-	r, err := BuildProject(path)
-	require.NoError(t, err, "should not error")
-
-	// Init Settings for templates to work
-	err = settings.Init(path)
-	require.NoError(t, err, "should not error")
-	os.Chdir(path)
-
-	err = r.Init()
-	require.NoError(t, err, "should not error")
-
-	assertBaseFs(t, r)
-	assertTestableFs(t, r)
-
-	images, err := r.Images()
-	require.NoError(t, err, "should not error")
-	assert.Len(t, images, 0, "should not have any image")
-
-	// Init new images
-	image1Path := filepath.Join(path, "image1")
-	i1, err := BuildImage(image1Path)
-	i1.Init()
-
-	image2Path := filepath.Join(path, "image2")
-	i2, err := BuildImage(image2Path)
-	i2.Init()
-
-	images, err = r.Images()
-	require.NoError(t, err, "should not error")
-	assert.Len(t, images, 2, "should got 2 images")
-
 }

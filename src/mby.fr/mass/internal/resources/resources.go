@@ -3,7 +3,6 @@ package resources
 import (
 	//"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 )
 
@@ -35,11 +34,6 @@ func buildTestable(res Resourcer, path string) (t testable, err error) {
 		t = Testable{base, testDir}
 	*/
 	t = testable{resource: res, testDirectory: testDir}
-	return
-}
-
-func buildVersionable(version string) (v versionable) {
-	v = versionable{version}
 	return
 }
 
@@ -82,8 +76,6 @@ func BuildImage(path string) (r Image, err error) {
 		return
 	}
 
-	versionable := buildVersionable(version)
-
 	b, err := buildBase(ImageKind, path)
 	if err != nil {
 		return
@@ -91,7 +83,6 @@ func BuildImage(path string) (r Image, err error) {
 
 	r = Image{
 		base:            b,
-		versionable:     versionable,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
 		Project:         project,
@@ -103,9 +94,13 @@ func BuildImage(path string) (r Image, err error) {
 	}
 	r.testable = t
 
+	versionable := buildVersionable(r, version)
+	r.versionable = versionable
+
 	return
 }
 
+/*
 func Undecorate[T any](o any, t T) (r T, ok bool) {
 	r, ok = o.(T)
 	if ok {
@@ -119,6 +114,7 @@ func Undecorate[T any](o any, t T) (r T, ok bool) {
 	}
 	return r, false
 }
+*/
 
 func resourceName(path string) string {
 	return filepath.Base(path)

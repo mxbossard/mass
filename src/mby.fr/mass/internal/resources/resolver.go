@@ -347,7 +347,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 					return
 				}
 
-				fromDirRes, err := Read(fromDir)
+				fromDirRes, err := ReadResourcer(fromDir)
 				if err == nil && fromDirRes.Kind() == ProjectKind && v.ImageName() == name {
 					// In Project context
 					return res, nil
@@ -376,7 +376,7 @@ func isResourceMatchingExpr(r Resourcer, expr string) bool {
 
 // Return resource with kind in dir if it exists
 func getDirResource(fromDir string, resourceKind Kind) (res Resourcer, err error) {
-	r, err := Read(fromDir)
+	r, err := ReadResourcer(fromDir)
 	if err != nil {
 		return
 	}

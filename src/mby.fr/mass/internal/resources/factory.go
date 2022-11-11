@@ -47,17 +47,28 @@ func InitResourcer(kind Kind, path string) (res Resourcer, err error) {
 	if err != nil {
 		return
 	}
-	res.Init()
-
+	err = res.init()
+	if err != nil {
+		return
+	}
+	err = Write(res)
 	return
 }
 
 func Init[T Resourcer](path string) (r T, err error) {
 	r, err = Build[T](path)
-	r.Init()
+	if err != nil {
+		return
+	}
+	err = r.init()
+	if err != nil {
+		return
+	}
+	err = Write(r)
 	return
 }
 
+/*
 type ResourceCallFunc[T Resourcer, K any] = func(T) (K, error)
 
 func CallFuncOnResource[K any](r T, f ResourceCallFunc[T, K]) (a K, err error) {
@@ -73,3 +84,4 @@ func CallFuncOnResource[K any](r T, f ResourceCallFunc[T, K]) (a K, err error) {
 		return
 	}
 }
+*/

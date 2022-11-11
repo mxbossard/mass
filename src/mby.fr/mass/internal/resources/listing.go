@@ -7,12 +7,12 @@ import (
 	"mby.fr/mass/internal/settings"
 )
 
-func ListEnvs() (envs []*Env, err error) {
+func ListEnvs() (envs []Env, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	envs, err = ScanEnvs(ss.EnvsDir())
+	envs, err = Scan[Env](ss.EnvsDir())
 	if err == os.ErrNotExist {
 		err = nil
 	} else if err != nil {
@@ -21,25 +21,25 @@ func ListEnvs() (envs []*Env, err error) {
 	return
 }
 
-func ListProjects() (projects []*Project, err error) {
+func ListProjects() (projects []Project, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	projects, err = ScanProjects(ss.ProjectsDir())
+	projects, err = Scan[Project](ss.ProjectsDir())
 	return
 }
 
-func ListImages() (images []*Image, err error) {
+func ListImages() (images []Image, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
 		return
 	}
-	images, err = ScanImages(ss.ProjectsDir())
+	images, err = Scan[Image](ss.ProjectsDir())
 	return
 }
 
-func GetProject(name string) (p *Project, ok bool, err error) {
+func GetProject(name string) (p Project, ok bool, err error) {
 	projects, err := ListProjects()
 	for _, p = range projects {
 		if p.Name() == name {
@@ -50,7 +50,7 @@ func GetProject(name string) (p *Project, ok bool, err error) {
 	return
 }
 
-func GetEnv(name string) (r *Env, ok bool, err error) {
+func GetEnv(name string) (r Env, ok bool, err error) {
 	envs, err := ListEnvs()
 
 	for _, r = range envs {
@@ -62,7 +62,7 @@ func GetEnv(name string) (r *Env, ok bool, err error) {
 	return
 }
 
-func GetImage(projectName, imageName string) (r *Image, ok bool, err error) {
+func GetImage(projectName, imageName string) (r Image, ok bool, err error) {
 	images, err := ListImages()
 	for _, r = range images {
 		if r.Name() == projectName+"/"+imageName {

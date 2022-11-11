@@ -25,7 +25,7 @@ func buildScanner0(resKind Kind, c chan<- interface{}) fs.WalkDirFunc {
 		//fmt.Println("scanning", path)
 		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
-			res, err := Read(parentDir)
+			res, err := ReadResourcer(parentDir)
 			if err != nil {
 				return err
 			}
@@ -57,12 +57,12 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 		//fmt.Println("scanning", path)
 		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
-			res, err := Read(parentDir)
+			res, err := ReadResourcer(parentDir)
 			if err != nil {
 				return err
 			}
-			if res.Kind() == resKind {
-				c <- &res
+			if res.Kind() == resKind || resKind == AllKind {
+				c <- res
 				return fs.SkipDir
 			}
 		}
@@ -71,20 +71,53 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 	return scanner
 }
 
-func ScanProjectsMaxDepth(path string, maxDepth int) (projects []*Project, err error) {
-	c := make(chan interface{})
+func buildScanner2[T Resourcer](rootPath string, maxDepth int, c chan<- T) fs.WalkDirFunc {
+	if maxDepth >= 0 {
+		rootPathDepth := pathDepth(rootPath)
+		maxDepth += rootPathDepth
+	}
+	scanner := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if maxDepth >= 0 && pathDepth(path) > maxDepth+1 {
+			//fmt.Printf("Reached max depth: %d with path: %s\n", maxDepth, path)
+			return fs.SkipDir
+		}
+
+		//fmt.Println("scanning", path)
+		if d.Name() == DefaultResourceFile {
+			parentDir := filepath.Dir(path)
+			res, err := Read[T](parentDir)
+			if IsBadResourceType(err) {
+				// pass we are scanning
+			} else if err != nil {
+				return err
+			} else {
+				c <- res
+				return fs.SkipDir
+			}
+		}
+		return nil
+	}
+	return scanner
+}
+
+func ScanMaxDepth[T Resourcer](path string, maxDepth int) (resources []T, err error) {
+	c := make(chan T)
 	finished := make(chan bool)
 	go func() {
 		// consume not buffered channel in a goroutine to avoid to be stuck
 		for r := range c {
 			//fmt.Println("Consuming project")
-			projects = append(projects, r.(*Project))
+			resources = append(resources, r)
 		}
 		finished <- true
 		close(finished)
 	}()
 
-	scanner := buildScanner(path, ProjectKind, maxDepth, c)
+	scanner := buildScanner2[T](path, maxDepth, c)
 	err = filepath.WalkDir(path, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -99,7 +132,70 @@ func ScanProjectsMaxDepth(path string, maxDepth int) (projects []*Project, err e
 	return
 }
 
-func ScanProjects(path string) (projects []*Project, err error) {
+func Scan[T Resourcer](path string) (projects []T, err error) {
+	return ScanMaxDepth[T](path, -1)
+}
+
+func scanResourcesFrom(fromDir string, resourceKind Kind) (resources []Resourcer, err error) {
+	c := make(chan interface{})
+	finished := make(chan bool)
+	go func() {
+		// consume not buffered channel in a goroutine to avoid to be stuck
+		for r := range c {
+			//fmt.Println("Consuming project")
+			resources = append(resources, r.(Resourcer))
+		}
+		finished <- true
+		close(finished)
+	}()
+
+	scanner := buildScanner(fromDir, resourceKind, 1, c)
+	err = filepath.WalkDir(fromDir, scanner)
+	close(c)
+	if errors.Is(err, fs.ErrNotExist) {
+		// Swallow error if path don't exists
+		err = nil
+		return
+	} else if err != nil {
+		return
+	}
+	// BLock until array finished
+	<-finished
+	return
+}
+
+/*
+func ScanProjectsMaxDepth(path string, maxDepth int) (projects []Project, err error) {
+	//c := make(chan interface{})
+	c := make(chan Project)
+	finished := make(chan bool)
+	go func() {
+		// consume not buffered channel in a goroutine to avoid to be stuck
+		for r := range c {
+			//fmt.Println("Consuming project")
+			projects = append(projects, r)
+		}
+		finished <- true
+		close(finished)
+	}()
+
+	//scanner := buildScanner(path, ProjectKind, maxDepth, c)
+	scanner := buildScanner2[Project](path, maxDepth, c)
+	err = filepath.WalkDir(path, scanner)
+	close(c)
+	if errors.Is(err, fs.ErrNotExist) {
+		// Swallow error if path don't exists
+		err = nil
+		return
+	} else if err != nil {
+		return
+	}
+	// BLock until array finished
+	<-finished
+	return
+}
+
+func ScanProjects(path string) (projects []Project, err error) {
 	return ScanProjectsMaxDepth(path, -1)
 }
 
@@ -169,7 +265,7 @@ func ScanEnvs(path string) (envs []*Env, err error) {
 
 func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resourcer, err error) {
 	var envs []*Env
-	var projects []*Project
+	var projects []Project
 	var images []*Image
 	switch resourceKind {
 	case AllKind:
@@ -223,3 +319,4 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resourcer, err 
 
 	return
 }
+*/

@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// TODO: move Marshal and Unmarshall to private methods in model.go
+
 var writeLock = &sync.Mutex{}
 
 func Write(r Resourcer) (err error) {
@@ -59,16 +61,14 @@ func ReadAny(path string) (r any, err error) {
 	if err != nil {
 		return
 	}
-	//base.name = filepath.Base(path)
-	//base.dir = path
 
 	kind := base.Kind()
 	res, err := BuildAny(kind, path)
-	//res, err := Build[any](path)
 	if err != nil {
 		return
 	}
-	fmt.Printf("Build any: %T for kind: %s\n", res, kind)
+	//fmt.Printf("Build any: %T for kind: %s\n", res, kind)
+
 	switch re := res.(type) {
 	case Env:
 		err = yaml.Unmarshal(content, &re)
@@ -79,20 +79,24 @@ func ReadAny(path string) (r any, err error) {
 	case Project:
 		err = yaml.Unmarshal(content, &re)
 		return re, nil
+	
+	
 	default:
 		err = yaml.Unmarshal(content, &res)
 		return
 	}
 
-	fmt.Printf("Unmarshal any: %T for kind: %s\n", res, kind)
-	//r = (res).(Resourcer)
+	//fmt.Printf("Unmarshal any: %T for kind: %s\n", res, kind)
 	r = res
 	return
+	
 }
 
 func ReadResourcer(path string) (res Resourcer, err error) {
 	r, err := ReadAny(path)
-	res = r.(Resourcer)
+	if r != nil {
+		res = r.(Resourcer)
+	}
 	return
 }
 
@@ -103,19 +107,11 @@ func Read[T Resourcer](path string) (r T, err error) {
 	}
 
 	r, ok := res.(T)
-	/*
-		if reflect.ValueOf(r).Kind() != reflect.Ptr {
-			// Expect resource value
-			// In this case, res is a pointer and we want to return a value, but the type cast don't return ok.
-			resPtrType := reflect.PointerTo(reflect.TypeOf(r))
-			if reflect.TypeOf(res) == resPtrType {
-				// Right type so res was rightly type cast
-				return r, err
-			}
-		}
-	*/
 	if !ok {
-		err = fmt.Errorf("bad resource type for path %s. Expected type %T but got %T", path, r, res)
+		//err = fmt.Errorf("bad resource type for path %s. Expected type %T but got %T", path, r, res)
+		err = BadResourceType{path, r, res}
+		return
 	}
-	return r, err
+
+	return
 }

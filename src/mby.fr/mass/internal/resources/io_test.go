@@ -76,8 +76,10 @@ func TestReadAny(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	envContent := "resourceKind: env\n"
-	err = os.WriteFile(path, []byte(envContent), 0644)
+	content := "resourceKind: env\n"
+	resourceFilepath := filepath.Join(path, DefaultResourceFile)
+	err = os.WriteFile(resourceFilepath, []byte(content), 0644)
+	require.NoError(t, err, "should not error")
 
 	r, err := ReadAny(path)
 	require.NoError(t, err, "should not error")
@@ -89,8 +91,10 @@ func TestReadResourcer(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	envContent := "resourceKind: project\n"
-	err = os.WriteFile(path, []byte(envContent), 0644)
+	content := "resourceKind: project\n"
+	resourceFilepath := filepath.Join(path, DefaultResourceFile)
+	err = os.WriteFile(resourceFilepath, []byte(content), 0644)
+	require.NoError(t, err, "should not error")
 
 	r, err := ReadResourcer(path)
 	require.NoError(t, err, "should not error")
@@ -105,7 +109,7 @@ func TestReadResourcer(t *testing.T) {
 		testFunc := func() {
 			p.Images()
 		}
-		assert.Panics(t, testFunc, "should panic")
+		assert.NotPanics(t, testFunc, "should panic")
 
 		assert.Equal(t, expectedName, (&p).Name())
 		testFunc = func() {
@@ -120,8 +124,10 @@ func TestRead(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	envContent := "resourceKind: project\n"
-	err = os.WriteFile(path, []byte(envContent), 0644)
+	content := "resourceKind: project\n"
+	resourceFilepath := filepath.Join(path, DefaultResourceFile)
+	err = os.WriteFile(resourceFilepath, []byte(content), 0644)
+	require.NoError(t, err, "should not error")
 
 	_, err = Read[Env](path)
 	assert.Error(t, err, "should error")
@@ -135,14 +141,7 @@ func TestRead(t *testing.T) {
 	testFunc := func() {
 		p.Images()
 	}
-	assert.Panics(t, testFunc, "should panic")
-
-	ePtr, err := Read[*Project](path)
-	require.NoError(t, err, "should not error")
-	assert.IsType(t, Project{}, ePtr, "bad type")
-
-	assert.Equal(t, expectedName, ePtr.Name())
-	assert.NotPanics(t, testFunc, "should not panic")
+	assert.NotPanics(t, testFunc, "should panic")
 }
 
 func TestWriteThenRead(t *testing.T) {

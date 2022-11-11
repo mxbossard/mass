@@ -16,8 +16,8 @@ type Resourcer interface {
 	QualifiedName() string
 	Dir() string
 	Config() (config.Config, error)
-	Init() error
 	Match(string, Kind) bool
+	init() error
 }
 
 type base struct {
@@ -46,7 +46,7 @@ func (r base) Config() (config.Config, error) {
 	return c, err
 }
 
-func (r base) Init() (err error) {
+func (r base) init() (err error) {
 	// Create resource dir
 	err = os.MkdirAll(r.Dir(), 0755)
 	if err != nil {
@@ -79,7 +79,7 @@ func (t testable) AbsTestDir() string {
 	return absResourcePath(t.resource.Dir(), t.testDirectory)
 }
 
-func (t testable) Init() (err error) {
+func (t testable) init() (err error) {
 	// Create test dir
 	err = os.MkdirAll(t.AbsTestDir(), 0755)
 	return
@@ -89,12 +89,8 @@ type Env struct {
 	base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
 }
 
-func (e Env) Init() (err error) {
-	err = e.base.Init()
-	if err != nil {
-		return
-	}
-	err = Write(e)
+func (e Env) init() (err error) {
+	err = e.base.init()
 	return
 }
 
@@ -108,8 +104,12 @@ type Project struct {
 	DeployFile string `yaml:"deployFile"`
 }
 
-func (p Project) Init() (err error) {
-	err = p.base.Init()
+func (p Project) init() (err error) {
+	err = p.base.init()
+	if err != nil {
+		return
+	}
+	err = p.testable.init()
 	if err != nil {
 		return
 	}
@@ -118,11 +118,7 @@ func (p Project) Init() (err error) {
 	deployfileContent := ""
 	//buildfileContent := "FROM alpine\n"
 	_, err = file.SoftInitFile(p.DeployFile, deployfileContent)
-	if err != nil {
-		return
-	}
 
-	err = Write(p)
 	return
 }
 
@@ -142,11 +138,15 @@ func (p Project) AbsDeployFile() string {
 func (p *Project) Images() ([]*Image, error) {
 	var err error = nil
 	if len(p.images) == 0 {
-		images, err := ScanImages(p.Dir())
+		images, err := Scan[Image](p.Dir())
+		var imagesPtrs []*Image
+		for i := 0; i < len(images); i++ {
+			imagesPtrs = append(imagesPtrs, &images[i])
+		}
 		if err != nil {
 			return []*Image{}, err
 		}
-		p.images = images
+		p.images = imagesPtrs
 	}
 	return p.images, err
 }
@@ -164,12 +164,19 @@ type Image struct {
 	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
-func (i Image) Init() (err error) {
-	err = i.base.Init()
+func (i Image) init() (err error) {
+	err = i.base.init()
 	if err != nil {
 		return
 	}
-
+	err = i.testable.init()
+	if err != nil {
+		return
+	}
+	err = i.versionable.init()
+	if err != nil {
+		return
+	}
 	// Init version file
 	//versionFile := versionFilepath(projectPath)
 	//_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
@@ -182,10 +189,6 @@ func (i Image) Init() (err error) {
 	//buildfileContent := "FROM alpine\n"
 	_, err = file.SoftInitFile(i.BuildFile, buildfileContent)
 
-	if err != nil {
-		return
-	}
-	err = Write(i)
 	return
 }
 

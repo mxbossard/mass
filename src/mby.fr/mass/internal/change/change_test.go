@@ -34,15 +34,12 @@ func TestCalcImageSignature(t *testing.T) {
 	defer os.RemoveAll(path)
 	require.NoError(t, err, "should not error")
 
-	r, err := resources.BuildImage(path)
-	require.NoError(t, err, "should not error")
-
 	// Init Settings for templates to work
 	err = settings.Init(path)
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	err = r.Init()
+	r, err := resources.Init[resources.Image](path)
 	require.NoError(t, err, "should not error")
 
 	signature1, err := calcImageSignature(r)
@@ -140,15 +137,12 @@ func TestDoesImageChanged(t *testing.T) {
 	defer os.RemoveAll(path)
 	require.NoError(t, err, "should not error")
 
-	r, err := resources.BuildImage(path)
-	require.NoError(t, err, "should not error")
-
 	// Init Settings for templates to work
 	err = settings.Init(path)
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	err = r.Init()
+	r, err := resources.Init[resources.Image](path)
 	require.NoError(t, err, "should not error")
 
 	err = StoreImageSignature(r)
