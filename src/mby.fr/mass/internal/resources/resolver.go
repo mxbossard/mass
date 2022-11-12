@@ -329,7 +329,12 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 	}
 
 	// 3- Scan to find resource
-	resources, err := scanResourcesFrom(fromDir, kind)
+	var resources []Resourcer
+	if kind == AllKind {
+		resources, err = scanResourcesFrom(fromDir, AllKind, 1)
+	} else {
+		resources, err = scanResourcesFrom(fromDir, kind, -1)
+	}
 	if err != nil {
 		return
 	}

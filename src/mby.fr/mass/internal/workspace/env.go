@@ -22,7 +22,7 @@ func InitEnvs() (err error) {
 	settings := settingsService.Settings()
 
 	for _, envName := range settings.Environments {
-		_, err = resources.Init[resources.Env](envName)
+		_, err = InitEnv(envName)
 		if err != nil {
 			return
 		}

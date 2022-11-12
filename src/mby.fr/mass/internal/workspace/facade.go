@@ -76,6 +76,10 @@ func DisplayResourcesVersion(args []string) {
 	d.Info("Version finished")
 }
 
+func forgeVersionBumpMessage(fromVer, toVer string) (string) {
+	return fmt.Sprintf("%s => %s", fromVer, toVer)
+}
+
 func BumpResources(args []string) {
 	d := display.Service()
 	d.Info("Bump starting ...")
@@ -85,11 +89,12 @@ func BumpResources(args []string) {
 		var i interface{} = r
 		vb, ok := i.(resources.VersionBumper)
 		if ok {
-			msg, err := vb.Bump(BumpMinor, BumpMajor)
+			toVer, fromVer, err := vb.Bump(BumpMinor, BumpMajor)
 			if err != nil {
 				d.Warn(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
 			} else {
-				msg := fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
+				msg := forgeVersionBumpMessage(fromVer, toVer)
+				msg = fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
 				d.Display(msg)
 			}
 		}
@@ -108,11 +113,12 @@ func PromoteResources(args []string) {
 		var i interface{} = r
 		vb, ok := i.(resources.VersionBumper)
 		if ok {
-			msg, err := vb.Promote()
+			toVer, fromVer, err := vb.Promote()
 			if err != nil {
 				d.Warn(fmt.Sprintf("Error promoting resource %s: %s\n", r.QualifiedName(), err))
 			} else {
-				msg := fmt.Sprintf("Promoted resource %s: %s\n", r.QualifiedName(), msg)
+				msg := forgeVersionBumpMessage(fromVer, toVer)
+				msg = fmt.Sprintf("Promoted resource %s: %s\n", r.QualifiedName(), msg)
 				d.Display(msg)
 			}
 		}
@@ -131,11 +137,12 @@ func ReleaseResources(args []string) {
 		var i interface{} = r
 		vb, ok := i.(resources.VersionBumper)
 		if ok {
-			msg, err := vb.Release()
+			toVer, fromVer, err := vb.Release()
 			if err != nil {
 				d.Warn(fmt.Sprintf("Error releasing resource %s: %s\n", r.QualifiedName(), err))
 			} else {
-				msg := fmt.Sprintf("Released resource %s: %s\n", r.QualifiedName(), msg)
+				msg := forgeVersionBumpMessage(fromVer, toVer)
+				msg = fmt.Sprintf("Released resource %s: %s\n", r.QualifiedName(), msg)
 				d.Display(msg)
 			}
 		}

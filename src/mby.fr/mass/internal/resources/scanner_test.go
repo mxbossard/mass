@@ -3,7 +3,8 @@ package resources
 import (
 	"os"
 	"testing"
-
+	"path/filepath"
+	
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -206,4 +207,81 @@ func TestScanImages(t *testing.T) {
 	res6, err := ScanMaxDepth[Image](parentPath, parentDepth+2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res6, 3, "bad resource count")
+}
+
+func TestScanResourcesFrom(t *testing.T) {
+	fakeWorkspacePath := initWorkspace(t)
+
+	expectedImagesCount := 9
+	var err error
+	var resources []Resourcer
+	// Scan all depths from root dir
+	resources, err = scanResourcesFrom(fakeWorkspacePath, EnvKind, -1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs), "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, ProjectKind, -1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(projects), "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, ImageKind, -1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, expectedImagesCount, "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, AllKind, -1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs) + len(projects) + expectedImagesCount, "bad resource count")
+
+	// Scan 1 depth from root dir
+	resources, err = scanResourcesFrom(fakeWorkspacePath, EnvKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, ProjectKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(projects), "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, ImageKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(fakeWorkspacePath, AllKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(projects), "bad resource count")
+
+	envDirPath := filepath.Join(fakeWorkspacePath, envDir)
+
+	// Scan all depths from env dir
+	resources, err = scanResourcesFrom(envDirPath, EnvKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs), "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, ProjectKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, ImageKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, AllKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs), "bad resource count")
+
+	// Scan 1 depth from env dir
+	resources, err = scanResourcesFrom(envDirPath, EnvKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs), "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, ProjectKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, ImageKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, 0, "bad resource count")
+
+	resources, err = scanResourcesFrom(envDirPath, AllKind, 1)
+	require.NoError(t, err, "should not error")
+	assert.Len(t, resources, len(envs), "bad resource count")
 }

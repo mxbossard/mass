@@ -54,7 +54,7 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 			return fs.SkipDir
 		}
 
-		//fmt.Println("scanning", path)
+		fmt.Println("scanning", path)
 		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
 			res, err := ReadResourcer(parentDir)
@@ -136,7 +136,7 @@ func Scan[T Resourcer](path string) (projects []T, err error) {
 	return ScanMaxDepth[T](path, -1)
 }
 
-func scanResourcesFrom(fromDir string, resourceKind Kind) (resources []Resourcer, err error) {
+func scanResourcesFrom(fromDir string, resourceKind Kind, maxDepth int) (resources []Resourcer, err error) {
 	c := make(chan interface{})
 	finished := make(chan bool)
 	go func() {
@@ -149,7 +149,9 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (resources []Resourcer
 		close(finished)
 	}()
 
-	scanner := buildScanner(fromDir, resourceKind, 1, c)
+	var scanner fs.WalkDirFunc
+	scanner = buildScanner(fromDir, resourceKind, maxDepth, c)
+	
 	err = filepath.WalkDir(fromDir, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -165,6 +167,64 @@ func scanResourcesFrom(fromDir string, resourceKind Kind) (resources []Resourcer
 }
 
 /*
+
+func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resourcer, err error) {
+	var envs []*Env
+	var projects []Project
+	var images []*Image
+	switch resourceKind {
+	case AllKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		projects, err = ScanProjectsMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+		images, err = ScanImagesMaxDepth(fromDir, 1)
+		if err != nil && !IsResourceNotFound(err) {
+			return
+		}
+
+	case EnvKind:
+		envs, err = ScanEnvsMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	case ProjectKind:
+		projects, err = ScanProjectsMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	case ImageKind:
+		images, err = ScanImagesMaxDepth(fromDir, -1)
+		if err != nil {
+			return
+		}
+	default:
+		err = fmt.Errorf("Not supported kind")
+		return
+	}
+
+	for _, r := range envs {
+		res = append(res, r)
+	}
+	for _, r := range projects {
+		res = append(res, r)
+	}
+	for _, r := range images {
+		res = append(res, r)
+	}
+
+	if IsResourceNotFound(err) && len(res) > 0 {
+		// Swallow ResourceNotFound error if found something
+		err = nil
+	}
+
+	return
+}
+
 func ScanProjectsMaxDepth(path string, maxDepth int) (projects []Project, err error) {
 	//c := make(chan interface{})
 	c := make(chan Project)
@@ -263,60 +323,4 @@ func ScanEnvs(path string) (envs []*Env, err error) {
 	return ScanEnvsMaxDepth(path, -1)
 }
 
-func scanResourcesFrom(fromDir string, resourceKind Kind) (res []Resourcer, err error) {
-	var envs []*Env
-	var projects []Project
-	var images []*Image
-	switch resourceKind {
-	case AllKind:
-		envs, err = ScanEnvsMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-		projects, err = ScanProjectsMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-		images, err = ScanImagesMaxDepth(fromDir, 1)
-		if err != nil && !IsResourceNotFound(err) {
-			return
-		}
-
-	case EnvKind:
-		envs, err = ScanEnvsMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	case ProjectKind:
-		projects, err = ScanProjectsMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	case ImageKind:
-		images, err = ScanImagesMaxDepth(fromDir, -1)
-		if err != nil {
-			return
-		}
-	default:
-		err = fmt.Errorf("Not supported kind")
-		return
-	}
-
-	for _, r := range envs {
-		res = append(res, r)
-	}
-	for _, r := range projects {
-		res = append(res, r)
-	}
-	for _, r := range images {
-		res = append(res, r)
-	}
-
-	if IsResourceNotFound(err) && len(res) > 0 {
-		// Swallow ResourceNotFound error if found something
-		err = nil
-	}
-
-	return
-}
 */

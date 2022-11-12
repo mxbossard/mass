@@ -46,7 +46,7 @@ func TestWriteTestable(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	te, err := BuildProject(path)
+	te, err := buildProject(path)
 	require.NoError(t, err, "should not error")
 
 	err = Write(te)
@@ -61,7 +61,7 @@ func TestWriteProject(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	pr, err := BuildProject(path)
+	pr, err := buildProject(path)
 	require.NoError(t, err, "should not error")
 
 	err = Write(pr)
@@ -149,7 +149,7 @@ func TestWriteThenRead(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	i, err := BuildImage(path)
+	i, err := buildImage(path)
 	require.NoError(t, err, "should not error")
 	//i.Init()
 	err = Write(i)

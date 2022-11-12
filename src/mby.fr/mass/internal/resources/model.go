@@ -95,8 +95,6 @@ func (e Env) init() (err error) {
 }
 
 type Project struct {
-	//Resourcer //`yaml:"base,inline"`
-
 	base     `yaml:"base,inline"`
 	testable `yaml:"testable,inline"`
 
@@ -152,15 +150,12 @@ func (p *Project) Images() ([]*Image, error) {
 }
 
 type Image struct {
-	//Resourcer //`yaml:"base,inline"`
-
 	base        `yaml:"base,inline"`
 	testable    `yaml:"testable,inline"`
 	versionable `yaml:"versionable,inline"`
 
 	SourceDirectory string `yaml:"sourceDirectory"`
 	BuildFile       string `yaml:"buildFile"`
-	//Version         string  `yaml:"version"`
 	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
