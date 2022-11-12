@@ -79,17 +79,10 @@ func ReadAny(path string) (r any, err error) {
 	case Project:
 		err = yaml.Unmarshal(content, &re)
 		return re, nil
-	
-	
-	default:
-		err = yaml.Unmarshal(content, &res)
-		return
 	}
 
-	//fmt.Printf("Unmarshal any: %T for kind: %s\n", res, kind)
-	r = res
+	err = fmt.Errorf("Unable to read Resource in file [%s] ! Not supported kind property: [%T].", path, res)
 	return
-	
 }
 
 func ReadResourcer(path string) (res Resourcer, err error) {
