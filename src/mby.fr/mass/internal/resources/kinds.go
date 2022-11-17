@@ -15,6 +15,9 @@ const (
 	EnvKind
 	ProjectKind
 	ImageKind
+	PodKind
+	EndpointKind
+	ServiceKind
 	kindLimit
 )
 
@@ -26,6 +29,12 @@ func TypeFromKind(kind Kind) (t reflect.Type) {
 		t = reflect.TypeOf((*Project)(nil)).Elem()
 	case ImageKind:
 		t = reflect.TypeOf((*Image)(nil)).Elem()
+	case PodKind:
+		t = reflect.TypeOf((*Pod)(nil)).Elem()		
+	case EndpointKind:
+		t = reflect.TypeOf((*Endpoint)(nil)).Elem()
+	case ServiceKind:
+		t = reflect.TypeOf((*Service)(nil)).Elem()
 	default:
 		log.Fatalf("Resource type not found for kind %s !", kind)
 	}
@@ -35,16 +44,6 @@ func TypeFromKind(kind Kind) (t reflect.Type) {
 func KindFromResource(res Resourcer) (k Kind) {
 	t := reflect.TypeOf(res)
 	return KindFromType(t)
-	//return KindFromType(any)(res).(type))
-	// Iterate over all kinds
-	/*
-		for k = Kind(0); i < kindLimit; i++ {
-			if (interface{})(res).(type) == k.ResourceType() {
-				return
-			}
-		}
-		log.Fatalf("Resource kind not found for type %T !", res)
-	*/
 }
 
 func KindFromType(t reflect.Type) (k Kind) {
@@ -87,24 +86,6 @@ func (k Kind) MarshalYAML() (interface{}, error) {
 		s = k.String()
 	}
 	return s, nil
-}
-
-func (k *Kind) UnmarshalYAML0(unmarshal func(interface{}) error) error {
-	var s string
-	if err := unmarshal(&s); err != nil {
-		return err
-	}
-	switch s {
-	case "env":
-		*k = EnvKind
-	case "project":
-		*k = ProjectKind
-	case "image":
-		*k = ImageKind
-	default:
-		return fmt.Errorf("Unable to unmarshal kind: %s", s)
-	}
-	return nil
 }
 
 func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -170,10 +151,13 @@ func NewKindSet(kinds ...Kind) *KindSet {
 }
 
 var kindAlias = map[Kind][]string{
-	EnvKind:     []string{EnvKind.String()[0:1], EnvKind.String(), EnvKind.String() + "s"},
-	ProjectKind: []string{ProjectKind.String()[0:1], ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind:   []string{ImageKind.String()[0:1], ImageKind.String(), ImageKind.String() + "s"},
-	AllKind:     []string{AllKind.String()},
+	EnvKind:     	[]string{"e", EnvKind.String(), EnvKind.String() + "s"},
+	ProjectKind: 	[]string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
+	ImageKind:   	[]string{"i", ImageKind.String(), ImageKind.String() + "s"},
+	PodKind:	 	[]string{"po", PodKind.String(), PodKind.String() + "s"},
+	EndpointKind: 	[]string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
+	ServiceKind: 	[]string{"s", "svc", ServiceKind.String(), ServiceKind.String() + "s"},
+	AllKind:     	[]string{AllKind.String()},
 }
 
 func KindExists(k Kind) bool {

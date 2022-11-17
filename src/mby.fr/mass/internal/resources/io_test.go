@@ -27,13 +27,13 @@ func TestWriteBase(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	b, err := buildBase(EnvKind, path)
+	b, err := buildBase(EnvKind, path, DefaultResourceFile)
 	require.NoError(t, err, "should not error")
 
 	err = Write(b)
 	require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
+	expectedResourceFilepath := b.backingFilepath()
 	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
 	//base := filepath.Base(path)
 	//expectedContent := fmt.Sprintf("{1 %s %s}\n", base, path)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"path/filepath"
 
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/settings"
@@ -18,11 +19,12 @@ type Resourcer interface {
 	Config() (config.Config, error)
 	Match(string, Kind) bool
 	init() error
+	backingFilepath() string
 }
 
 type base struct {
 	ResourceKind Kind `yaml:"resourceKind"`
-	name, dir    string
+	name, dir, backingFilename    string
 }
 
 func (r base) Kind() Kind {
@@ -64,6 +66,10 @@ func (r base) init() (err error) {
 
 func (r base) Match(name string, k Kind) bool {
 	return name == r.Name() && (k == AllKind || k == r.Kind())
+}
+
+func (r base) backingFilepath() string {
+	return filepath.Join(r.Dir(), r.backingFilename)
 }
 
 type Tester interface {
@@ -172,9 +178,6 @@ func (i Image) init() (err error) {
 	if err != nil {
 		return
 	}
-	// Init version file
-	//versionFile := versionFilepath(projectPath)
-	//_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
 
 	// Init source directory
 	err = os.MkdirAll(i.AbsSourceDir(), 0755)
@@ -224,34 +227,67 @@ func (i Image) Match(name string, k Kind) bool {
 	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
 
+
+type Pod struct {
+	base        `yaml:"base,inline"`
+	testable    `yaml:"testable,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (p Pod) init() (err error) {
+	err = p.base.init()
+	if err != nil {
+		return
+	}
+	err = p.testable.init()
+	if err != nil {
+		return
+	}
+	return
+}
+
+type Endpoint struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (e Endpoint) init() (err error) {
+	err = e.base.init()
+	if err != nil {
+		return
+	}
+	return
+}
+
+type Service struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (s Service) init() (err error) {
+	err = s.base.init()
+	if err != nil {
+		return
+	}
+	return
+}
+
 /*
-func (i Image) GetVersionable() *versionable {
-	return &(i.versionable)
+type Ingress struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
-func (i *Image) SetVersionable(v versionable) {
-	i.Versionable = v
-}
-
-func (i Image) Version() string {
-	return i.versionable.version()
-}
-
-func (i *Image) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
-	msg, err = i.Versionable.bump(bumpMinor, bumpMajor)
-	Write(i)
-	return
-}
-
-func (i *Image) Promote() (msg string, err error) {
-	msg, err = i.Versionable.promote()
-	Write(i)
-	return
-}
-
-func (i *Image) Release() (msg string, err error) {
-	msg, err = i.Versionable.release()
-	Write(i)
+func (i Ingress) init() (err error) {
+	err = i.base.init()
+	if err != nil {
+		return
+	}
 	return
 }
 */
+
