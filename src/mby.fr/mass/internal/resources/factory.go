@@ -98,7 +98,7 @@ func buildPod(projectPath, name string) (r Pod, err error) {
 
 	r = Pod{
 		base:            b,
-		Project:         &project,
+		Project:         project,
 	}
 
 	t, err := buildTestable(r, projectPath)
