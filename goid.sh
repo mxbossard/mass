@@ -27,7 +27,9 @@ rootDir=$scriptDir
 rootDirInCt=/home/goid
 workDir=$PWD
 workDirInCt=$rootDirInCt/$( relpath $rootDir $workDir/. )
-goUser="$( id -u ):$( id -g )"
+goUser="$( id -u )"
+goGroup="$( id -g )"
+goUserAndGroup="$goUser:$goGroup"
 
 export GOBIN="$rootDirInCt/bin"
 export GOCACHE="$rootDirInCt/.cache/go-build"
@@ -48,27 +50,31 @@ ctName="goid_$( basename $scriptDir )_$( id -u )"
 buildCmd="$scriptDir/goid/build.sh"
 
 #runCmd="docker run --rm -d --name=$ctName --user=$( id -u ):$( id -g ) --workdir=$rootDirInCt -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
-runCmd="docker run --privileged --rm -d --name=$ctName -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw $ctImage"
-#echo $runCmd
+#runCmd="docker run --rm -d --name=$ctName -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$rootDirInCt:rw --volume=/var/run/docker.sock:/var/run/docker.sock $ctImage sleep 3600"
+runCmd="docker run --rm -d --name=$ctName -e GOBIN -e GOCACHE -e GOENV -e GOMODCACHE -e GOPATH --volume=$hostGoDir:/go:rw --volume=$scriptDir:$scriptDir:rw --volume=/var/run/docker.sock:/var/run/docker.sock $ctImage sleep 3600"
+#>&2 echo "docker run: $runCmd"
 
 #>&2 echo "Executing go in a container on workspace: $rootDir within container workdir: $workDirInCt ..."
 #>&2 echo "GOMODCACHE: $hostModCacheDir ..."
 
 ctId=$( docker ps -f name=$ctName -q )
 if [ -z "$ctId" ]; then
-	#ctId=$( $runCmd sleep $ctDurationInSec )
+    #ctId=$( $runCmd sleep $ctDurationInSec )
     $buildCmd
-	ctId=$( $runCmd )
+    ctId=$( $runCmd )
     #sleep 1
-    docker exec "$ctId" addgroup docker
-    docker exec "$ctId" adduser --no-create-home --system $( id -u )
-    docker exec "$ctId" addgroup $( id -u ) docker
+    docker exec "$ctId" addgroup --gid "$goGroup" gofer
+    docker exec "$ctId" adduser --system --no-create-home --home $scriptDir --uid "$goUser" --gid "$goGroup" gofer
+    #docker exec "$ctId" addgroup docker
+    #docker exec "$ctId" addgroup gofer docker
+    docker exec "$ctId" chmod a+rw /var/run/docker.sock
     echo "Wait Docker dameon started ..."
-    while ! 2>&1 >/dev/null docker exec "--user=$goUser" "$ctId" docker ps; do
+    while ! 2>&1 >/dev/null docker exec "--user=$goUserAndGroup" "$ctId" docker ps; do
         sleep 1
         #echo -n "."
     done
 fi
 
 #echo "workdir=$workDirInCt"
-docker exec "--workdir=$workDirInCt" "--user=$goUser" "$ctId" go "$@"
+docker exec "--workdir=$( pwd )" "--user=$goUser" "$ctId" go "$@"
+
