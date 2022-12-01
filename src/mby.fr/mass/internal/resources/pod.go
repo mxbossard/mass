@@ -47,7 +47,7 @@ type Pod struct {
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
-	Project        Project `yaml:"-"` // Ignore this field for yaml marshalling
+	Project        *Project `yaml:"-"` // Ignore this field for yaml marshalling
 	events         []Event `yaml:"-"` // Ignore this field for yaml marshalling
 	InitContainers []*Container
 	Containers     []*Container

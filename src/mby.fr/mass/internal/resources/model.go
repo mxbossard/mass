@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"path/filepath"
 
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/settings"
@@ -18,11 +19,12 @@ type Resourcer interface {
 	Config() (config.Config, error)
 	Match(string, Kind) bool
 	init() error
+	backingFilepath() string
 }
 
 type base struct {
 	ResourceKind Kind `yaml:"resourceKind"`
-	name, dir    string
+	name, dir, backingFilename    string
 }
 
 func (r base) Kind() Kind {
@@ -64,6 +66,10 @@ func (r base) init() (err error) {
 
 func (r base) Match(name string, k Kind) bool {
 	return name == r.Name() && (k == AllKind || k == r.Kind())
+}
+
+func (r base) backingFilepath() string {
+	return filepath.Join(r.Dir(), r.backingFilename)
 }
 
 type Tester interface {
@@ -220,3 +226,49 @@ func (i Image) AbsoluteName() (name string, err error) {
 func (i Image) Match(name string, k Kind) bool {
 	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
+
+
+type Endpoint struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (e Endpoint) init() (err error) {
+	err = e.base.init()
+	if err != nil {
+		return
+	}
+	return
+}
+
+type Service struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (s Service) init() (err error) {
+	err = s.base.init()
+	if err != nil {
+		return
+	}
+	return
+}
+
+/*
+type Ingress struct {
+	base        `yaml:"base,inline"`
+
+	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (i Ingress) init() (err error) {
+	err = i.base.init()
+	if err != nil {
+		return
+	}
+	return
+}
+*/
+
