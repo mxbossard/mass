@@ -154,9 +154,9 @@ type Image struct {
 	testable    `yaml:"testable,inline"`
 	versionable `yaml:"versionable,inline"`
 
-	SourceDirectory string `yaml:"sourceDirectory"`
-	BuildFile       string `yaml:"buildFile"`
-	Project Project `yaml:"-"` // Ignore this field for yaml marshalling
+	SourceDirectory string  `yaml:"sourceDirectory"`
+	BuildFile       string  `yaml:"buildFile"`
+	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) init() (err error) {
@@ -172,9 +172,6 @@ func (i Image) init() (err error) {
 	if err != nil {
 		return
 	}
-	// Init version file
-	//versionFile := versionFilepath(projectPath)
-	//_, err = file.SoftInitFile(versionFile, resources.DefaultInitialVersion)
 
 	// Init source directory
 	err = os.MkdirAll(i.AbsSourceDir(), 0755)
@@ -223,35 +220,3 @@ func (i Image) AbsoluteName() (name string, err error) {
 func (i Image) Match(name string, k Kind) bool {
 	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
 }
-
-/*
-func (i Image) GetVersionable() *versionable {
-	return &(i.versionable)
-}
-
-func (i *Image) SetVersionable(v versionable) {
-	i.Versionable = v
-}
-
-func (i Image) Version() string {
-	return i.versionable.version()
-}
-
-func (i *Image) Bump(bumpMinor, bumpMajor bool) (msg string, err error) {
-	msg, err = i.Versionable.bump(bumpMinor, bumpMajor)
-	Write(i)
-	return
-}
-
-func (i *Image) Promote() (msg string, err error) {
-	msg, err = i.Versionable.promote()
-	Write(i)
-	return
-}
-
-func (i *Image) Release() (msg string, err error) {
-	msg, err = i.Versionable.release()
-	Write(i)
-	return
-}
-*/

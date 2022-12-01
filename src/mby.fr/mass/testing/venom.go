@@ -13,14 +13,14 @@ import (
 var (
 	venomImage = "mxbossard/venom:1.0.1"
 
-	venomRunner = container.Runner{
+	venomRunner = container.DockerRunner{
 		Image: venomImage,
 		//Volumes: []string{testDirMount},
 		CmdArgs: []string{"run"},
 		Remove:  true,
 	}
 
-	dummyRunner = container.Runner{
+	dummyRunner = container.DockerRunner{
 		Image:   "alpine:3.16",
 		CmdArgs: []string{"sh", "-c", "echo 'Dummy venom runner '; for i in $(seq 3); do sleep 1; echo .; done"},
 		Remove:  true,
