@@ -3,12 +3,9 @@ package resources
 import (
 	"fmt"
 	"os"
-	"strings"
 	"path/filepath"
 
 	"mby.fr/mass/internal/config"
-	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/file"
 )
 
 type Resourcer interface {
@@ -23,8 +20,8 @@ type Resourcer interface {
 }
 
 type base struct {
-	ResourceKind Kind `yaml:"resourceKind"`
-	name, dir, backingFilename    string
+	ResourceKind               Kind `yaml:"resourceKind"`
+	name, dir, backingFilename string
 }
 
 func (r base) Kind() Kind {
@@ -72,6 +69,16 @@ func (r base) backingFilepath() string {
 	return filepath.Join(r.Dir(), r.backingFilename)
 }
 
+func buildBase(kind Kind, dirPath, backingFilename string) (b base, err error) {
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return
+	}
+	name := resourceName(dirPath)
+	b = base{ResourceKind: kind, name: name, dir: absDirPath, backingFilename: backingFilename}
+	return
+}
+
 type Tester interface {
 	AbsTestDir() string
 }
@@ -91,6 +98,12 @@ func (t testable) init() (err error) {
 	return
 }
 
+func buildTestable(res Resourcer, path string) (t testable, err error) {
+	testDir := DefaultTestDir
+	t = testable{resource: res, testDirectory: testDir}
+	return
+}
+
 type Env struct {
 	base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
 }
@@ -100,159 +113,13 @@ func (e Env) init() (err error) {
 	return
 }
 
-type Project struct {
-	base     `yaml:"base,inline"`
-	testable `yaml:"testable,inline"`
-
-	images     []*Image
-	DeployFile string `yaml:"deployFile"`
-}
-
-func (p Project) init() (err error) {
-	err = p.base.init()
-	if err != nil {
-		return
-	}
-	err = p.testable.init()
+func buildEnv(path string) (r Env, err error) {
+	base, err := buildBase(EnvKind, path, DefaultResourceFile)
 	if err != nil {
 		return
 	}
 
-	// Init Deploy file
-	deployfileContent := ""
-	//buildfileContent := "FROM alpine\n"
-	_, err = file.SoftInitFile(p.DeployFile, deployfileContent)
-
-	return
-}
-
-func (p Project) AbsoluteName() (name string, err error) {
-	ss, err := settings.GetSettingsService()
-	if err != nil {
-		return "", err
-	}
-	name = ss.Settings().Name + "-" + p.Name()
-	return
-}
-
-func (p Project) AbsDeployFile() string {
-	return absResourcePath(p.Dir(), p.DeployFile)
-}
-
-func (p *Project) Images() ([]*Image, error) {
-	var err error = nil
-	if len(p.images) == 0 {
-		images, err := Scan[Image](p.Dir())
-		var imagesPtrs []*Image
-		for i := 0; i < len(images); i++ {
-			imagesPtrs = append(imagesPtrs, &images[i])
-		}
-		if err != nil {
-			return []*Image{}, err
-		}
-		p.images = imagesPtrs
-	}
-	return p.images, err
-}
-
-type Image struct {
-	base        `yaml:"base,inline"`
-	testable    `yaml:"testable,inline"`
-	versionable `yaml:"versionable,inline"`
-
-	SourceDirectory string  `yaml:"sourceDirectory"`
-	BuildFile       string  `yaml:"buildFile"`
-	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
-}
-
-func (i Image) init() (err error) {
-	err = i.base.init()
-	if err != nil {
-		return
-	}
-	err = i.testable.init()
-	if err != nil {
-		return
-	}
-	err = i.versionable.init()
-	if err != nil {
-		return
-	}
-
-	// Init source directory
-	err = os.MkdirAll(i.AbsSourceDir(), 0755)
-
-	// Init Build file
-	buildfileContent := ""
-	//buildfileContent := "FROM alpine\n"
-	_, err = file.SoftInitFile(i.BuildFile, buildfileContent)
-
-	return
-}
-
-func (i Image) AbsSourceDir() string {
-	return absResourcePath(i.Dir(), i.SourceDirectory)
-}
-
-func (i Image) AbsBuildFile() string {
-	return absResourcePath(i.Dir(), i.BuildFile)
-}
-
-func (i Image) ImageName() string {
-	return i.base.Name()
-}
-
-func (i Image) Name() string {
-	return i.Project.Name() + "/" + i.ImageName()
-}
-
-func (i Image) FullName() string {
-	if i.Version() != "" {
-		return strings.ToLower(i.Name()) + ":" + i.Version()
-	} else {
-		return strings.ToLower(i.Name()) + ":latest"
-	}
-}
-
-func (i Image) AbsoluteName() (name string, err error) {
-	ss, err := settings.GetSettingsService()
-	if err != nil {
-		return "", err
-	}
-	name = ss.Settings().Name + "-" + i.Name()
-	return
-}
-
-func (i Image) Match(name string, k Kind) bool {
-	return i.base.Match(name, k) || name == i.ImageName() && (k == AllKind || k == i.Kind())
-}
-
-
-type Endpoint struct {
-	base        `yaml:"base,inline"`
-
-	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
-}
-
-func (e Endpoint) init() (err error) {
-	err = e.base.init()
-	if err != nil {
-		return
-	}
-	return
-}
-
-type Service struct {
-	base        `yaml:"base,inline"`
-
-	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
-}
-
-func (s Service) init() (err error) {
-	err = s.base.init()
-	if err != nil {
-		return
-	}
+	r = Env{base: base}
 	return
 }
 
@@ -271,4 +138,3 @@ func (i Ingress) init() (err error) {
 	return
 }
 */
-

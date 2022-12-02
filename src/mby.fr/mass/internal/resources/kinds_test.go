@@ -69,6 +69,20 @@ func TestKindSetString(t *testing.T) {
 	assert.Equal(t, "env,image,project", s.String())
 }
 
+func TestKindExists(t *testing.T) {
+	assert.True(t, KindExists(EnvKind), "kind shoud exist")
+	assert.False(t, KindExists(-1), "kind shoud not exist")
+	assert.False(t, KindExists(kindLimit), "kind shoud not exist")
+}
+
+func TestKindsMatch(t *testing.T) {
+	assert.True(t, KindsMatch(EnvKind, EnvKind), "kind shoud match")
+	assert.True(t, KindsMatch(EnvKind, AllKind), "kind shoud match")
+	assert.True(t, KindsMatch(ProjectKind, AllKind), "kind shoud match")
+	assert.True(t, KindsMatch(AllKind, EnvKind), "kind shoud match")
+	assert.False(t, KindsMatch(ProjectKind, EnvKind), "kind shoud not match")
+}
+
 func TestKindFromAlias(t *testing.T) {
 	k, ok := KindFromAlias("")
 	assert.False(t, ok)

@@ -30,7 +30,7 @@ func TypeFromKind(kind Kind) (t reflect.Type) {
 	case ImageKind:
 		t = reflect.TypeOf((*Image)(nil)).Elem()
 	case PodKind:
-		t = reflect.TypeOf((*Pod)(nil)).Elem()		
+		t = reflect.TypeOf((*Pod)(nil)).Elem()
 	case EndpointKind:
 		t = reflect.TypeOf((*Endpoint)(nil)).Elem()
 	case ServiceKind:
@@ -151,17 +151,21 @@ func NewKindSet(kinds ...Kind) *KindSet {
 }
 
 var kindAlias = map[Kind][]string{
-	EnvKind:     	[]string{"e", EnvKind.String(), EnvKind.String() + "s"},
-	ProjectKind: 	[]string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind:   	[]string{"i", ImageKind.String(), ImageKind.String() + "s"},
-	PodKind:	 	[]string{"po", PodKind.String(), PodKind.String() + "s"},
-	EndpointKind: 	[]string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
-	ServiceKind: 	[]string{"s", "svc", ServiceKind.String(), ServiceKind.String() + "s"},
-	AllKind:     	[]string{AllKind.String()},
+	EnvKind:      []string{"e", EnvKind.String(), EnvKind.String() + "s"},
+	ProjectKind:  []string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
+	ImageKind:    []string{"i", ImageKind.String(), ImageKind.String() + "s"},
+	PodKind:      []string{"po", PodKind.String(), PodKind.String() + "s"},
+	EndpointKind: []string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
+	ServiceKind:  []string{"s", ServiceKind.String(), ServiceKind.String() + "s"},
+	AllKind:      []string{AllKind.String()},
 }
 
 func KindExists(k Kind) bool {
-	return k == EnvKind || k == ProjectKind || k == ImageKind || k == AllKind
+	return k >= 0 && k < kindLimit
+}
+
+func KindsMatch(k1, k2 Kind) bool {
+	return k1 == AllKind || k2 == AllKind || k1 == k2
 }
 
 func KindFromAlias(alias string) (Kind, bool) {

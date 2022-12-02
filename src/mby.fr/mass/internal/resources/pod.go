@@ -1,31 +1,53 @@
 package resources
 
 import (
+	"fmt"
+
 	"mby.fr/mass/internal/settings"
 )
 
 type Container struct {
-	Image string
-	Entrypoint []string
-	Cmd []string
-	Args []string
+	Image      string   `yaml:"image"`
+	Entrypoint []string `yaml:"entrypoint,omitempty"`
+	Cmd        []string `yaml:"cmd,omitempty"`
+	Args       []string `yaml:"args,omitempty"`
 }
 
+type ProbeKind int
+
+const (
+	Http = ProbeKind(iota)
+	Tcp
+	Exec
+	probeKindLimit
+)
+
 type Probe struct {
+	Kind   ProbeKind         `yaml:"kind"`
+	Config map[string]string `yaml:",inline"`
 }
+
+type RestartPolicy int
+
+const (
+	Always = RestartPolicy(iota)
+	OnFailure
+	Never
+	restartPolicyLimit
+)
 
 type Pod struct {
 	base     `yaml:"base,inline"`
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
-	Project        Project `yaml:"-"` // Ignore this field for yaml marshalling
-	InitContainers []*Container
-	Containers     []*Container
-	StartupProbe   Probe
-	ReadinessProbe Probe
-	LivenessProbe  Probe
-	RestartPolicy  string
+	Project        Project       `yaml:"-"` // Ignore this field for yaml marshalling
+	InitContainers []*Container  `yaml:"initContainers,omitempty"`
+	Containers     []*Container  `yaml:"containers"`
+	StartupProbe   Probe         `yaml:"startupProbe,omitempty"`
+	ReadinessProbe Probe         `yaml:"readinessProbe,omitempty"`
+	LivenessProbe  Probe         `yaml:"livenessProbe,omitempty"`
+	RestartPolicy  RestartPolicy `yaml:"restartPolicy,omitempty"`
 }
 
 func (p Pod) init() (err error) {
@@ -76,4 +98,30 @@ func (p Pod) AbsoluteName() (name string, err error) {
 
 func (p Pod) Match(name string, k Kind) bool {
 	return p.base.Match(name, k) || name == p.PodName() && (k == AllKind || k == p.Kind())
+}
+
+func buildPod(projectPath, name string) (r Pod, err error) {
+	project, err := buildProject(projectPath)
+	if err != nil {
+		return
+	}
+
+	backingFilename := fmt.Sprintf("pod-%s.yaml", name)
+	b, err := buildBase(PodKind, projectPath, backingFilename)
+	if err != nil {
+		return
+	}
+
+	r = Pod{
+		base:    b,
+		Project: project,
+	}
+
+	t, err := buildTestable(r, projectPath)
+	if err != nil {
+		return
+	}
+	r.testable = t
+
+	return
 }
