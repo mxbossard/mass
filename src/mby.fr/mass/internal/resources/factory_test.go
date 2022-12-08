@@ -2,20 +2,20 @@ package resources
 
 import (
 	//"fmt"
-	"testing"
 	"path/filepath"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/config"
-	//"mby.fr/utils/file"
+	//"mby.fr/utils/filez"
 	"mby.fr/utils/test"
 )
 
 func assertBaseContent(t *testing.T, path string, b Resourcer) {
 	//expectedName := filepath.Base(path)
-	//assert.Equal(t, expectedName, b.Name(), "bad resource name")
+	//assert.Equal(t, expectedName, b.FullName(), "bad resource name")
 	assert.Equal(t, path, b.Dir(), "bad resource dir")
 }
 
@@ -62,7 +62,7 @@ func TestBuildProject(t *testing.T) {
 	r, err := buildProject(path)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
-	assert.Equal(t, expectedName, r.Name(), "bad resource name")
+	assert.Equal(t, expectedName, r.FullName(), "bad resource name")
 	assert.Equal(t, path, r.Dir(), "bad resource dir")
 	assert.Equal(t, ProjectKind, r.Kind(), "bad resource kind")
 	assertBaseContent(t, path, r)
@@ -138,7 +138,7 @@ func TestCallFuncOnResource(t *testing.T) {
 	}
 	r, err := CallFuncOnResource[Env](e, call)
 	require.NoError(t, err, "should not error")
-	assert.Equal(t, e.Name(), r.Name())
+	assert.Equal(t, e.FullName(), r.FullName())
 }
 */
 
