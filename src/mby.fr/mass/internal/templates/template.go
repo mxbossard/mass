@@ -4,11 +4,12 @@ import (
 	"io"
 	"io/fs"
 	"os"
+
 	//"fmt"
 	"embed"
+	"path/filepath"
 	"strings"
 	"text/template"
-	"path/filepath"
 )
 
 const ConfigTemplate = "config.yaml"
@@ -16,12 +17,13 @@ const ConfigTemplate = "config.yaml"
 ////go:embed image/* template/*
 //go:embed templates/*
 var templates embed.FS
+
 const templatesRootDir = "templates"
 
 type Renderer struct {
 	templatesDir string
-	templatesFs fs.FS
-	rootDir string
+	templatesFs  fs.FS
+	rootDir      string
 }
 
 func New(templatesDir string) Renderer {
@@ -69,7 +71,7 @@ func Init(templatesDir string) (err error) {
 			}
 		} else {
 			// Copy file from FS/path into targetDir/targetPath
-			//fileName := d.Name()
+			//fileName := d.FullName()
 			filePath := filepath.Join(targetDir, targetPath)
 			//fmt.Printf("Copying template %s into dir %s ...\n", fileName, filePath)
 

@@ -6,11 +6,11 @@ import (
 	//"path/filepath"
 
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/file"
+	"mby.fr/utils/filez"
 )
 
 func init() {
-  	//fmt.Println("This will get called on main initialization")
+	//fmt.Println("This will get called on main initialization")
 }
 
 func Init(path string) (err error) {
@@ -22,17 +22,17 @@ func Init(path string) (err error) {
 		return
 	}
 
-	err = file.CreateDirectory(path)
+	err = filez.CreateDirectory(path)
 	if err != nil {
 		return
 	}
 
-	err = file.Chdir(path)
+	err = filez.Chdir(path)
 	if err != nil {
 		return
 	}
 
-	workspacePath, err := file.WorkDirPath()
+	workspacePath, err := filez.WorkDirPath()
 	if err != nil {
 		return
 	}
@@ -59,4 +59,3 @@ func isPathInExistingWorkspace(path string) (ok bool, err error) {
 	}
 	return
 }
-

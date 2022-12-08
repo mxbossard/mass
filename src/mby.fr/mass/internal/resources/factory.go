@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+/*
 func BuildAny0(kind Kind, baseDir string) (res any, err error) {
 	switch kind {
 	case EnvKind:
@@ -33,33 +34,33 @@ func Build0[T Resourcer](path string) (r T, err error) {
 	r = (any)(res).(T)
 	return
 }
-
-func BuildAny(kind Kind, name string, parent Resourcer) (res any, err error) {
+*/
+func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
 	switch kind {
 	case EnvKind:
-		res, err = buildEnv(name)
+		res, err = buildEnv(parentDir, name)
 	case ProjectKind:
-		res, err = buildProject(name)
+		res, err = buildProject(parentDir, name)
 	case ImageKind:
-		res, err = buildImage(name, parent)
+		res, err = buildImage(parentDir, name)
 	case PodKind:
-		res, err = buildPod(name, parent)
+		res, err = buildPod(parentDir, name)
 	default:
-		err = fmt.Errorf("Unable to build Resource with base dir: %s ! Not supported kind property: [%s].", baseDir, kind)
+		err = fmt.Errorf("Unable to build Resource with name: %s in parent dir: %s ! Not supported kind property: [%s].", name, parentDir, kind)
 	}
 
 	return
 }
 
-func BuildResourcer(kind Kind, name string, parent Resourcer) (res Resourcer, err error) {
-	r, err := BuildAny(kind, name, parent)
+func BuildResourcer(kind Kind, parentDir, name string) (res Resourcer, err error) {
+	r, err := BuildAny(kind, parentDir, name)
 	res = r.(Resourcer)
 	return
 }
 
-func Build[T Resourcer](name string, parent Resourcer) (r T, err error) {
+func Build[T Resourcer](parentDir, name string) (r T, err error) {
 	kind := KindFromResource(r)
-	res, err := BuildResourcer(kind, name, parent)
+	res, err := BuildResourcer(kind, parentDir, name)
 	r = (any)(res).(T)
 	return
 }

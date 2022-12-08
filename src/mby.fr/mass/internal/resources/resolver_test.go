@@ -218,7 +218,7 @@ func TestResolveResourceFrom(t *testing.T) {
 		} else {
 			require.NotNil(t, r, "must found a resource for case %d", i)
 			if r != nil {
-				assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+				assert.Equal(t, c.resNameWanted, r.FullName(), "Bad resource name for case %d", i)
 			}
 		}
 	}
@@ -314,7 +314,7 @@ func TestResolveContextualResource(t *testing.T) {
 			assert.Nil(t, r, "should not found a resource for case %d", i)
 		} else {
 			require.NotNil(t, r, "must found a resource for case %d", i)
-			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+			assert.Equal(t, c.resNameWanted, r.FullName(), "Bad resource name for case %d", i)
 		}
 	}
 
@@ -438,7 +438,7 @@ func TestResolveResource(t *testing.T) {
 			assert.Nil(t, r, "should not found a resource for case %d", i)
 		} else {
 			require.NotNil(t, r, "must found a resource for case %d", i)
-			assert.Equal(t, c.resNameWanted, r.Name(), "Bad resource name for case %d", i)
+			assert.Equal(t, c.resNameWanted, r.FullName(), "Bad resource name for case %d", i)
 		}
 	}
 }
@@ -500,7 +500,7 @@ func TestResolveExpression(t *testing.T) {
 		{"/" + project1, "", []Kind{AllKind}, []string{project1}, nil},
 		{"/" + project1, ".", []Kind{AllKind}, []string{project1}, nil},
 		{"/env/", project1, []Kind{ProjectKind}, []string{project1}, nil}, // case 10
-		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}}, 
+		{"/", project1, []Kind{EnvKind}, []string{}, ResourceNotFound{project1, NewKindSet(EnvKind)}},
 
 		{"/", "p/" + project1 + " p/" + project2, []Kind{AllKind}, []string{project1, project2}, nil},
 		{"/", "p " + project1 + " " + project2, []Kind{AllKind}, []string{project1, project2}, nil},
@@ -609,7 +609,7 @@ func TestResolveExpression(t *testing.T) {
 			assert.Len(t, resources, len(c.resNamesWanted), "bad resources count returned for case %d", i)
 			for _, res := range resources {
 				require.NotNil(t, res, "must found not nil resource for case %d", i)
-				assert.Contains(t, c.resNamesWanted, res.Name(), "Bad resource name [%s] for case %d", res.Name(), i)
+				assert.Contains(t, c.resNamesWanted, res.FullName(), "Bad resource name [%s] for case %d", res.FullName(), i)
 			}
 		}
 	}

@@ -1,8 +1,10 @@
 package resources
 
 import (
+	"path/filepath"
+
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/file"
+	"mby.fr/utils/filez"
 )
 
 type Project struct {
@@ -26,7 +28,7 @@ func (p Project) init() (err error) {
 	// Init Deploy file
 	deployfileContent := ""
 	//buildfileContent := "FROM alpine\n"
-	_, err = file.SoftInitFile(p.DeployFile, deployfileContent)
+	_, err = filez.SoftInitFile(p.DeployFile, deployfileContent)
 
 	return
 }
@@ -36,7 +38,7 @@ func (p Project) AbsoluteName() (name string, err error) {
 	if err != nil {
 		return "", err
 	}
-	name = ss.Settings().Name + "-" + p.Name()
+	name = ss.Settings().Name + "-" + p.FullName()
 	return
 }
 
@@ -60,10 +62,10 @@ func (p *Project) Images() ([]*Image, error) {
 	return p.images, err
 }
 
-func buildProject(path string) (p Project, err error) {
+func buildProject(parentDir, name string) (p Project, err error) {
+	resourceDir := filepath.Join(parentDir, name)
 	deployfile := DefaultDeployFile
-
-	b, err := buildBase(ProjectKind, path, DefaultResourceFile)
+	b, err := buildBase(ProjectKind, resourceDir, DefaultResourceFile)
 	if err != nil {
 		return
 	}

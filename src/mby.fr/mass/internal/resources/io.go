@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v3"
+
+	"mby.fr/utils/filez"
 )
 
 // TODO: move Marshal and Unmarshall to private methods in model.go
@@ -42,12 +44,14 @@ func Write(r Resourcer) (err error) {
 }
 
 func ReadAny(path string) (r any, err error) {
+	if ok, _ := filez.IsDirectory(path); ok {
+		path = filepath.Join(path, DefaultResourceFile)
+	}
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return
 	}
-	resourceFilepath := filepath.Join(path, DefaultResourceFile)
-	content, err := os.ReadFile(resourceFilepath)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = ResourceNotFound{path, NewKindSet(AllKind)}

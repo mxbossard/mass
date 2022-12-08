@@ -31,7 +31,7 @@ func TestListProjects(t *testing.T) {
 	require.NotEmpty(t, projects, "should not be empty")
 	assert.Len(t, projects, 1, "Should list 1 project")
 	p1 := projects[0]
-	assert.Equal(t, name, p1.Name(), "Bad project name")
+	assert.Equal(t, name, p1.FullName(), "Bad project name")
 	assert.Equal(t, path, p1.Dir(), "Bad project dir")
 
 	commontest.InitRandProject(t, tempDir)

@@ -101,17 +101,17 @@ func TestReadResourcer(t *testing.T) {
 	assert.IsType(t, Project{}, r, "bad type")
 
 	expectedName := filepath.Base(path)
-	assert.Equal(t, expectedName, r.Name())
+	assert.Equal(t, expectedName, r.FullName())
 
 	if p, ok := r.(Project); ok {
 		expectedName := filepath.Base(path)
-		assert.Equal(t, expectedName, p.Name(), "bad name")
+		assert.Equal(t, expectedName, p.FullName(), "bad name")
 		testFunc := func() {
 			p.Images()
 		}
 		assert.NotPanics(t, testFunc, "should panic")
 
-		assert.Equal(t, expectedName, (&p).Name())
+		assert.Equal(t, expectedName, (&p).FullName())
 		testFunc = func() {
 			(&p).Images()
 		}
@@ -137,7 +137,7 @@ func TestRead(t *testing.T) {
 	assert.IsType(t, Project{}, p, "bad type")
 
 	expectedName := filepath.Base(path)
-	assert.Equal(t, expectedName, p.Name(), "bad name")
+	assert.Equal(t, expectedName, p.FullName(), "bad name")
 	testFunc := func() {
 		p.Images()
 	}

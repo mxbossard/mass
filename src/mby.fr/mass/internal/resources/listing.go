@@ -42,7 +42,7 @@ func ListImages() (images []Image, err error) {
 func GetProject(name string) (p Project, ok bool, err error) {
 	projects, err := ListProjects()
 	for _, p = range projects {
-		if p.Name() == name {
+		if p.FullName() == name {
 			ok = true
 			return
 		}
@@ -54,7 +54,7 @@ func GetEnv(name string) (r Env, ok bool, err error) {
 	envs, err := ListEnvs()
 
 	for _, r = range envs {
-		if r.Name() == name {
+		if r.FullName() == name {
 			ok = true
 			return
 		}
@@ -65,7 +65,7 @@ func GetEnv(name string) (r Env, ok bool, err error) {
 func GetImage(projectName, imageName string) (r Image, ok bool, err error) {
 	images, err := ListImages()
 	for _, r = range images {
-		if r.Name() == projectName+"/"+imageName {
+		if r.FullName() == projectName+"/"+imageName {
 			ok = true
 			return
 		}

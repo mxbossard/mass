@@ -7,7 +7,7 @@ import (
 
 	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/errorz"
-	"mby.fr/utils/file"
+	"mby.fr/utils/filez"
 )
 
 const EnvPrefix = "env/"
@@ -264,7 +264,7 @@ func resolveContextualResource(name string, kind Kind) (r Resourcer, err error) 
 	}
 	workspaceDir := ss.WorkspaceDir()
 
-	workDir, err2 := file.WorkDirPath()
+	workDir, err2 := filez.WorkDirPath()
 	if err != nil {
 		return r, err2
 	}
@@ -346,7 +346,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 		if kind == AllKind || kind == res.Kind() {
 			switch v := res.(type) {
 			case *Image:
-				if v.Name() == name {
+				if v.FullName() == name {
 					// Image general case
 					r = res
 					return
@@ -364,7 +364,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 				}
 
 			default:
-				if v.Name() == name {
+				if v.FullName() == name {
 					r = res
 					return
 				}
@@ -376,7 +376,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 }
 
 func isResourceMatchingExpr(r Resourcer, expr string) bool {
-	return r.Name() == expr
+	return r.FullName() == expr
 }
 
 // Return resource with kind in dir if it exists
@@ -396,7 +396,7 @@ func getDirResource(fromDir string, resourceKind Kind) (res Resourcer, err error
 
 // Return resource with kind in current dir if it exists
 func getCurrentDirResource(resourceKind Kind) (res Resourcer, err error) {
-	workDir, err := file.WorkDirPath()
+	workDir, err := filez.WorkDirPath()
 	if err != nil {
 		return
 	}

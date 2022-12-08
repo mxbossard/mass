@@ -74,7 +74,7 @@ func (b DockerBuilder) Build(onlyIfChange bool, noCache bool, forcePull bool) (e
 
 func buildDockerImage(binary string, image resources.Image, onlyIfChange bool, noCache bool, forcePull bool, errors chan error) {
 	d := display.Service()
-	logger := d.BufferedActionLogger("build", image.Name())
+	logger := d.BufferedActionLogger("build", image.FullName())
 
 	err := change.Init()
 	if err != nil {
@@ -88,15 +88,15 @@ func buildDockerImage(binary string, image resources.Image, onlyIfChange bool, n
 		if err != nil {
 			errors <- err
 		} else if !changed {
-			logger.Info("Image: %s did not changed. Do not build it.", image.Name())
+			logger.Info("Image: %s did not changed. Do not build it.", image.FullName())
 			return
 		}
 	}
 
-	logger.Info("Building image: %s ...", image.Name())
+	logger.Info("Building image: %s ...", image.FullName())
 
 	var buildParams []string
-	buildParams = append(buildParams, "build", "-t", image.FullName())
+	buildParams = append(buildParams, "build", "-t", image.FullImageName())
 
 	// Add --no-cache option
 	if noCache {
@@ -128,11 +128,11 @@ func buildDockerImage(binary string, image resources.Image, onlyIfChange bool, n
 	err = command.RunLogging(cmd, logger)
 	if err != nil {
 		logger.Flush()
-		err := fmt.Errorf("Error building image %s : %w", image.Name(), err)
+		err := fmt.Errorf("Error building image %s : %w", image.FullName(), err)
 		errors <- err
 	}
 
 	change.StoreImageSignature(image)
 
-	logger.Info("Build finished for image: %s .", image.Name())
+	logger.Info("Build finished for image: %s .", image.FullName())
 }

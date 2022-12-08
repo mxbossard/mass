@@ -32,7 +32,7 @@ func TestReInitProject(t *testing.T) {
 	require.NotEmpty(t, projects, "should not be empty")
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 := projects[0]
-	assert.Equal(t, name, p1.Name(), "Bad project name")
+	assert.Equal(t, name, p1.FullName(), "Bad project name")
 	assert.Equal(t, path, p1.Dir(), "Bad project dir")
 	assert.DirExists(t, p1.Dir(), "Project dir does not exists")
 
@@ -44,7 +44,7 @@ func TestReInitProject(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 = projects[0]
-	assert.Equal(t, name, p1.Name(), "Bad project name")
+	assert.Equal(t, name, p1.FullName(), "Bad project name")
 	assert.Equal(t, path, p1.Dir(), "Bad project dir")
 	assert.DirExists(t, p1.Dir(), "Project dir does not exists")
 
@@ -62,7 +62,7 @@ func TestReInitProject(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, projects, 1, "Should list one project")
 	p1 = projects[0]
-	assert.Equal(t, name, p1.Name(), "Bad project name")
+	assert.Equal(t, name, p1.FullName(), "Bad project name")
 	assert.Equal(t, path, p1.Dir(), "Bad project dir")
 	assert.DirExists(t, p1.Dir(), "Project dir does not exists")
 }
@@ -84,7 +84,7 @@ func TestReInitProject(t *testing.T) {
 //	images, err := p.Images()
 //	image := images[0]
 //	require.NoError(t, err, "should not error")
-//	assert.Equal(t, imageName, image.Name(), "bad image name")
+//	assert.Equal(t, imageName, image.FullName(), "bad image name")
 //	assert.Equal(t, path + "/" + imageName, image.Dir(), "bad image dir")
 //	assert.DirExists(t, image.Dir(), "image dir does not exists")
 //	assert.Equal(t, imagePath + "/src", image.AbsSourceDir(), "bad image source dir")

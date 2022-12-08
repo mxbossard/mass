@@ -10,7 +10,7 @@ import (
 
 type Resourcer interface {
 	Kind() Kind
-	Name() string
+	FullName() string
 	QualifiedName() string
 	Dir() string
 	Config() (config.Config, error)
@@ -28,12 +28,12 @@ func (r base) Kind() Kind {
 	return r.ResourceKind
 }
 
-func (r base) Name() string {
+func (r base) FullName() string {
 	return r.name
 }
 
 func (r base) QualifiedName() string {
-	return fmt.Sprintf("%s/%s", r.Kind(), r.Name())
+	return fmt.Sprintf("%s/%s", r.Kind(), r.FullName())
 }
 
 func (r base) Dir() string {
@@ -62,7 +62,7 @@ func (r base) init() (err error) {
 }
 
 func (r base) Match(name string, k Kind) bool {
-	return name == r.Name() && (k == AllKind || k == r.Kind())
+	return name == r.FullName() && (k == AllKind || k == r.Kind())
 }
 
 func (r base) backingFilepath() string {
@@ -98,7 +98,7 @@ func (t testable) init() (err error) {
 	return
 }
 
-func buildTestable(res Resourcer, path string) (t testable, err error) {
+func buildTestable(res Resourcer) (t testable, err error) {
 	testDir := DefaultTestDir
 	t = testable{resource: res, testDirectory: testDir}
 	return
@@ -113,8 +113,9 @@ func (e Env) init() (err error) {
 	return
 }
 
-func buildEnv(path string) (r Env, err error) {
-	base, err := buildBase(EnvKind, path, DefaultResourceFile)
+func buildEnv(parentDir, name string) (r Env, err error) {
+	resourceDir := filepath.Join(parentDir, name)
+	base, err := buildBase(EnvKind, resourceDir, DefaultResourceFile)
 	if err != nil {
 		return
 	}

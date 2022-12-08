@@ -35,12 +35,12 @@ func TestReInitEnv(t *testing.T) {
 	e1 := envs[0]
 
 	// reinit env e1
-	_, err := InitEnv(e1.Name())
+	_, err := InitEnv(e1.FullName())
 	require.NoError(t, err, "reiniting project should not return an error")
 	envs, _ = resources.ListEnvs()
 	require.NotEmpty(t, envs, "should not be empty")
 	assert.Len(t, envs, 4, "Bad env listing")
 	e2 := envs[0]
-	assert.Equal(t, e1.Name(), e2.Name(), "Bad env name")
+	assert.Equal(t, e1.FullName(), e2.FullName(), "Bad env name")
 	assert.Equal(t, e1.Dir(), e2.Dir(), "Bad env dir")
 }

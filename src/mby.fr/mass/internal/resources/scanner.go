@@ -151,7 +151,7 @@ func scanResourcesFrom(fromDir string, resourceKind Kind, maxDepth int) (resourc
 
 	var scanner fs.WalkDirFunc
 	scanner = buildScanner(fromDir, resourceKind, maxDepth, c)
-	
+
 	err = filepath.WalkDir(fromDir, scanner)
 	close(c)
 	if errors.Is(err, fs.ErrNotExist) {

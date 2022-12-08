@@ -3,9 +3,9 @@ package workspace
 import (
 	"path/filepath"
 
-	"mby.fr/mass/internal/settings"
 	"mby.fr/mass/internal/resources"
-	"mby.fr/utils/file"
+	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/filez"
 )
 
 func InitEnvs() (err error) {
@@ -14,7 +14,7 @@ func InitEnvs() (err error) {
 		return
 	}
 
-	err = file.CreateNewDirectory(settingsService.EnvsDir())
+	err = filez.CreateNewDirectory(settingsService.EnvsDir())
 	if err != nil {
 		return
 	}
@@ -28,7 +28,7 @@ func InitEnvs() (err error) {
 		}
 	}
 
-	return 
+	return
 }
 
 func InitEnv(name string) (envPath string, err error) {
@@ -40,4 +40,3 @@ func InitEnv(name string) (envPath string, err error) {
 	_, err = resources.Init[resources.Env](envPath)
 	return
 }
-

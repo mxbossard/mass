@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/file"
+	"mby.fr/utils/filez"
 )
 
 type Image struct {
@@ -39,7 +39,7 @@ func (i Image) init() (err error) {
 	// Init Build file
 	buildfileContent := ""
 	//buildfileContent := "FROM alpine\n"
-	_, err = file.SoftInitFile(i.BuildFile, buildfileContent)
+	_, err = filez.SoftInitFile(i.BuildFile, buildfileContent)
 
 	return
 }
@@ -52,19 +52,19 @@ func (i Image) AbsBuildFile() string {
 	return absResourcePath(i.Dir(), i.BuildFile)
 }
 
-func (i Image) ImageName() string {
-	return i.base.Name()
-}
-
-func (i Image) Name() string {
-	return i.Project.Name() + "/" + i.ImageName()
-}
-
 func (i Image) FullName() string {
+	return i.Project.FullName() + "/" + i.ImageName()
+}
+
+func (i Image) ImageName() string {
+	return i.base.name
+}
+
+func (i Image) FullImageName() string {
 	if i.Version() != "" {
-		return strings.ToLower(i.Name()) + ":" + i.Version()
+		return strings.ToLower(i.FullName()) + ":" + i.Version()
 	} else {
-		return strings.ToLower(i.Name()) + ":latest"
+		return strings.ToLower(i.FullName()) + ":latest"
 	}
 }
 
@@ -73,7 +73,7 @@ func (i Image) AbsoluteName() (name string, err error) {
 	if err != nil {
 		return "", err
 	}
-	name = ss.Settings().Name + "-" + i.Name()
+	name = ss.Settings().Name + "-" + i.FullName()
 	return
 }
 
@@ -81,18 +81,18 @@ func (i Image) Match(name string, k Kind) bool {
 	return i.base.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
 }
 
-func buildImage(path string) (r Image, err error) {
+func buildImage(projectPath, name string) (r Image, err error) {
+	resourceDir := filepath.Join(projectPath, name)
 	version := DefaultInitialVersion
 	buildfile := DefaultBuildFile
 	sourceDir := DefaultSourceDir
 
-	projectPath := filepath.Dir(path)
-	project, err := buildProject(projectPath)
+	project, err := Read[Project](projectPath) //buildProject(projectPath)
 	if err != nil {
 		return
 	}
 
-	b, err := buildBase(ImageKind, path, DefaultResourceFile)
+	b, err := buildBase(ImageKind, resourceDir, DefaultResourceFile)
 	if err != nil {
 		return
 	}
@@ -104,7 +104,7 @@ func buildImage(path string) (r Image, err error) {
 		Project:         project,
 	}
 
-	t, err := buildTestable(r, path)
+	t, err := buildTestable(r)
 	if err != nil {
 		return
 	}

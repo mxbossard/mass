@@ -252,8 +252,8 @@ func (d DockerComposeProjectsDeployer) Undeploy(rmVolumes bool) (err error) {
 
 func pullDockerComposeProject(project resources.Project, binary string) (err error) {
 	d := display.Service()
-	log := d.BufferedActionLogger("pull", project.Name())
-	log.Info("Pulling project: %s ...", project.Name())
+	log := d.BufferedActionLogger("pull", project.FullName())
+	log.Info("Pulling project: %s ...", project.FullName())
 
 	// Docker run level config
 	projectVol := project.Dir() + ":/code:ro"
@@ -290,19 +290,19 @@ func pullDockerComposeProject(project resources.Project, binary string) (err err
 	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
 	if err != nil {
 		flushErr := d.Flush()
-		err = fmt.Errorf("Error pulling project %s : %w", project.Name(), err)
+		err = fmt.Errorf("Error pulling project %s : %w", project.FullName(), err)
 		agg := errorz.NewAggregated(err, flushErr)
 		return agg
 	}
 
-	log.Info("Pull finished for project: %s .", project.Name())
+	log.Info("Pull finished for project: %s .", project.FullName())
 	return
 }
 
 func upDockerComposeProject(project resources.Project, binary string, args ...string) (err error) {
 	d := display.Service()
-	log := d.BufferedActionLogger("up", project.Name())
-	log.Info("Upping project: %s ...", project.Name())
+	log := d.BufferedActionLogger("up", project.FullName())
+	log.Info("Upping project: %s ...", project.FullName())
 
 	// Docker run level config
 	projectVol := project.Dir() + ":/code:ro"
@@ -360,19 +360,19 @@ func upDockerComposeProject(project resources.Project, binary string, args ...st
 	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
 	if err != nil {
 		flushErr := d.Flush()
-		err = fmt.Errorf("Error upping project %s : %w", project.Name(), err)
+		err = fmt.Errorf("Error upping project %s : %w", project.FullName(), err)
 		agg := errorz.NewAggregated(err, flushErr)
 		return agg
 	}
 
-	log.Info("Up finished for project: %s .", project.Name())
+	log.Info("Up finished for project: %s .", project.FullName())
 	return
 }
 
 func downDockerComposeProject(project resources.Project, binary string, rmVolumes bool) (err error) {
 	d := display.Service()
-	log := d.BufferedActionLogger("down", project.Name())
-	log.Info("Downing project: %s ...", project.Name())
+	log := d.BufferedActionLogger("down", project.FullName())
+	log.Info("Downing project: %s ...", project.FullName())
 
 	// Docker run level config
 	projectVol := project.Dir() + ":/code:ro"
@@ -413,11 +413,11 @@ func downDockerComposeProject(project resources.Project, binary string, rmVolume
 	err = runDockerImage(log, binary, runComposeOnDockerArgs, "", composeImage, cmdParams...)
 	if err != nil {
 		flushErr := d.Flush()
-		err = fmt.Errorf("Error downing project %s : %w", project.Name(), err)
+		err = fmt.Errorf("Error downing project %s : %w", project.FullName(), err)
 		agg := errorz.NewAggregated(err, flushErr)
 		return agg
 	}
 
-	log.Info("Down finished for project: %s .", project.Name())
+	log.Info("Down finished for project: %s .", project.FullName())
 	return
 }

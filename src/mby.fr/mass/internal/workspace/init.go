@@ -3,12 +3,12 @@ package workspace
 import (
 	//"os"
 	//"io/fs"
-	"strings"
 	"path/filepath"
+	"strings"
 
-	"mby.fr/mass/internal/settings"
 	"mby.fr/mass/internal/resources"
-	"mby.fr/utils/file"
+	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/filez"
 )
 
 var forbiddenNames = []string{resources.DefaultSourceDir, resources.DefaultTestDir, "envs"}
@@ -46,7 +46,7 @@ func InitImage(name string) (imagePath string, err error) {
 	splittedName := strings.Split(name, "/")
 	if len(splittedName) == 1 {
 		// Work dir must be project dir
-		workDir, err := file.WorkDirPath()
+		workDir, err := filez.WorkDirPath()
 		if err != nil {
 			return "", err
 		}
@@ -67,4 +67,3 @@ func InitImage(name string) (imagePath string, err error) {
 	_, err = resources.Init[resources.Image](imagePath)
 	return
 }
-

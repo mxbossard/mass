@@ -70,19 +70,19 @@ func (p Pod) init() (err error) {
 }
 
 func (p Pod) PodName() string {
-	return p.base.Name()
+	return p.base.name
 }
 
-func (p Pod) Name() string {
-	return p.Project.Name() + "/" + p.PodName()
+func (p Pod) FullName() string {
+	return p.Project.FullName() + "/" + p.PodName()
 }
 
 /*
 func (p Pod) FullName() string {
 	if i.Version() != "" {
-		return strings.ToLower(p.Name()) + ":" + p.Version()
+		return strings.ToLower(p.FullName()) + ":" + p.Version()
 	} else {
-		return strings.ToLower(p.Name()) + ":latest"
+		return strings.ToLower(p.FullName()) + ":latest"
 	}
 }
 */
@@ -92,7 +92,7 @@ func (p Pod) AbsoluteName() (name string, err error) {
 	if err != nil {
 		return "", err
 	}
-	name = ss.Settings().Name + "-" + p.Name()
+	name = ss.Settings().Name + "-" + p.FullName()
 	return
 }
 
@@ -101,7 +101,7 @@ func (p Pod) Match(name string, k Kind) bool {
 }
 
 func buildPod(projectPath, name string) (r Pod, err error) {
-	project, err := buildProject(projectPath)
+	project, err := Read[Project](projectPath) //buildProject(projectPath)
 	if err != nil {
 		return
 	}

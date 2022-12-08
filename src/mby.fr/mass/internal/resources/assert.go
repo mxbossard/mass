@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	//"path/filepath"
-	//"mby.fr/utils/file"
+	//"mby.fr/utils/filez"
 )
 
 type BadResourceName struct {
