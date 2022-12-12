@@ -41,24 +41,10 @@ func Init[T Resourcer](path string) (r T, err error) {
 }
 
 /*
-func Undecorate[T any](o any, t T) (r T, ok bool) {
-	r, ok = o.(T)
-	if ok {
-		return
-	}
-	metaValue := reflect.ValueOf(o)
-	field := metaValue.FieldByName("Resourcer")
-	if field != (reflect.Value{}) {
-		//fmt.Printf("recursion on %T ...\n", field.Interface())
-		return Undecorate(field.Interface(), t)
-	}
-	return r, false
-}
-*/
-
 func resourceName(path string) string {
 	return filepath.Base(path)
 }
+*/
 
 // Return a resource relative path from an absolute path
 func relResourcePath(resRootPath string, resPath string) (path string, err error) {
@@ -77,5 +63,70 @@ func relResourcePath(resRootPath string, resPath string) (path string, err error
 // Return a absolute path from a relative resource path
 func absResourcePath(relRootPath string, resPath string) (path string) {
 	path = filepath.Join(relRootPath, resPath)
+	return
+}
+
+func assertName(k Kind, name string) (err error) {
+	// TODO
+	return
+}
+
+func assertFullName(k Kind, fullName string) (err error) {
+	parts := strings.Split(fullName, fullNameSeparator)
+	switch k {
+	case ProjectKind, EnvKind:
+		if len(parts) != 1 {
+			err = fmt.Errorf("Malformed fullName [%s] kind: [%s].", fullName, k)
+		}
+	case ImageKind, PodKind, ServiceKind, EndpointKind:
+		if len(parts) != 2 {
+			err = fmt.Errorf("Malformed fullName [%s] kind: [%s].", fullName, k)
+		}
+	default:
+		err = fmt.Errorf("Unable to assert resource fullName for kind: [%s].", k)
+	}
+	return
+}
+
+func splitResourceHierarchy(k Kind, fullName string) (hierarchy []Uid, err error) {
+	err = assertFullName(k, fullName)
+	if err != nil {
+		return
+	}
+
+	switch k {
+	case ProjectKind, EnvKind:
+		append(hierarchy, Uid{k, fullName})
+	case ImageKind, PodKind, ServiceKind, EndpointKind:
+		// Take project part of fullName
+		parts := strings.Split(fullName, fullNameSeparator)
+		append(hierarchy, SplitResourceHierarchy(ProjectKind, parts[0]))
+		append(hierarchy, Uid{k, fullName})
+	default:
+		err = fmt.Errorf("Unable to split resource hierarchy for kind: [%s].", k)
+	}
+	return
+}
+
+func forgeResourceFilepath(k Kind, parentDir, name string) (path string, err error)) {
+	err = assertName(k, fullName)
+	if err != nil {
+		return
+	}
+
+	//hierarchy, err := splitResourceHierarchy(k, fillName)
+
+	switch k {
+	case ProjectKind, EnvKind, ImageKind:
+		// name not used
+		path = filepath.Join(parentDir, DefaultResourceFile)
+	//case ImageKind:
+	//	path = filepath.Join(rootDir, fullName, DefaultResourceFile)
+	case PodKind, ServiceKind, EndpointKind:
+		resourceFile := fmt.Sprintf("%s-%s.yaml", k, name)
+		path = filepath.Join(parentDir, resourceFile)
+	default:
+		err = fmt.Errorf("Unable to forge resource filepath for kind: [%s].", k)
+	}
 	return
 }

@@ -43,6 +43,11 @@ func Write(r Resourcer) (err error) {
 	return
 }
 
+func ReadAny(kind Kind, fullName string) (r any, err error) {
+	// SplitResourceHierarchy(Kind, FullName) => 
+	// for each Uid : Build(Kind, FullName) + ForgeResourceFile(Kind, FullName)
+}
+
 func ReadAny(path string) (r any, err error) {
 	if ok, _ := filez.IsDirectory(path); ok {
 		path = filepath.Join(path, DefaultResourceFile)

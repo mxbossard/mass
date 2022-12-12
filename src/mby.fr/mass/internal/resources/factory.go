@@ -35,16 +35,18 @@ func Build0[T Resourcer](path string) (r T, err error) {
 	return
 }
 */
+
 func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
+	
 	switch kind {
 	case EnvKind:
-		res, err = buildEnv(parentDir, name)
+		res, err = buildEnv(parentDir)
 	case ProjectKind:
-		res, err = buildProject(parentDir, name)
+		res, err = buildProject(parentDir)
 	case ImageKind:
-		res, err = buildImage(parentDir, name)
+		res, err = buildImage(parentDir)
 	case PodKind:
-		res, err = buildPod(parentDir, name)
+		res, err = buildPod(projectDir, name)
 	default:
 		err = fmt.Errorf("Unable to build Resource with name: %s in parent dir: %s ! Not supported kind property: [%s].", name, parentDir, kind)
 	}
