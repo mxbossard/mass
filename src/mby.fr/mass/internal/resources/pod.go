@@ -37,7 +37,7 @@ const (
 )
 
 type Pod struct {
-	base     `yaml:"base,inline"`
+	fileBase     `yaml:"base,inline"`
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
@@ -70,7 +70,7 @@ func (p Pod) init() (err error) {
 }
 
 func (p Pod) PodName() string {
-	return p.base.name
+	return p.fileBase.name
 }
 
 func (p Pod) FullName() string {
@@ -97,7 +97,7 @@ func (p Pod) AbsoluteName() (name string, err error) {
 }
 
 func (p Pod) Match(name string, k Kind) bool {
-	return p.base.Match(name, k) || name == p.PodName() && (k == AllKind || k == p.Kind())
+	return p.fileBase.Match(name, k) || name == p.PodName() && (k == AllKind || k == p.Kind())
 }
 
 func buildPod(projectPath, name string) (r Pod, err error) {
@@ -107,17 +107,17 @@ func buildPod(projectPath, name string) (r Pod, err error) {
 	}
 
 	backingFilename := fmt.Sprintf("pod-%s.yaml", name)
-	b, err := buildBase(PodKind, projectPath, backingFilename)
+	b, err := buildFileBase(PodKind, projectPath, backingFilename)
 	if err != nil {
 		return
 	}
 
 	r = Pod{
-		base:    b,
+		fileBase:    b,
 		Project: project,
 	}
 
-	t, err := buildTestable(r, projectPath)
+	t, err := buildTestable(r)
 	if err != nil {
 		return
 	}

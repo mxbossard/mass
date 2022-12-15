@@ -43,7 +43,7 @@ func Write(r Resourcer) (err error) {
 	return
 }
 
-func ReadAny(kind Kind, fullName string) (r any, err error) {
+func ReadAny2(kind Kind, parentDir, name string) (r any, err error) {
 	// SplitResourceHierarchy(Kind, FullName) => 
 	// for each Uid : Build(Kind, FullName) + ForgeResourceFile(Kind, FullName)
 }

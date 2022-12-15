@@ -28,34 +28,28 @@ type Resourcer interface {
 	backingFilepath() string
 }
 
-type fileBase struct {
-	ResourceKind               Kind `yaml:"resourceKind"`
-	name, dir string
+type base struct {
+	ResourceKind    Kind `yaml:"resourceKind"`
+	name, dir 		string
 }
 
-func (r fileBase) Kind() Kind {
+func (r base) Kind() Kind {
 	return r.ResourceKind
 }
 
-func (r fileBase) FullName() string {
+func (r base) FullName() string {
 	return r.name
 }
 
-func (r fileBase) QualifiedName() string {
+func (r base) QualifiedName() string {
 	return fmt.Sprintf("%s/%s", r.Kind(), r.FullName())
 }
 
-func (r fileBase) Dir() string {
+func (r base) Dir() string {
 	return r.dir
 }
 
-/*
-func (r fileBase) Config() (config.Config, error) {
-	c, err := config.Read(r.Dir())
-	return c, err
-}
-*/
-func (r fileBase) init() (err error) {
+func (r base) init() (err error) {
 	// Create resource dir
 	err = os.MkdirAll(r.Dir(), 0755)
 	if err != nil {
@@ -71,40 +65,43 @@ func (r fileBase) init() (err error) {
 	return
 }
 
-func (r fileBase) Match(name string, k Kind) bool {
+func (r base) Match(name string, k Kind) bool {
 	return name == r.FullName() && (k == AllKind || k == r.Kind())
+}
+
+type fileBase struct {
+	base    //`yaml:",inline"`
 }
 
 func (r fileBase) backingFilepath() string {
 	resourceFile := fmt.Sprintf("%s-%s.yaml", r.ResourceKind, r.name)
-	return filepath.Join(r.Dir(), resourceFile)
+	return filepath.Join(r.base.Dir(), resourceFile)
 }
 
-func buildFileBase(kind Kind, dirPath, name string) (b base, err error) {
+func buildFileBase(kind Kind, dirPath, name string) (b fileBase, err error) {
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		return
 	}
-	name := resourceName(dirPath)
-	b = fileBase{ResourceKind: kind, name: name, dir: absDirPath}
+	b = fileBase{base{ResourceKind: kind, name: name, dir: absDirPath}}
 	return
 }
 
 type directoryBase struct {
-	base
+	base	//`yaml:",inline"`
 }
 
 func (r directoryBase) backingFilepath() string {
-	return filepath.Join(r.Dir(), DefaultResourceFile)
+	return filepath.Join(r.base.Dir(), DefaultResourceFile)
 }
 
-func buildDirectoryBase(kind Kind, dirPath string) (b base, err error) {
+func buildDirectoryBase(kind Kind, dirPath string) (b directoryBase, err error) {
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		return
 	}
 	name := resourceName(dirPath)
-	b = directoryBase{ResourceKind: kind, name: name, dir: absDirPath}
+	b = directoryBase{base{ResourceKind: kind, name: name, dir: absDirPath}}
 	return
 }
 
@@ -138,23 +135,38 @@ type Configer interface {
 	Config() (config.Config, error)
 }
 
-type Env struct {
-	base `yaml:"base,inline"` // Implicit composition: "golang inheritance"
+type configurableDir struct {
+	base directoryBase
 }
 
-func (e Env) init() (err error) {
-	err = e.base.init()
+func (c configurableDir) Config() (config.Config, error) {
+	cfg, err := config.Read(c.base.Dir())
+	return cfg, err
+}
+
+func buildConfigurableDir(res directoryBase) (c configurableDir) {
+	c = configurableDir{base: res}
 	return
 }
 
-func buildEnv(parentDir, name string) (r Env, err error) {
-	resourceDir := filepath.Join(parentDir, name)
-	base, err := buildDirectoryBase(EnvKind, resourceDir)
+type Env struct {
+	directoryBase	`yaml:"base,inline"` // Implicit composition: "golang inheritance"
+	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (e Env) init() (err error) {
+	err = e.directoryBase.init()
+	return
+}
+
+func buildEnv(envDir string) (r Env, err error) {
+	base, err := buildDirectoryBase(EnvKind, envDir)
 	if err != nil {
 		return
 	}
 
-	r = Env{base: base}
+	r = Env{directoryBase: base}
+	r.configurableDir = buildConfigurableDir(base)
 	return
 }
 

@@ -40,11 +40,9 @@ func Init[T Resourcer](path string) (r T, err error) {
 	return
 }
 
-/*
 func resourceName(path string) string {
 	return filepath.Base(path)
 }
-*/
 
 // Return a resource relative path from an absolute path
 func relResourcePath(resRootPath string, resPath string) (path string, err error) {
@@ -108,7 +106,8 @@ func splitResourceHierarchy(k Kind, fullName string) (hierarchy []Uid, err error
 	return
 }
 
-func forgeResourceFilepath(k Kind, parentDir, name string) (path string, err error)) {
+/*
+func forgeResourceFilepath(k Kind, parentDir, name string) (path string, err error) {
 	err = assertName(k, fullName)
 	if err != nil {
 		return
@@ -130,3 +129,4 @@ func forgeResourceFilepath(k Kind, parentDir, name string) (path string, err err
 	}
 	return
 }
+*/

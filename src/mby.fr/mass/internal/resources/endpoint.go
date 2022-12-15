@@ -3,13 +3,13 @@ package resources
 import "fmt"
 
 type Endpoint struct {
-	base `yaml:"base,inline"`
+	fileBase `yaml:"base,inline"`
 
 	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (e Endpoint) init() (err error) {
-	err = e.base.init()
+	err = e.fileBase.init()
 	if err != nil {
 		return
 	}
@@ -22,11 +22,11 @@ func buildEndpoint(projectPath, name string) (r Endpoint, err error) {
 		return
 	}
 	backingFilename := fmt.Sprintf("end-%s.yaml", name)
-	base, err := buildBase(EndpointKind, projectPath, backingFilename)
+	base, err := buildFileBase(EndpointKind, projectPath, backingFilename)
 	if err != nil {
 		return
 	}
 
-	r = Endpoint{base: base, Project: &project}
+	r = Endpoint{fileBase: base, Project: &project}
 	return
 }

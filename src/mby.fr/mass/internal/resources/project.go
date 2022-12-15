@@ -8,15 +8,16 @@ import (
 )
 
 type Project struct {
-	base     `yaml:"base,inline"`
-	testable `yaml:"testable,inline"`
+	directoryBase	`yaml:"base,inline"`
+	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
+	testable 		`yaml:"testable,inline"`
 
 	images     []*Image
 	DeployFile string `yaml:"deployFile"`
 }
 
 func (p Project) init() (err error) {
-	err = p.base.init()
+	err = p.directoryBase.init()
 	if err != nil {
 		return
 	}
@@ -62,16 +63,16 @@ func (p *Project) Images() ([]*Image, error) {
 	return p.images, err
 }
 
-func buildProject(parentDir, name string) (p Project, err error) {
-	resourceDir := filepath.Join(parentDir, name)
+func buildProject(projectDir string) (p Project, err error) {
 	deployfile := DefaultDeployFile
-	b, err := buildBase(ProjectKind, resourceDir, DefaultResourceFile)
+	b, err := buildDirectoryBase(ProjectKind, projectDir)
 	if err != nil {
 		return
 	}
-	p = Project{base: b, DeployFile: deployfile}
+	p = Project{directoryBase: b, DeployFile: deployfile}
 
-	t, err := buildTestable(b, path)
+	p.configurableDir = buildConfigurableDir(b)
+	t, err := buildTestable(p)
 	if err != nil {
 		return
 	}

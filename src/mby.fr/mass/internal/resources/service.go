@@ -3,13 +3,13 @@ package resources
 import "fmt"
 
 type Service struct {
-	base `yaml:"base,inline"`
+	fileBase `yaml:"base,inline"`
 
 	Project *Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (s Service) init() (err error) {
-	err = s.base.init()
+	err = s.fileBase.init()
 	if err != nil {
 		return
 	}
@@ -22,11 +22,11 @@ func buildService(projectPath, name string) (r Service, err error) {
 		return
 	}
 	backingFilename := fmt.Sprintf("svc-%s.yaml", name)
-	base, err := buildBase(ServiceKind, projectPath, backingFilename)
+	base, err := buildFileBase(ServiceKind, projectPath, backingFilename)
 	if err != nil {
 		return
 	}
 
-	r = Service{base: base, Project: &project}
+	r = Service{fileBase: base, Project: &project}
 	return
 }

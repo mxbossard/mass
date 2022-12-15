@@ -10,9 +10,10 @@ import (
 )
 
 type Image struct {
-	base        `yaml:"base,inline"`
-	testable    `yaml:"testable,inline"`
-	versionable `yaml:"versionable,inline"`
+	directoryBase  	`yaml:"base,inline"`
+	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
+	testable    	`yaml:"testable,inline"`
+	versionable 	`yaml:"versionable,inline"`
 
 	SourceDirectory string  `yaml:"sourceDirectory"`
 	BuildFile       string  `yaml:"buildFile"`
@@ -20,7 +21,7 @@ type Image struct {
 }
 
 func (i Image) init() (err error) {
-	err = i.base.init()
+	err = i.directoryBase.init()
 	if err != nil {
 		return
 	}
@@ -57,7 +58,7 @@ func (i Image) FullName() string {
 }
 
 func (i Image) ImageName() string {
-	return i.base.name
+	return i.directoryBase.name
 }
 
 func (i Image) FullImageName() string {
@@ -78,31 +79,32 @@ func (i Image) AbsoluteName() (name string, err error) {
 }
 
 func (i Image) Match(name string, k Kind) bool {
-	return i.base.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
+	return i.directoryBase.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
 }
 
-func buildImage(projectPath, name string) (r Image, err error) {
-	resourceDir := filepath.Join(projectPath, name)
+func buildImage(projectDir, imageName string) (r Image, err error) {
+	imageDir := filepath.Join(projectDir, imageName)
 	version := DefaultInitialVersion
 	buildfile := DefaultBuildFile
 	sourceDir := DefaultSourceDir
 
-	project, err := Read[Project](projectPath) //buildProject(projectPath)
+	project, err := Read[Project](projectDir) //buildProject(projectPath)
 	if err != nil {
 		return
 	}
 
-	b, err := buildBase(ImageKind, resourceDir, DefaultResourceFile)
+	b, err := buildDirectoryBase(ImageKind, imageDir)
 	if err != nil {
 		return
 	}
 
 	r = Image{
-		base:            b,
+		directoryBase:   b,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
 		Project:         project,
 	}
+	r.configurableDir = buildConfigurableDir(b)
 
 	t, err := buildTestable(r)
 	if err != nil {

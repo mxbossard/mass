@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"path/filepath"
 )
 
 /*
@@ -40,13 +41,15 @@ func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
 	
 	switch kind {
 	case EnvKind:
-		res, err = buildEnv(parentDir)
+		resDir := filepath.Join(parentDir, name)
+		res, err = buildEnv(resDir)
 	case ProjectKind:
-		res, err = buildProject(parentDir)
+		resDir := filepath.Join(parentDir, name)
+		res, err = buildProject(resDir)
 	case ImageKind:
-		res, err = buildImage(parentDir)
+		res, err = buildImage(parentDir, name)
 	case PodKind:
-		res, err = buildPod(projectDir, name)
+		res, err = buildPod(parentDir, name)
 	default:
 		err = fmt.Errorf("Unable to build Resource with name: %s in parent dir: %s ! Not supported kind property: [%s].", name, parentDir, kind)
 	}
