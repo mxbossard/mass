@@ -21,11 +21,13 @@ func TestInitResourcer(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	e, err := InitResourcer(EnvKind, path)
+	expectedEnvName := "myEnv"
+	e, err := InitResourcer(EnvKind, path, expectedEnvName)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, e, "bad type")
 	assert.Equal(t, EnvKind, e.Kind(), "bad kind")
 	assert.Equal(t, path, e.Dir(), "bad dir")
+	assert.Equal(t, expectedEnvName, e.FullName(), "bad full name")
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "Resource file not written")
 }
@@ -39,14 +41,14 @@ func TestInitEnv(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	r, err := Init[Env](path)
+	expectedEnvName := "myEnv"
+	r, err := Init[Env](path, expectedEnvName)
 	require.NoError(t, err, "should not error")
 
-	assertBaseFs(t, r.base)
+	assertBaseFs(t, r.directoryBase)
 	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
 	assert.FileExists(t, expectedResourceFilepath, "Resource file not written")
 }
-
 
 func TestInitProject(t *testing.T) {
 	path, err := test.BuildRandTempPath()
@@ -57,7 +59,8 @@ func TestInitProject(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	r, err := Init[Project](path)
+	expectedProjectName := "myProject"
+	r, err := Init[Project](path, expectedProjectName)
 	require.NoError(t, err, "should not error")
 
 	assertBaseFs(t, r)
@@ -77,8 +80,8 @@ func TestInitImage(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-	
-	r, err := Init[Image](path)
+	expectedImageName := "myImage"
+	r, err := Init[Image](path, expectedImageName)
 	require.NoError(t, err, "should not error")
 
 	assertBaseFs(t, r)
@@ -97,27 +100,27 @@ func TestInitProjectWithImages(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
-
-	r, err := Init[Project](path)
+	expectedProjectName := "myProject"
+	p, err := Init[Project](path, expectedProjectName)
 	require.NoError(t, err, "should not error")
 
-	assertBaseFs(t, r)
-	assertTestableFs(t, r)
+	assertBaseFs(t, p)
+	assertTestableFs(t, p)
 
-	images, err := r.Images()
+	images, err := p.Images()
 	require.NoError(t, err, "should not error")
 	assert.Len(t, images, 0, "should not have any image")
 
 	// Init new images
-	image1Path := filepath.Join(path, "image1")
-	_, err = Init[Image](image1Path)
+	//image1Path := filepath.Join(path, )
+	_, err = Init[Image](p.Dir(), "image1")
 	require.NoError(t, err, "should not error")
 
-	image2Path := filepath.Join(path, "image2")
-	_, err = Init[Image](image2Path)
+	//image2Path := filepath.Join(path, "image2")
+	_, err = Init[Image](p.Dir(), "image2")
 	require.NoError(t, err, "should not error")
 
-	images, err = r.Images()
+	images, err = p.Images()
 	require.NoError(t, err, "should not error")
 	assert.Len(t, images, 2, "should got 2 images")
 

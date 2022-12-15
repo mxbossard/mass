@@ -2,19 +2,19 @@ package resources
 
 import (
 	"os"
-	"testing"
 	"path/filepath"
-	
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/utils/test"
 )
 
-func initRandResource(t *testing.T, parentPath string, kind Kind) (path string) {
-	resDir, err := test.MkRandSubDir(parentPath)
+func initRandResource(t *testing.T, rootPath, name string, kind Kind) (path string) {
+	resDir, err := test.MkRandSubDir(rootPath)
 	require.NoError(t, err, "should not error")
-	res, err := InitResourcer(kind, resDir)
+	res, err := InitResourcer(kind, resDir, name)
 	require.NoError(t, err, "should not error")
 	path = res.Dir()
 	return
@@ -70,15 +70,15 @@ func TestScanProjects(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
-	r1Path := initRandResource(t, parentPath, ProjectKind)
+	r1Path := initRandResource(t, parentPath, "p1", ProjectKind)
 	_ = r1Path
-	r2Path := initRandResource(t, parentPath, ProjectKind)
+	r2Path := initRandResource(t, parentPath, "p2", ProjectKind)
 	_ = r2Path
-	r3Path := initRandResource(t, parentPath, ProjectKind)
+	r3Path := initRandResource(t, parentPath, "p3", ProjectKind)
 	_ = r3Path
-	r4Path := initRandResource(t, parentPath, EnvKind)
+	r4Path := initRandResource(t, parentPath, "e1", EnvKind)
 	_ = r4Path
-	r5Path := initRandResource(t, parentPath, ImageKind)
+	r5Path := initRandResource(t, parentPath, "i1", ImageKind)
 	_ = r5Path
 
 	// Empty dirs
@@ -119,15 +119,15 @@ func TestScanEnvs(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
-	r1Path := initRandResource(t, parentPath, EnvKind)
+	r1Path := initRandResource(t, parentPath, "e1", EnvKind)
 	_ = r1Path
-	r2Path := initRandResource(t, parentPath, EnvKind)
+	r2Path := initRandResource(t, parentPath, "e2", EnvKind)
 	_ = r2Path
-	r3Path := initRandResource(t, parentPath, EnvKind)
+	r3Path := initRandResource(t, parentPath, "e3", EnvKind)
 	_ = r3Path
-	r4Path := initRandResource(t, parentPath, ProjectKind)
+	r4Path := initRandResource(t, parentPath, "p1", ProjectKind)
 	_ = r4Path
-	r5Path := initRandResource(t, parentPath, ImageKind)
+	r5Path := initRandResource(t, parentPath, "i1", ImageKind)
 	_ = r5Path
 
 	// Empty dirs
@@ -168,15 +168,15 @@ func TestScanImages(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, res, 0, "bad resource count")
 
-	r1Path := initRandResource(t, parentPath, ImageKind)
+	r1Path := initRandResource(t, parentPath, "i1", ImageKind)
 	_ = r1Path
-	r2Path := initRandResource(t, parentPath, ImageKind)
+	r2Path := initRandResource(t, parentPath, "i2", ImageKind)
 	_ = r2Path
-	r3Path := initRandResource(t, parentPath, ImageKind)
+	r3Path := initRandResource(t, parentPath, "i3", ImageKind)
 	_ = r3Path
-	r4Path := initRandResource(t, parentPath, EnvKind)
+	r4Path := initRandResource(t, parentPath, "e1", EnvKind)
 	_ = r4Path
-	r5Path := initRandResource(t, parentPath, ProjectKind)
+	r5Path := initRandResource(t, parentPath, "p1", ProjectKind)
 	_ = r5Path
 
 	// Empty dirs
@@ -230,7 +230,7 @@ func TestScanResourcesFrom(t *testing.T) {
 
 	resources, err = scanResourcesFrom(fakeWorkspacePath, AllKind, -1)
 	require.NoError(t, err, "should not error")
-	assert.Len(t, resources, len(envs) + len(projects) + expectedImagesCount, "bad resource count")
+	assert.Len(t, resources, len(envs)+len(projects)+expectedImagesCount, "bad resource count")
 
 	// Scan 1 depth from root dir
 	resources, err = scanResourcesFrom(fakeWorkspacePath, EnvKind, 1)
