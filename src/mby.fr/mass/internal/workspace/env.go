@@ -1,8 +1,6 @@
 package workspace
 
 import (
-	"path/filepath"
-
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/filez"
@@ -36,7 +34,7 @@ func InitEnv(name string) (envPath string, err error) {
 	if err != nil {
 		return
 	}
-	envPath = filepath.Join(settingsService.EnvsDir(), name)
-	_, err = resources.Init[resources.Env](envPath)
+	//envPath = filepath.Join(settingsService.EnvsDir(), name)
+	_, err = resources.Init[resources.Env](settingsService.EnvsDir(), name)
 	return
 }

@@ -2,6 +2,7 @@ package resources
 
 import (
 	//"fmt"
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -14,8 +15,8 @@ const DefaultBuildFile = "Dockerfile"
 const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"
 
-func InitResourcer(kind Kind, path string) (res Resourcer, err error) {
-	res, err = BuildResourcer(kind, path)
+func InitResourcer(kind Kind, parentDir, name string) (res Resourcer, err error) {
+	res, err = BuildResourcer(kind, parentDir, name)
 	if err != nil {
 		return
 	}
@@ -27,8 +28,8 @@ func InitResourcer(kind Kind, path string) (res Resourcer, err error) {
 	return
 }
 
-func Init[T Resourcer](path string) (r T, err error) {
-	r, err = Build[T](path)
+func Init[T Resourcer](parentDir, name string) (r T, err error) {
+	r, err = Build[T](parentDir, name)
 	if err != nil {
 		return
 	}
@@ -94,12 +95,16 @@ func splitResourceHierarchy(k Kind, fullName string) (hierarchy []Uid, err error
 
 	switch k {
 	case ProjectKind, EnvKind:
-		append(hierarchy, Uid{k, fullName})
+		hierarchy = append(hierarchy, Uid{k, fullName})
 	case ImageKind, PodKind, ServiceKind, EndpointKind:
 		// Take project part of fullName
 		parts := strings.Split(fullName, fullNameSeparator)
-		append(hierarchy, SplitResourceHierarchy(ProjectKind, parts[0]))
-		append(hierarchy, Uid{k, fullName})
+		split, err := splitResourceHierarchy(ProjectKind, parts[0])
+		if err != nil {
+			return hierarchy, err
+		}
+		hierarchy = append(hierarchy, split[0])
+		hierarchy = append(hierarchy, Uid{k, fullName})
 	default:
 		err = fmt.Errorf("Unable to split resource hierarchy for kind: [%s].", k)
 	}

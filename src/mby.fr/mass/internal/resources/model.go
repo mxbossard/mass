@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	fullNameSeparator = '/'
+	fullNameSeparator = "/"
 )
 
 type Uid struct {
-    Kind Kind
-    FullName string
+	Kind     Kind
+	FullName string
 }
 
 type Resourcer interface {
@@ -25,12 +25,12 @@ type Resourcer interface {
 	//Config() (config.Config, error)
 	Match(string, Kind) bool
 	init() error
-	backingFilepath() string
+	//backingFilepath() string
 }
 
 type base struct {
-	ResourceKind    Kind `yaml:"resourceKind"`
-	name, dir 		string
+	ResourceKind Kind `yaml:"resourceKind"`
+	name, dir    string
 }
 
 func (r base) Kind() Kind {
@@ -70,7 +70,7 @@ func (r base) Match(name string, k Kind) bool {
 }
 
 type fileBase struct {
-	base    //`yaml:",inline"`
+	base //`yaml:",inline"`
 }
 
 func (r fileBase) backingFilepath() string {
@@ -88,7 +88,7 @@ func buildFileBase(kind Kind, dirPath, name string) (b fileBase, err error) {
 }
 
 type directoryBase struct {
-	base	//`yaml:",inline"`
+	base //`yaml:",inline"`
 }
 
 func (r directoryBase) backingFilepath() string {
@@ -104,7 +104,6 @@ func buildDirectoryBase(kind Kind, dirPath string) (b directoryBase, err error) 
 	b = directoryBase{base{ResourceKind: kind, name: name, dir: absDirPath}}
 	return
 }
-
 
 type Tester interface {
 	AbsTestDir() string
@@ -150,8 +149,8 @@ func buildConfigurableDir(res directoryBase) (c configurableDir) {
 }
 
 type Env struct {
-	directoryBase	`yaml:"base,inline"` // Implicit composition: "golang inheritance"
-	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
+	directoryBase   `yaml:"base,inline"` // Implicit composition: "golang inheritance"
+	configurableDir `yaml:"-"`           // Ignore this field for yaml marshalling
 }
 
 func (e Env) init() (err error) {

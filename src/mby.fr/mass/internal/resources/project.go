@@ -1,16 +1,16 @@
 package resources
 
 import (
-	"path/filepath"
+	//"path/filepath"
 
 	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/filez"
 )
 
 type Project struct {
-	directoryBase	`yaml:"base,inline"`
+	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
-	testable 		`yaml:"testable,inline"`
+	testable        `yaml:"testable,inline"`
 
 	images     []*Image
 	DeployFile string `yaml:"deployFile"`

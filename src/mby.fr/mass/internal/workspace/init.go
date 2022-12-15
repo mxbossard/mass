@@ -24,9 +24,9 @@ func InitProject(name string) (projectPath string, err error) {
 		return
 	}
 
-	projectPath = filepath.Join(settingsService.ProjectsDir(), name)
+	//projectPath = filepath.Join(settingsService.ProjectsDir(), name)
 
-	_, err = resources.Init[resources.Project](projectPath)
+	_, err = resources.Init[resources.Project](settingsService.ProjectsDir(), name)
 	return
 }
 
@@ -63,7 +63,7 @@ func InitImage(name string) (imagePath string, err error) {
 	}
 
 	projectDir := filepath.Join(settingsService.ProjectsDir(), projectName)
-	imagePath = filepath.Join(projectDir, imageName)
-	_, err = resources.Init[resources.Image](imagePath)
+	//imagePath = filepath.Join(projectDir, imageName)
+	_, err = resources.Init[resources.Image](projectDir, imageName)
 	return
 }

@@ -1,7 +1,7 @@
 package resources
 
 import (
-	//"fmt"
+	"fmt"
 	"os"
 	"testing"
 
@@ -22,12 +22,12 @@ func assertFileContains(t *testing.T, path string, expectedContent string) {
 	assert.Equal(t, expectedContent, stringContent, "Bad file content")
 }
 
-func TestWriteBase(t *testing.T) {
+func TestWriteDirectoryBase(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	b, err := buildBase(EnvKind, path, DefaultResourceFile)
+	b, err := buildDirectoryBase(EnvKind, path)
 	require.NoError(t, err, "should not error")
 
 	err = Write(b)
@@ -149,7 +149,11 @@ func TestWriteThenRead(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	i, err := buildImage(path)
+	expectedImageName := "monImage"
+	expectedProjectName := filepath.Base(path)
+	expectedImageFullName := fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName)
+	expectedDir := filepath.Join(path, expectedImageName)
+	i, err := buildImage(path, expectedImageName)
 	require.NoError(t, err, "should not error")
 	//i.Init()
 	err = Write(i)
@@ -161,15 +165,17 @@ func TestWriteThenRead(t *testing.T) {
 	loadedImage, err := Read[Image](path)
 	require.NoError(t, err, "should not error")
 	//loadedImage := res.(*Image)
-	assert.Equal(t, path, loadedImage.Dir(), "bad resource dir")
+	assert.Equal(t, expectedDir, loadedImage.Dir(), "bad resource dir")
 	assert.Equal(t, ImageKind, loadedImage.Kind(), "bad resource kind")
 	assert.Equal(t, path+"/"+DefaultSourceDir, loadedImage.AbsSourceDir(), "bad source dir")
 	assert.Equal(t, DefaultBuildFile, loadedImage.BuildFile, "bad build file")
 	assert.Equal(t, path+"/"+DefaultBuildFile, loadedImage.AbsBuildFile(), "bad build file")
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version(), "bad version")
+	assert.Equal(t, expectedImageFullName, loadedImage.FullName(), "bad image full name")
 
 	parentDir := filepath.Dir(path)
 	assert.NotNil(t, loadedImage.Project, "bad parent project")
 	assert.Equal(t, ProjectKind, loadedImage.Project.Kind(), "bad parent project kind")
 	assert.Equal(t, parentDir, loadedImage.Project.Dir(), "bad parent project dir")
+	assert.Equal(t, expectedProjectName, loadedImage.Project.FullName(), "bad project full name")
 }

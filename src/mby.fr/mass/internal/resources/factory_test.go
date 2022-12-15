@@ -1,7 +1,7 @@
 package resources
 
 import (
-	//"fmt"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -48,7 +48,7 @@ func TestBuildEnv(t *testing.T) {
 	r, err := buildEnv(path)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
-	assertBaseContent(t, path, r.base)
+	assertBaseContent(t, path, r.directoryBase)
 
 	assert.Equal(t, EnvKind, r.Kind(), "bad resource kind")
 }
@@ -78,7 +78,9 @@ func TestBuildImage(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	r, err := buildImage(path)
+	expectedProjectName := filepath.Base(path)
+	expectedImageName := "monImage"
+	r, err := buildImage(path, expectedImageName)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
 
@@ -94,13 +96,18 @@ func TestBuildImage(t *testing.T) {
 	assert.NotNil(t, r.Project, "bad parent project")
 	assert.Equal(t, ProjectKind, r.Project.Kind(), "bad parent project kind")
 	assert.Equal(t, parentDir, r.Project.Dir(), "bad parent project dir")
+	assert.Equal(t, expectedProjectName, r.Project.FullName(), "bad project name")
+
+	assert.Equal(t, expectedImageName, r.name, "bad image name")
+	assert.Equal(t, fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName), r.FullName(), "bad image full name")
 }
 
 func TestBuildAny(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	e, err := BuildAny(EnvKind, path)
+	expectedEnvName := "monEnv"
+	e, err := BuildAny(EnvKind, path, expectedEnvName)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, e, "bad type")
 }
@@ -109,20 +116,27 @@ func TestBuildResourcer(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	e, err := BuildResourcer(EnvKind, path)
+	expectedEnvName := "monEnv"
+	expectedDir := filepath.Join(path, expectedEnvName)
+	e, err := BuildResourcer(EnvKind, path, expectedEnvName)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, e, "bad type")
+	assert.Equal(t, expectedEnvName, e.FullName(), "bad full name !")
+	assert.Equal(t, expectedDir, e.Dir())
 }
 
 func TestBuild(t *testing.T) {
 	path, err := test.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
-	e, err := Build[Env](path)
+	expectedEnvName := "monEnv"
+	expectedDir := filepath.Join(path, expectedEnvName)
+	e, err := Build[Env](path, expectedEnvName)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Env{}, e, "bad type")
 	assert.Equal(t, EnvKind, e.Kind(), "bad kind")
-	assert.Equal(t, path, e.Dir(), "bad dir")
+	assert.Equal(t, expectedEnvName, e.FullName(), "bad full name !")
+	assert.Equal(t, expectedDir, e.Dir(), "bad dir")
 }
 
 /*
