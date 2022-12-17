@@ -173,9 +173,12 @@ func TestWriteThenRead(t *testing.T) {
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version(), "bad version")
 	assert.Equal(t, expectedImageFullName, loadedImage.FullName(), "bad image full name")
 
+	project, err := loadedImage.Project()
+	require.NoError(t, err, "should not error")
+
 	parentDir := filepath.Dir(path)
-	assert.NotNil(t, loadedImage.Project, "bad parent project")
-	assert.Equal(t, ProjectKind, loadedImage.Project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, loadedImage.Project.Dir(), "bad parent project dir")
-	assert.Equal(t, expectedProjectName, loadedImage.Project.FullName(), "bad project full name")
+	assert.NotNil(t, project, "bad parent project")
+	assert.Equal(t, ProjectKind, project.Kind(), "bad parent project kind")
+	assert.Equal(t, parentDir, project.Dir(), "bad parent project dir")
+	assert.Equal(t, expectedProjectName, project.FullName(), "bad project full name")
 }

@@ -80,7 +80,12 @@ func TestBuildImage(t *testing.T) {
 
 	expectedProjectName := filepath.Base(path)
 	expectedImageName := "monImage"
-	r, err := buildImage(path, expectedImageName)
+	p, err := buildProject(path)
+	require.NoError(t, err, "should not error")
+	err = p.init()
+	require.NoError(t, err, "should not error")
+
+	r, err := buildImage(p.Dir(), expectedImageName)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
 
@@ -92,14 +97,28 @@ func TestBuildImage(t *testing.T) {
 	assert.Equal(t, path+"/"+DefaultBuildFile, r.AbsBuildFile(), "bad buildfile")
 	assert.Equal(t, DefaultInitialVersion, r.Version(), "bad version")
 
+	project, err := r.Project()
+	require.NoError(t, err, "should not error")
+
 	parentDir := filepath.Dir(path)
-	assert.NotNil(t, r.Project, "bad parent project")
-	assert.Equal(t, ProjectKind, r.Project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, r.Project.Dir(), "bad parent project dir")
-	assert.Equal(t, expectedProjectName, r.Project.FullName(), "bad project name")
+	assert.NotNil(t, project, "bad parent project")
+	assert.Equal(t, ProjectKind, project.Kind(), "bad parent project kind")
+	assert.Equal(t, parentDir, project.Dir(), "bad parent project dir")
+	assert.Equal(t, expectedProjectName, project.FullName(), "bad project name")
 
 	assert.Equal(t, expectedImageName, r.name, "bad image name")
 	assert.Equal(t, fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName), r.FullName(), "bad image full name")
+}
+
+func TestBuildImageOutsideProject(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	expectedImageName := "monImage"
+	_, err = buildImage(path, expectedImageName)
+	require.Error(t, err, "should error")
+	expectedError := ResourceNotFound{path, NewKindSet(ProjectKind)}
+	assert.Equal(t, expectedError, err, "bad error")
 }
 
 func TestBuildAny(t *testing.T) {
