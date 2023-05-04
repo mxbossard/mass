@@ -12,8 +12,8 @@ type Project struct {
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
 	testable        `yaml:"testable,inline"`
 
-	images     []*Image
-	DeployFile string `yaml:"deployFile"`
+	images     []*Image `yaml:"-"` // Ignore this field for yaml marshalling
+	DeployFile string   `yaml:"deployFile"`
 }
 
 func (p Project) init() (err error) {

@@ -16,7 +16,7 @@ const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"
 
 func InitResourcer(kind Kind, parentDir, name string) (res Resourcer, err error) {
-	res, err = BuildResourcer(kind, parentDir, name)
+	res, err = BuildResourcer(kind, name, parentDir)
 	if err != nil {
 		return
 	}

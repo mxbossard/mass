@@ -37,8 +37,24 @@ func Build0[T Resourcer](path string) (r T, err error) {
 }
 */
 
-func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
-	
+func BuildAny(kind Kind, name string, parentResOrDir any) (res any, err error) {
+	var parentDir string
+	ok := false
+	switch kind {
+	case ImageKind:
+		_, ok = parentResOrDir.(Resourcer)
+		if !ok {
+			err = fmt.Errorf("Expect a Resourcer parentRes to build kind: %v, received %T !", kind, parentResOrDir)
+			return
+		}
+	default:
+		parentDir, ok = parentResOrDir.(string)
+		if !ok {
+			err = fmt.Errorf("Expect a string parentDir to build kind: %v, received %T !", kind, parentResOrDir)
+			return
+		}
+	}
+
 	switch kind {
 	case EnvKind:
 		resDir := filepath.Join(parentDir, name)
@@ -47,7 +63,12 @@ func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
 		resDir := filepath.Join(parentDir, name)
 		res, err = buildProject(resDir)
 	case ImageKind:
-		res, err = buildImage(parentDir, name)
+		project, ok := parentResOrDir.(Project)
+		if !ok {
+			err = fmt.Errorf("Expect a P roject parentRes to build kind: %v, received %T !", kind, parentResOrDir)
+			return
+		}
+		res, err = buildImage(project, name)
 	case PodKind:
 		res, err = buildPod(parentDir, name)
 	default:
@@ -57,15 +78,21 @@ func BuildAny(kind Kind, parentDir, name string) (res any, err error) {
 	return
 }
 
-func BuildResourcer(kind Kind, parentDir, name string) (res Resourcer, err error) {
-	r, err := BuildAny(kind, parentDir, name)
+func BuildResourcer(kind Kind, name string, parentResOrDir any) (res Resourcer, err error) {
+	r, err := BuildAny(kind, name, parentResOrDir)
+	if err != nil {
+		return
+	}
 	res = r.(Resourcer)
 	return
 }
 
-func Build[T Resourcer](parentDir, name string) (r T, err error) {
+func Build[T Resourcer](name string, parentResOrDir any) (r T, err error) {
 	kind := KindFromResource(r)
-	res, err := BuildResourcer(kind, parentDir, name)
+	res, err := BuildResourcer(kind, name, parentResOrDir)
+	if err != nil {
+		return
+	}
 	r = (any)(res).(T)
 	return
 }

@@ -13,9 +13,10 @@ import (
 func TestType(t *testing.T) {
 	wksPath := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(wksPath)
-	_, imagePath := commontest.InitRandImage(t, wksPath)
-	image, err := buildImage(imagePath, "i1")
-	require.NoError(t, err, "should not return an error")
+	p, err := Build[Project]("p1", wksPath)
+	require.NoError(t, err, "should not error")
+	image, err := Build[Image]("i1", p)
+	require.NoError(t, err, "should not error")
 
 	assert.Implements(t, (*VersionBumper)(nil), &image, "image pointer should implements Versioner")
 }
@@ -23,9 +24,11 @@ func TestType(t *testing.T) {
 func TestBump(t *testing.T) {
 	wksPath := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(wksPath)
-	_, imagePath := commontest.InitRandImage(t, wksPath)
-	image, err := buildImage(imagePath, "i1")
-	require.NoError(t, err, "should not return an error")
+	p, err := Build[Project]("p1", wksPath)
+	require.NoError(t, err, "should not error")
+	image, err := Build[Image]("i1", p)
+	require.NoError(t, err, "should not error")
+
 	assert.Equal(t, "0.0.1-dev", image.Version(), "Bad initial version")
 
 	toVer, fromVer, err := image.Bump(false, false)
@@ -96,9 +99,10 @@ func TestBump(t *testing.T) {
 func TestPromote(t *testing.T) {
 	wksPath := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(wksPath)
-	_, imagePath := commontest.InitRandImage(t, wksPath)
-	image, err := buildImage(imagePath, "i1")
-	require.NoError(t, err, "should not return an error")
+	p, err := Build[Project]("p1", wksPath)
+	require.NoError(t, err, "should not error")
+	image, err := Build[Image]("i1", p)
+	require.NoError(t, err, "should not error")
 
 	toVer, fromVer, err := image.Promote()
 	require.NoError(t, err, "must not return an error")
@@ -124,9 +128,10 @@ func TestPromote(t *testing.T) {
 func TestRelease(t *testing.T) {
 	wksPath := commontest.InitTempWorkspace(t)
 	defer os.RemoveAll(wksPath)
-	_, imagePath := commontest.InitRandImage(t, wksPath)
-	image, err := buildImage(imagePath, "i1")
-	require.NoError(t, err, "should not return an error")
+	p, err := Build[Project]("p1", wksPath)
+	require.NoError(t, err, "should not error")
+	image, err := Build[Image]("i1", p)
+	require.NoError(t, err, "should not error")
 
 	toVer, fromVer, err := image.Release()
 	require.Error(t, err, "must return an error")

@@ -29,8 +29,8 @@ type Resourcer interface {
 }
 
 type base struct {
-	ResourceKind Kind `yaml:"resourceKind"`
-	name, dir    string
+	ResourceKind Kind   `yaml:"resourceKind"`
+	name, dir    string `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (r base) Kind() Kind {
@@ -70,7 +70,7 @@ func (r base) Match(name string, k Kind) bool {
 }
 
 type fileBase struct {
-	base //`yaml:",inline"`
+	base `yaml:",inline"`
 }
 
 func (r fileBase) backingFilepath() string {
@@ -88,7 +88,7 @@ func buildFileBase(kind Kind, dirPath, name string) (b fileBase, err error) {
 }
 
 type directoryBase struct {
-	base //`yaml:",inline"`
+	base `yaml:",inline"`
 }
 
 func (r directoryBase) backingFilepath() string {

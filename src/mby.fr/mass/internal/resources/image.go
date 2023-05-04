@@ -10,10 +10,10 @@ import (
 )
 
 type Image struct {
-	directoryBase  	`yaml:"base,inline"`
+	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
-	testable    	`yaml:"testable,inline"`
-	versionable 	`yaml:"versionable,inline"`
+	testable        `yaml:"testable,inline"`
+	versionable     `yaml:"versionable,inline"`
 
 	SourceDirectory string  `yaml:"sourceDirectory"`
 	BuildFile       string  `yaml:"buildFile"`
@@ -82,16 +82,19 @@ func (i Image) Match(name string, k Kind) bool {
 	return i.directoryBase.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
 }
 
-func buildImage(projectDir, imageName string) (r Image, err error) {
+func buildImage(project Project, imageName string) (r Image, err error) {
+	projectDir := project.Dir()
 	imageDir := filepath.Join(projectDir, imageName)
 	version := DefaultInitialVersion
 	buildfile := DefaultBuildFile
 	sourceDir := DefaultSourceDir
 
-	project, err := Read[Project](projectDir) //buildProject(projectPath)
-	if err != nil {
-		return
-	}
+	/*
+		project, err := Read[Project](projectDir) //buildProject(projectPath)
+		if err != nil {
+			return
+		}
+	*/
 
 	b, err := buildDirectoryBase(ImageKind, imageDir)
 	if err != nil {

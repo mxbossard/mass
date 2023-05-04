@@ -37,7 +37,7 @@ const (
 )
 
 type Pod struct {
-	fileBase     `yaml:"base,inline"`
+	fileBase `yaml:"base,inline"`
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
@@ -113,8 +113,8 @@ func buildPod(projectPath, name string) (r Pod, err error) {
 	}
 
 	r = Pod{
-		fileBase:    b,
-		Project: project,
+		fileBase: b,
+		Project:  project,
 	}
 
 	t, err := buildTestable(r)
