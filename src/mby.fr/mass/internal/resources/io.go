@@ -36,6 +36,10 @@ func Write(r Resourcer) (err error) {
 		return
 	}
 
+	err = os.MkdirAll(r.Dir(), 0755)
+	if err != nil {
+		return
+	}
 	resourceFilepath := filepath.Join(r.Dir(), DefaultResourceFile)
 	//fmt.Printf("Debug: WRITING content: [%s] in file: [%s] ...\n", content, resourceFilepath)
 	err = os.WriteFile(resourceFilepath, content, 0644)
@@ -44,8 +48,12 @@ func Write(r Resourcer) (err error) {
 }
 
 func ReadAny(path string) (r any, err error) {
+	var parentDir string
 	if ok, _ := filez.IsDirectory(path); ok {
+		parentDir = filepath.Dir(path)
 		path = filepath.Join(path, DefaultResourceFile)
+	} else {
+		parentDir = filepath.Dir(filepath.Dir(path))
 	}
 	path, err = filepath.Abs(path)
 	if err != nil {
@@ -66,8 +74,16 @@ func ReadAny(path string) (r any, err error) {
 		return
 	}
 
+	var parentResOrDir any = parentDir
 	kind := base.Kind()
-	res, err := BuildAny(kind, base.Dir(), base.name)
+	if kind == ImageKind {
+		parentProjectResPath := filepath.Join(parentDir, DefaultResourceFile)
+		parentResOrDir, err = Read[Project](parentProjectResPath)
+		if err != nil {
+			return
+		}
+	}
+	res, err := BuildAny(kind, base.name, parentResOrDir)
 	if err != nil {
 		return
 	}

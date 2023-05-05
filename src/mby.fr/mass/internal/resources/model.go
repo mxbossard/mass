@@ -30,7 +30,8 @@ type Resourcer interface {
 
 type base struct {
 	ResourceKind Kind   `yaml:"resourceKind"`
-	name, dir    string `yaml:"-"` // Ignore this field for yaml marshalling
+	name         string `yaml:"-"` // Ignore this field for yaml marshalling
+	dir          string `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (r base) Kind() Kind {

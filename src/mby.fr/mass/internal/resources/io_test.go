@@ -92,15 +92,21 @@ func TestReadResourcer(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
-	content := "resourceKind: project\n"
-	resourceFilepath := filepath.Join(path, DefaultResourceFile)
+	content := `
+        resourceKind: project
+    `
+	expectedParentDir := "bar"
+	err = os.MkdirAll(path+"/"+expectedParentDir, 0755)
+	require.NoError(t, err, "should not error")
+	resourceFilepath := filepath.Join(path, expectedParentDir, DefaultResourceFile)
 	err = os.WriteFile(resourceFilepath, []byte(content), 0644)
 	require.NoError(t, err, "should not error")
 
-	r, err := ReadResourcer(path)
+	r, err := ReadResourcer(resourceFilepath)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Project{}, r, "bad type")
 
+	assert.Equal(t, path, r.Dir())
 	expectedName := filepath.Base(path)
 	assert.Equal(t, expectedName, r.FullName())
 
@@ -162,10 +168,10 @@ func TestWriteThenRead(t *testing.T) {
 	err = Write(i)
 	require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
-	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
+	expectedImageResFilepath := filepath.Join(path, expectedProjectName, expectedImageName, DefaultResourceFile)
+	assert.FileExists(t, expectedImageResFilepath, "resource file should exist")
 
-	loadedImage, err := Read[Image](path)
+	loadedImage, err := Read[Image](expectedImageResFilepath)
 	require.NoError(t, err, "should not error")
 	//loadedImage := res.(*Image)
 	assert.Equal(t, expectedDir, loadedImage.Dir(), "bad resource dir")
