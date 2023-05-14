@@ -62,7 +62,8 @@ func ReadAny(path string) (r any, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = ResourceNotFound{path, NewKindSet(AllKind)}
+			//log.Fatal(err)
+			err = ResourceNotFound{path, NewKindSet(AllKind), err}
 		}
 		return
 	}
@@ -83,7 +84,8 @@ func ReadAny(path string) (r any, err error) {
 			return
 		}
 	}
-	res, err := BuildAny(kind, "not loaded yet", parentResOrDir)
+	resName := filepath.Base(filepath.Dir(path))
+	res, err := BuildAny(kind, resName, parentResOrDir)
 	if err != nil {
 		return
 	}
@@ -95,12 +97,15 @@ func ReadAny(path string) (r any, err error) {
 		return re, nil
 	case Image:
 		err = yaml.Unmarshal(content, &re)
+		//FIXME: set Full Name ?
 		return re, nil
 	case Project:
 		err = yaml.Unmarshal(content, &re)
 		return re, nil
 	case Pod:
 		err = yaml.Unmarshal(content, &re)
+		//basename := filepath.Base(path)
+		//resName = strings.TrimSuffix(basename, filepath.Ext(basename))
 		return re, nil
 	case Service:
 		err = yaml.Unmarshal(content, &re)
@@ -128,7 +133,7 @@ func Read[T Resourcer](path string) (r T, err error) {
 		if _, ok := err.(ResourceNotFound); ok {
 			// If ResourceNotFound error add expected type in error
 			kind := KindFromResource(r)
-			err = ResourceNotFound{path, NewKindSet(kind)}
+			err = ResourceNotFound{path, NewKindSet(kind), err}
 		}
 		return
 	}

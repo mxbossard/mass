@@ -8,10 +8,14 @@ import (
 type ResourceNotFound struct {
 	Expression string
 	Kinds      *KindSet
+	Wrapped    error
 }
 
 func (e ResourceNotFound) Error() string {
 	message := fmt.Sprintf("Resource not found: %s for kinds: %v", e.Expression, *e.Kinds)
+	if e.Wrapped != nil {
+		message += fmt.Sprintf("\ncaused by: %v", e.Wrapped)
+	}
 	return message
 }
 
@@ -47,9 +51,9 @@ func (e InconsistentExpression) Error() string {
 }
 
 type BadResourceType struct {
-	Path string
+	Path           string
 	ExpectedObject interface{}
-	FoundObject interface{}
+	FoundObject    interface{}
 }
 
 func (e BadResourceType) Error() string {

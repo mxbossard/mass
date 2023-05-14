@@ -177,7 +177,7 @@ func resolveExpresionForKinds(expr string, kinds KindSet) (res Resourcer, aggErr
 	if unknownErrors.GotError() {
 		aggErr = unknownErrors
 	} else if len(notFoundKinds) > 0 {
-		notFound := ResourceNotFound{name, NewKindSet(notFoundKinds...)}
+		notFound := ResourceNotFound{Expression: name, Kinds: NewKindSet(notFoundKinds...)}
 		aggErr.Add(notFound)
 	} else if len(kinds) == inconsistentExpressionTypeCount {
 		aggErr.Add(InconsistentExpressionType{expr, &kinds})
@@ -288,7 +288,7 @@ func resolveContextualResource(name string, kind Kind) (r Resourcer, err error) 
 
 	// Rewrite ResourceNotFound content
 	if _, ok := err.(ResourceNotFound); err != nil && ok {
-		err = ResourceNotFound{name, NewKindSet(kind)}
+		err = ResourceNotFound{name, NewKindSet(kind), err}
 	}
 
 	return
@@ -371,7 +371,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 			}
 		}
 	}
-	err = ResourceNotFound{name, NewKindSet(kind)}
+	err = ResourceNotFound{Expression: name, Kinds: NewKindSet(kind)}
 	return
 }
 
@@ -388,7 +388,7 @@ func getDirResource(fromDir string, resourceKind Kind) (res Resourcer, err error
 	if resourceKind == AllKind || resourceKind == r.Kind() {
 		res = r
 	} else {
-		err = ResourceNotFound{fromDir, NewKindSet(resourceKind)}
+		err = ResourceNotFound{Expression: fromDir, Kinds: NewKindSet(resourceKind)}
 	}
 
 	return
