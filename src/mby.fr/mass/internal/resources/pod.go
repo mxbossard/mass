@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"mby.fr/mass/internal/settings"
 )
@@ -41,7 +42,7 @@ type Pod struct {
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
-	Project        Project       `yaml:"-"` // Ignore this field for yaml marshalling
+	project        Project       `yaml:"-"` // Ignore this field for yaml marshalling
 	InitContainers []*Container  `yaml:"initContainers,omitempty"`
 	Containers     []*Container  `yaml:"containers"`
 	StartupProbe   Probe         `yaml:"startupProbe,omitempty"`
@@ -74,7 +75,8 @@ func (p Pod) PodName() string {
 }
 
 func (p Pod) FullName() string {
-	return p.Project.FullName() + "/" + p.PodName()
+	project, _ := p.Project()
+	return project.FullName() + "/" + p.PodName()
 }
 
 /*
@@ -100,12 +102,20 @@ func (p Pod) Match(name string, k Kind) bool {
 	return p.fileBase.Match(name, k) || name == p.PodName() && (k == AllKind || k == p.Kind())
 }
 
-func buildPod(projectPath, name string) (r Pod, err error) {
-	project, err := Read[Project](projectPath) //buildProject(projectPath)
-	if err != nil {
-		return
+func (p Pod) Project() (project Project, err error) {
+	// Lazy loading
+	if "" == p.project.directoryBase.base.name {
+		projectDir := filepath.Dir(p.Dir())
+		project, err = Read[Project](projectDir)
+		if err != nil {
+			return
+		}
+		p.project = project
 	}
+	return
+}
 
+func buildPod(projectPath, name string) (r Pod, err error) {
 	backingFilename := fmt.Sprintf("pod-%s.yaml", name)
 	b, err := buildFileBase(PodKind, projectPath, backingFilename)
 	if err != nil {
@@ -114,7 +124,6 @@ func buildPod(projectPath, name string) (r Pod, err error) {
 
 	r = Pod{
 		fileBase: b,
-		Project:  project,
 	}
 
 	t, err := buildTestable(r)

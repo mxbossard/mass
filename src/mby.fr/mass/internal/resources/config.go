@@ -70,7 +70,11 @@ func MergedConfig(res Resourcer) (conf *config.Config, err error) {
 		}
 	case Image:
 		var c config.Config
-		pc, err := r.Project.Config()
+		project, err := r.Project()
+		if err != nil {
+			return conf, err
+		}
+		pc, err := project.Config()
 		if errors.Is(err, fs.ErrNotExist) {
 			// swallow config not found error
 			err = nil

@@ -83,7 +83,7 @@ func ReadAny(path string) (r any, err error) {
 			return
 		}
 	}
-	res, err := BuildAny(kind, base.name, parentResOrDir)
+	res, err := BuildAny(kind, "not loaded yet", parentResOrDir)
 	if err != nil {
 		return
 	}
@@ -125,6 +125,11 @@ func ReadResourcer(path string) (res Resourcer, err error) {
 func Read[T Resourcer](path string) (r T, err error) {
 	res, err := ReadResourcer(path)
 	if err != nil {
+		if _, ok := err.(ResourceNotFound); ok {
+			// If ResourceNotFound error add expected type in error
+			kind := KindFromResource(r)
+			err = ResourceNotFound{path, NewKindSet(kind)}
+		}
 		return
 	}
 

@@ -82,6 +82,7 @@ func TestBuildImage(t *testing.T) {
 	expectedImageName := "monImage"
 	rp, err := Build[Project](expectedProjectName, path)
 	require.NoError(t, err, "should not error")
+	assert.Equal(t, ProjectKind, rp.Kind(), "bad project kind")
 	r, err := Build[Image](expectedImageName, rp)
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
@@ -95,15 +96,29 @@ func TestBuildImage(t *testing.T) {
 	assert.Equal(t, resPath+"/"+DefaultBuildFile, r.AbsBuildFile(), "bad buildfile")
 	assert.Equal(t, DefaultInitialVersion, r.Version(), "bad version")
 
-	parentDir := filepath.Dir(resPath)
-	assert.NotNil(t, r.Project, "bad parent project")
-	assert.Equal(t, ProjectKind, r.Project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, r.Project.Dir(), "bad parent project dir")
-	assert.Equal(t, expectedProjectName, r.Project.FullName(), "bad project name")
+	project, err := r.Project()
+	require.NoError(t, err, "should not error")
+
+	assert.NotNil(t, project, "bad parent project")
+	assert.Equal(t, ProjectKind, project.Kind(), "bad parent project kind")
+	assert.Equal(t, rp, project, "bad project")
 
 	assert.Equal(t, expectedImageName, r.name, "bad image name")
 	assert.Equal(t, fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName), r.FullName(), "bad image full name")
 }
+
+/* Cannot build an image outside a project anymore.
+func TestBuildImageOutsideProject(t *testing.T) {
+	path, err := test.BuildRandTempPath()
+	require.NoError(t, err, "should not error")
+
+	expectedImageName := "monImage"
+	_, err = buildImage(nil, expectedImageName)
+	require.Error(t, err, "should error")
+	expectedError := ResourceNotFound{path, NewKindSet(ProjectKind)}
+	assert.Equal(t, expectedError, err, "bad error")
+}
+*/
 
 func TestBuildAny(t *testing.T) {
 	path, err := test.BuildRandTempPath()

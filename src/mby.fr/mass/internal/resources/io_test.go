@@ -131,20 +131,23 @@ func TestRead(t *testing.T) {
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
+	expectedProjectName := "projectName"
+	expectedProjectDir := filepath.Join(path, expectedProjectName)
+	os.MkdirAll(expectedProjectDir, 0755)
 	content := "resourceKind: project\n"
-	resourceFilepath := filepath.Join(path, DefaultResourceFile)
+	resourceFilepath := filepath.Join(expectedProjectDir, DefaultResourceFile)
 	err = os.WriteFile(resourceFilepath, []byte(content), 0644)
 	require.NoError(t, err, "should not error")
 
-	_, err = Read[Env](path)
+	_, err = Read[Env](expectedProjectDir)
 	assert.Error(t, err, "should error")
 
-	p, err := Read[Project](path)
+	p, err := Read[Project](expectedProjectDir)
 	require.NoError(t, err, "should not error")
 	assert.IsType(t, Project{}, p, "bad type")
 
-	expectedName := filepath.Base(path)
-	assert.Equal(t, expectedName, p.FullName(), "bad name")
+	assert.Equal(t, expectedProjectDir, p.Dir(), "bad dir")
+	assert.Equal(t, expectedProjectName, p.FullName(), "bad name")
 	testFunc := func() {
 		p.Images()
 	}
@@ -182,9 +185,12 @@ func TestWriteThenRead(t *testing.T) {
 	assert.Equal(t, DefaultInitialVersion, loadedImage.Version(), "bad version")
 	assert.Equal(t, expectedImageFullName, loadedImage.FullName(), "bad image full name")
 
+	project, err := loadedImage.Project()
+	require.NoError(t, err, "should not error")
+
 	parentDir := filepath.Dir(path)
-	assert.NotNil(t, loadedImage.Project, "bad parent project")
-	assert.Equal(t, ProjectKind, loadedImage.Project.Kind(), "bad parent project kind")
-	assert.Equal(t, parentDir, loadedImage.Project.Dir(), "bad parent project dir")
-	assert.Equal(t, expectedProjectName, loadedImage.Project.FullName(), "bad project full name")
+	assert.NotNil(t, project, "bad parent project")
+	assert.Equal(t, ProjectKind, project.Kind(), "bad parent project kind")
+	assert.Equal(t, parentDir, project.Dir(), "bad parent project dir")
+	assert.Equal(t, expectedProjectName, project.FullName(), "bad project full name")
 }

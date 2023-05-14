@@ -17,7 +17,7 @@ type Image struct {
 
 	SourceDirectory string  `yaml:"sourceDirectory"`
 	BuildFile       string  `yaml:"buildFile"`
-	Project         Project `yaml:"-"` // Ignore this field for yaml marshalling
+	project         Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (i Image) init() (err error) {
@@ -54,7 +54,8 @@ func (i Image) AbsBuildFile() string {
 }
 
 func (i Image) FullName() string {
-	return i.Project.FullName() + "/" + i.ImageName()
+	p, _ := i.Project()
+	return p.FullName() + "/" + i.ImageName()
 }
 
 func (i Image) ImageName() string {
@@ -82,19 +83,24 @@ func (i Image) Match(name string, k Kind) bool {
 	return i.directoryBase.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
 }
 
-func buildImage(project Project, imageName string) (r Image, err error) {
-	projectDir := project.Dir()
-	imageDir := filepath.Join(projectDir, imageName)
-	version := DefaultInitialVersion
-	buildfile := DefaultBuildFile
-	sourceDir := DefaultSourceDir
-
-	/*
-		project, err := Read[Project](projectDir) //buildProject(projectPath)
+func (i Image) Project() (project Project, err error) {
+	// Lazy loading
+	if "" == i.project.directoryBase.base.name {
+		projectDir := filepath.Dir(i.Dir())
+		project, err = Read[Project](projectDir)
 		if err != nil {
 			return
 		}
-	*/
+		i.project = project
+	}
+	return i.project, err
+}
+
+func buildImage(project Project, imageName string) (r Image, err error) {
+	imageDir := filepath.Join(project.Dir(), imageName)
+	version := DefaultInitialVersion
+	buildfile := DefaultBuildFile
+	sourceDir := DefaultSourceDir
 
 	b, err := buildDirectoryBase(ImageKind, imageDir)
 	if err != nil {
@@ -105,7 +111,7 @@ func buildImage(project Project, imageName string) (r Image, err error) {
 		directoryBase:   b,
 		BuildFile:       buildfile,
 		SourceDirectory: sourceDir,
-		Project:         project,
+		project:         project,
 	}
 	r.configurableDir = buildConfigurableDir(b)
 
