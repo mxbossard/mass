@@ -54,7 +54,7 @@ func buildScanner(rootPath string, resKind Kind, maxDepth int, c chan<- interfac
 			return fs.SkipDir
 		}
 
-		fmt.Println("scanning", path)
+		//fmt.Println("scanning", path)
 		if d.Name() == DefaultResourceFile {
 			parentDir := filepath.Dir(path)
 			res, err := ReadResourcer(parentDir)

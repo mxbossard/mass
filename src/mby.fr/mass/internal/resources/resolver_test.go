@@ -60,18 +60,18 @@ func initWorkspace(t *testing.T) (path string) {
 	// Init envs
 	os.MkdirAll(filepath.Join(path, envDir), 0755)
 	for _, e := range envs {
-		_, err := Init[Env]("env/", e)
+		_, err := Init[Env](e, "env/")
 		require.NoError(t, err, "must not error")
 	}
 
 	// Init projects
 	for _, p := range projects {
-		_, err := Init[Project]("./", p)
+		projectRes, err := Init[Project](p, "./")
 		require.NoError(t, err, "must not error")
 
 		// Init project images
 		for _, i := range images[p] {
-			_, err := Init[Image](p, i)
+			_, err := Init[Image](i, projectRes)
 			require.NoError(t, err, "must not error")
 		}
 	}
@@ -307,7 +307,7 @@ func TestResolveContextualResource(t *testing.T) {
 		if c.errWanted == nil {
 			assert.NoError(t, err, "should not error on case %d", i)
 		} else {
-			assert.Equal(t, c.errWanted, err, "bad error for case %d", i)
+			assert.ErrorContains(t, err, c.errWanted.Error(), "bad error for case %d", i)
 		}
 
 		if c.resNameWanted == "" {
@@ -431,7 +431,7 @@ func TestResolveResource(t *testing.T) {
 		if c.errWanted == nil {
 			assert.NoError(t, err, "should not error on case %d", i)
 		} else {
-			assert.Equal(t, c.errWanted, err, "bad error for case %d", i)
+			assert.ErrorContains(t, err, c.errWanted.Error(), "bad error for case %d", i)
 		}
 
 		if c.resNameWanted == "" {

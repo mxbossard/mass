@@ -14,7 +14,7 @@ type ResourceNotFound struct {
 func (e ResourceNotFound) Error() string {
 	message := fmt.Sprintf("Resource not found: %s for kinds: %v", e.Expression, *e.Kinds)
 	if e.Wrapped != nil {
-		message += fmt.Sprintf("\ncaused by: %v", e.Wrapped)
+		message += fmt.Sprintf("\nCaused by: %s", e.Wrapped.Error())
 	}
 	return message
 }

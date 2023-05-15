@@ -15,8 +15,8 @@ const DefaultBuildFile = "Dockerfile"
 const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"
 
-func InitResourcer(kind Kind, parentDir, name string) (res Resourcer, err error) {
-	res, err = BuildResourcer(kind, name, parentDir)
+func InitResourcer(kind Kind, name string, parentResOrDir any) (res Resourcer, err error) {
+	res, err = BuildResourcer(kind, name, parentResOrDir)
 	if err != nil {
 		return
 	}
@@ -28,16 +28,13 @@ func InitResourcer(kind Kind, parentDir, name string) (res Resourcer, err error)
 	return
 }
 
-func Init[T Resourcer](parentDir, name string) (r T, err error) {
-	r, err = Build[T](parentDir, name)
+func Init[T Resourcer](name string, parentResOrDir any) (r T, err error) {
+	kind := KindFromResource(r)
+	res, err := InitResourcer(kind, name, parentResOrDir)
 	if err != nil {
 		return
 	}
-	err = r.init()
-	if err != nil {
-		return
-	}
-	err = Write(r)
+	r = (any)(res).(T)
 	return
 }
 
