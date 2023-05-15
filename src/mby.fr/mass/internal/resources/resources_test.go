@@ -93,7 +93,7 @@ func TestInitImage(t *testing.T) {
 	assertTestableFs(t, r)
 
 	assert.DirExists(t, r.AbsSourceDir(), "source dir should exists")
-	assert.FileExists(t, r.BuildFile, "source dir should exists")
+	assert.FileExists(t, filepath.Join(r.Dir(), r.BuildFile), "build file should exists")
 }
 
 func TestInitProjectWithImages(t *testing.T) {

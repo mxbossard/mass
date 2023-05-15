@@ -67,7 +67,7 @@ func fileTree(rootPath string) (tree string, err error) {
 }
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
-	filesToSign := []string{res.BuildFile, res.AbsSourceDir()}
+	filesToSign := []string{res.AbsBuildFile(), res.AbsSourceDir()}
 	filesSignature, err := trust.SignFsContents(filesToSign...)
 	if err != nil {
 		return "", err

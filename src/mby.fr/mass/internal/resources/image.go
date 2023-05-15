@@ -38,9 +38,9 @@ func (i Image) init() (err error) {
 	err = os.MkdirAll(i.AbsSourceDir(), 0755)
 
 	// Init Build file
-	buildfileContent := ""
-	//buildfileContent := "FROM alpine\n"
-	_, err = filez.SoftInitFile(i.BuildFile, buildfileContent)
+	//buildfileContent := ""
+	buildfileContent := "FROM alpine\n"
+	_, err = filez.SoftInitFile(i.AbsBuildFile(), buildfileContent)
 
 	return
 }

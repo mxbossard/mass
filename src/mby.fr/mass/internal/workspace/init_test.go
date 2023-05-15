@@ -11,6 +11,7 @@ import (
 	//"mby.fr/utils/test"
 	"mby.fr/mass/internal/commontest"
 	"mby.fr/mass/internal/resources"
+	"mby.fr/utils/filez"
 )
 
 func TestInitProject(t *testing.T) {
@@ -65,6 +66,23 @@ func TestReInitProject(t *testing.T) {
 	assert.Equal(t, name, p1.FullName(), "Bad project name")
 	assert.Equal(t, path, p1.Dir(), "Bad project dir")
 	assert.DirExists(t, p1.Dir(), "Project dir does not exists")
+}
+
+func TestInitImage(t *testing.T) {
+	tempDir := commontest.InitTempWorkspace(t)
+	defer os.RemoveAll(tempDir)
+
+	projectName := "p1"
+	projectPath, err := InitProject(projectName)
+	require.NoError(t, err, "should not error")
+	commontest.AssertProjectFileTree(t, projectName)
+
+	os.Chdir(projectPath)
+	imageName := "i1"
+	imagePath, err := InitImage(imageName)
+	require.NoError(t, err, "should not error")
+	filez.PrintTree(projectPath)
+	commontest.AssertImageFileTree(t, imagePath)
 }
 
 //func TestInitImage(t *testing.T) {

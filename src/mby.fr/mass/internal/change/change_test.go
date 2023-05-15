@@ -53,7 +53,7 @@ func TestCalcImageSignature(t *testing.T) {
 	assert.Equal(t, signature1, signature1b, "signature should stay the same")
 
 	// Change Buildfile shoud change signature
-	err = os.WriteFile(r.BuildFile, []byte("foo"), 0644)
+	err = os.WriteFile(r.AbsBuildFile(), []byte("foo"), 0644)
 	require.NoError(t, err, "should not error")
 
 	signature2, err := calcImageSignature(r)
