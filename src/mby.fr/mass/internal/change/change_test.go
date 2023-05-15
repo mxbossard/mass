@@ -39,8 +39,11 @@ func TestCalcImageSignature(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
+	expectedProjectName := "monProject"
+	p, err := resources.Init[resources.Project](expectedProjectName, path)
+	require.NoError(t, err, "should not error")
 	expectedImageName := "monImage"
-	r, err := resources.Init[resources.Image](expectedImageName, path)
+	r, err := resources.Init[resources.Image](expectedImageName, p)
 	require.NoError(t, err, "should not error")
 
 	signature1, err := calcImageSignature(r)
@@ -143,8 +146,11 @@ func TestDoesImageChanged(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	os.Chdir(path)
 
+	expectedProjectName := "monProject"
+	p, err := resources.Init[resources.Project](expectedProjectName, path)
+	require.NoError(t, err, "should not error")
 	expectedImageName := "monImage"
-	r, err := resources.Init[resources.Image](expectedImageName, path)
+	r, err := resources.Init[resources.Image](expectedImageName, p)
 	require.NoError(t, err, "should not error")
 
 	err = StoreImageSignature(r)
