@@ -62,7 +62,7 @@ func (i Image) ImageName() string {
 	return i.directoryBase.name
 }
 
-func (i Image) FullImageName() string {
+func (i Image) FullTaggedName() string {
 	if i.Version() != "" {
 		return strings.ToLower(i.FullName()) + ":" + i.Version()
 	} else {

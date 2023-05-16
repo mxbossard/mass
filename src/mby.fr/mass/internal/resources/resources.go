@@ -10,7 +10,7 @@ import (
 const DefaultSourceDir = "src"
 const DefaultTestDir = "test"
 const DefaultVersionFile = "version.txt"
-const DefaultInitialVersion = "0.0.1-dev"
+const DefaultInitialVersion = "0.1.0-dev"
 const DefaultBuildFile = "Dockerfile"
 const DefaultDeployFile = "compose.yaml"
 const DefaultResourceFile = "resource.yaml"

@@ -45,12 +45,16 @@ environment:
   ekey2: e$name
   ctx: project
 EOF
+
+	cat <<EOF > $name/compose.yaml
+services:
+EOF
 	done
 }
 
 configImages() {
 	for name in "$@"; do
-		projactName=$( echo $name | cut -d'/' -f1 )
+		projectName=$( echo $name | cut -d'/' -f1 )
 		imageName=$( echo $name | cut -d'/' -f2 )
 		cat <<EOF > $name/config.yaml
 labels:
@@ -61,12 +65,22 @@ environment:
   ekey3: e$name
   ctx: image
 EOF
+
 	cat <<EOF > $name/Dockerfile
 FROM alpine
 RUN echo foo
 RUN echo bar
 RUN echo baz
 CMD /bin/sh -c 'echo hello world !'
+EOF
+
+	cat <<EOF >> $projectName/compose.yaml
+  $imageName:
+    image: $name:0.1.0-dev
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - sleep inf
 EOF
 	done
 }
@@ -95,12 +109,16 @@ $massCmd build i/p3/i31
 $massCmd build p/p3
 $massCmd build --no-cache p/p1 p/p2
 
+echo "##### p2/compose.yaml :"
+cat p2/compose.yaml
+
 echo "##### Testing mass down ..."
-mass down i/p3/i31 #p/p2
+mass down i/p3/i31 p/p2
 
 echo "##### Testing mass up ..."
 mass up i/p3/i31
-#mass up p/p2
+
+mass up p/p2
 
 echo
 echo SUCCESS

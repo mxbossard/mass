@@ -83,10 +83,10 @@ func absContainerName(image resources.Image) (name string, err error) {
 
 func pullImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
-	log := d.BufferedActionLogger("pull", image.FullName())
+	log := d.BufferedActionLogger("pull", image.FullTaggedName())
 
 	var pullParams []string
-	pullParams = append(pullParams, "pull", image.FullName())
+	pullParams = append(pullParams, "pull", image.FullTaggedName())
 
 	log.Debug("pull params: %s", pullParams)
 	cmd := exec.Command(binary, pullParams...)
@@ -95,7 +95,7 @@ func pullImage(binary string, image resources.Image) (err error) {
 	err = command.RunLogging(cmd, log)
 	if err != nil {
 		flushErr := d.Flush()
-		err = fmt.Errorf("Error pulling image %s : %w", image.FullName(), err)
+		err = fmt.Errorf("Error pulling image %s : %w", image.FullTaggedName(), err)
 		agg := errorz.NewAggregated(err, flushErr)
 		return agg
 	}
@@ -136,7 +136,7 @@ func runDockerImage(log logger.ActionLogger, binary string, runArgs []string, na
 
 func runImage(binary string, image resources.Image) (err error) {
 	d := display.Service()
-	log := d.BufferedActionLogger("run", image.FullName())
+	log := d.BufferedActionLogger("run", image.FullTaggedName())
 
 	var runArgs []string
 	config, errors := resources.MergedConfig(image)
@@ -162,7 +162,7 @@ func runImage(binary string, image resources.Image) (err error) {
 		return
 	}
 
-	err = runDockerImage(log, binary, runArgs, ctName, image.FullName(), cmdArgs...)
+	err = runDockerImage(log, binary, runArgs, ctName, image.FullTaggedName(), cmdArgs...)
 	if err != nil {
 		flushErr := d.Flush()
 		agg := errorz.NewAggregated(err, flushErr)

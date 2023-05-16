@@ -8,9 +8,9 @@ import (
 )
 
 type Project struct {
-	directoryBase	`yaml:"base,inline"`
+	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
-	testable 		`yaml:"testable,inline"`
+	testable        `yaml:"testable,inline"`
 
 	images     []*Image `yaml:"-"` // Ignore this field for yaml marshalling
 	DeployFile string   `yaml:"deployFile"`
@@ -28,8 +28,8 @@ func (p Project) init() (err error) {
 
 	// Init Deploy file
 	deployfileContent := ""
-	//buildfileContent := "FROM alpine\n"
-	_, err = filez.SoftInitFile(p.DeployFile, deployfileContent)
+	//deployfileContent := "FROM alpine\n"
+	_, err = filez.SoftInitFile(p.AbsDeployFile(), deployfileContent)
 
 	return
 }
