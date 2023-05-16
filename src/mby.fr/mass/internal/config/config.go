@@ -1,13 +1,13 @@
 package config
 
-import(
+import (
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 
-	"mby.fr/mass/internal/templates"
 	"mby.fr/mass/internal/settings"
+	"mby.fr/mass/internal/templates"
 )
 
 const DefaultConfigFile = templates.ConfigTemplate
@@ -16,14 +16,15 @@ type LabelsConfig map[string]string
 type TagsConfig map[string]string
 type EnvConfig map[string]string
 type BuildArgsConfig map[string]string
-type RunArgsConfig []string
+type CommandArgsConfig []string
 
 type Config struct {
-	Labels LabelsConfig
-	Tags TagsConfig
-	Environment EnvConfig
-	BuildArgs BuildArgsConfig
-	RunArgs RunArgsConfig
+	Labels      LabelsConfig      `yaml:"labels"`
+	Tags        TagsConfig        `yaml:"tags"`
+	Environment EnvConfig         `yaml:"environment"`
+	BuildArgs   BuildArgsConfig   `yaml:"buildArgs"`
+	Entrypoint  string            `yaml:"entrypoint"`
+	CommandArgs CommandArgsConfig `yaml:"commandArgs"`
 }
 
 // Init config in a directory path
@@ -99,7 +100,7 @@ func mergeStringArrays(base, replace []string) []string {
 }
 
 // Merge several config from lowest priority to highest priority
-func Merge(configs ...Config) (Config) {
+func Merge(configs ...Config) Config {
 	mergedConfig := configs[0]
 
 	for _, c := range configs[1:] {
@@ -107,9 +108,11 @@ func Merge(configs ...Config) (Config) {
 		mergedConfig.Tags = mergeStringMaps(mergedConfig.Tags, c.Tags)
 		mergedConfig.Environment = mergeStringMaps(mergedConfig.Environment, c.Environment)
 		mergedConfig.BuildArgs = mergeStringMaps(mergedConfig.BuildArgs, c.BuildArgs)
-		mergedConfig.RunArgs = mergeStringArrays(mergedConfig.RunArgs, c.RunArgs)
+		if c.Entrypoint != "" {
+			mergedConfig.Entrypoint = c.Entrypoint
+		}
+		mergedConfig.CommandArgs = mergeStringArrays(mergedConfig.CommandArgs, c.CommandArgs)
 	}
 
 	return mergedConfig
 }
-

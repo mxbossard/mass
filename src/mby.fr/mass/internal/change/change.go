@@ -138,7 +138,7 @@ func calcDeploySignature(res resources.Image) (signature string, err error) {
 	if err != nil {
 		return "", err
 	}
-	signature, err = trust.SignObjects(filesSignature, configs.Environment, configs.RunArgs)
+	signature, err = trust.SignObjects(filesSignature, configs.Environment, configs.Entrypoint, configs.CommandArgs)
 
 	return
 }

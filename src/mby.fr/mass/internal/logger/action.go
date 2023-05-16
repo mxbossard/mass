@@ -40,8 +40,8 @@ func NewAction(outs output.Outputs, action, subject string, filterLevel int) Act
 	// Decorate outputs
 	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
 	errColorFormatter := inout.AnsiFormatter{getErrAnsiColor()}
-	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDOUT>", RightPad: 8}
-	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "STDERR>", RightPad: 8}
+	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "out>", RightPad: 5}
+	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "err>", RightPad: 5}
 
 	loggerPrefixedFormatter := inout.LineFormatter{func(line string) string {
 		prefix := fmt.Sprintf("[%s] ", format.PadRight(loggerName, actionPadding))

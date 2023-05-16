@@ -64,14 +64,19 @@ tags:
 environment:
   ekey3: e$name
   ctx: image
+entrypoint: /bin/sh
+commandArgs:
+  - -c
+  - echo run args from config file
 EOF
 
 	cat <<EOF > $name/Dockerfile
 FROM alpine
 RUN echo foo
-RUN echo bar
-RUN echo baz
-CMD /bin/sh -c 'echo hello world !'
+#RUN echo bar
+#RUN echo baz
+ENTRYPOINT ["/bin/sh"]
+CMD ["-c", "echo hello world !"]
 EOF
 
 	cat <<EOF >> $projectName/compose.yaml

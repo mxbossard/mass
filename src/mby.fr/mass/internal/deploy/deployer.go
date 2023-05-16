@@ -151,9 +151,13 @@ func runImage(binary string, image resources.Image) (err error) {
 
 	//runArgs = append(runArgs, "badArg")
 
+	if config.Entrypoint != "" {
+		runArgs = append(runArgs, "--entrypoint="+config.Entrypoint)
+	}
+
 	var cmdArgs []string
 	// Add runParams
-	for _, argValue := range config.RunArgs {
+	for _, argValue := range config.CommandArgs {
 		cmdArgs = append(cmdArgs, argValue)
 	}
 
