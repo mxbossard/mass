@@ -16,6 +16,7 @@ type LabelsConfig map[string]string
 type TagsConfig map[string]string
 type EnvConfig map[string]string
 type BuildArgsConfig map[string]string
+type EntrypointConfig []string
 type CommandArgsConfig []string
 
 type Config struct {
@@ -23,7 +24,7 @@ type Config struct {
 	Tags        TagsConfig        `yaml:"tags"`
 	Environment EnvConfig         `yaml:"environment"`
 	BuildArgs   BuildArgsConfig   `yaml:"buildArgs"`
-	Entrypoint  string            `yaml:"entrypoint"`
+	Entrypoint  EntrypointConfig  `yaml:"entrypoint"`
 	CommandArgs CommandArgsConfig `yaml:"commandArgs"`
 }
 
@@ -108,7 +109,7 @@ func Merge(configs ...Config) Config {
 		mergedConfig.Tags = mergeStringMaps(mergedConfig.Tags, c.Tags)
 		mergedConfig.Environment = mergeStringMaps(mergedConfig.Environment, c.Environment)
 		mergedConfig.BuildArgs = mergeStringMaps(mergedConfig.BuildArgs, c.BuildArgs)
-		if c.Entrypoint != "" {
+		if len(c.Entrypoint) > 0 {
 			mergedConfig.Entrypoint = c.Entrypoint
 		}
 		mergedConfig.CommandArgs = mergeStringArrays(mergedConfig.CommandArgs, c.CommandArgs)

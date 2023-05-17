@@ -64,10 +64,9 @@ tags:
 environment:
   ekey3: e$name
   ctx: image
-entrypoint: /bin/sh
+entrypoint: ["/bin/sh", "-c"]
 commandArgs:
-  - -c
-  - echo run args from config file
+  - echo display args configured in config.yaml file
 EOF
 
 	cat <<EOF > $name/Dockerfile
@@ -82,9 +81,8 @@ EOF
 	cat <<EOF >> $projectName/compose.yaml
   $imageName:
     image: $name:0.1.0-dev
-    entrypoint: /bin/sh
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - -c
       - sleep inf
 EOF
 	done

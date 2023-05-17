@@ -151,12 +151,21 @@ func runImage(binary string, image resources.Image) (err error) {
 
 	//runArgs = append(runArgs, "badArg")
 
-	if config.Entrypoint != "" {
-		runArgs = append(runArgs, "--entrypoint="+config.Entrypoint)
+	if len(config.Entrypoint) > 0 {
+		// use first entrypoint item as entrypoint
+		entrypoint := config.Entrypoint[0]
+		runArgs = append(runArgs, "--entrypoint="+entrypoint)
 	}
 
 	var cmdArgs []string
-	// Add runParams
+	if len(config.Entrypoint) > 1 {
+		// use followong entrypoint items as mandatory command args
+		for _, entrypointArgValue := range config.Entrypoint[1:] {
+			cmdArgs = append(cmdArgs, entrypointArgValue)
+		}
+	}
+
+	// Add commandArgs
 	for _, argValue := range config.CommandArgs {
 		cmdArgs = append(cmdArgs, argValue)
 	}
