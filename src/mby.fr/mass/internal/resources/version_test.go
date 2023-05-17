@@ -29,7 +29,7 @@ func TestBump(t *testing.T) {
 	image, err := Build[Image]("i1", p)
 	require.NoError(t, err, "should not error")
 
-	assert.Equal(t, "0.0.1-dev", image.Version(), "Bad initial version")
+	assert.Equal(t, "0.1.0-dev", image.Version(), "Bad initial version")
 
 	toVer, fromVer, err := image.Bump(false, false)
 	require.Error(t, err, "Bump must return an error")
@@ -106,9 +106,9 @@ func TestPromote(t *testing.T) {
 
 	toVer, fromVer, err := image.Promote()
 	require.NoError(t, err, "must not return an error")
-	assert.Equal(t, "0.0.1-rc1", image.Version(), "Bad promoted version")
-	assert.Equal(t, "0.0.1-rc1", toVer, "Bad bumped message")
-	assert.Equal(t, "0.0.1-dev", fromVer, "Bad bumped message")
+	assert.Equal(t, "0.1.0-rc1", image.Version(), "Bad promoted version")
+	assert.Equal(t, "0.1.0-rc1", toVer, "Bad bumped message")
+	assert.Equal(t, "0.1.0-dev", fromVer, "Bad bumped message")
 
 	image.versionable.ver = "2.0.1-rc3"
 	toVer, fromVer, err = image.Promote()

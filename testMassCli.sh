@@ -15,10 +15,10 @@ $massCmd init workspace $workspaceDir
 cd $workspaceDir
 
 # Init some projects
-$massCmd init project p1 p2 p3
+$massCmd init project p1 p2 p3 p444444444444
 
 # Init some images
-mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
+mass init image p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33 p444444444444/i444444444444
 
 configEnvs() {
 	for name in "$@"; do	
@@ -94,10 +94,10 @@ EOF
 configEnvs dev
 
 # Init project configs
-configProjects p1 p2 p3
+configProjects p1 p2 p3 p444444444444
 
 # Init image configs
-configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33
+configImages p1/i11 p1/i12 p1/i13 p2/i21 p2/i22 p2/i23 p3/i31 p3/i32 p3/i33 p444444444444/i444444444444
 
 tree -Ca $workspaceDir
 
@@ -113,6 +113,7 @@ $massCmd build e/dev i/p1/i11 || true
 $massCmd build i/p3/i31
 $massCmd build p/p3
 $massCmd build --no-cache p/p1 p/p2
+$massCmd build p444444444444/i444444444444
 
 echo "##### p2/compose.yaml :"
 cat p2/compose.yaml

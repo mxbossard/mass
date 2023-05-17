@@ -9,10 +9,11 @@ import (
 	"mby.fr/utils/format"
 	"mby.fr/utils/inout"
 	"mby.fr/utils/logz"
+	"mby.fr/utils/stringz"
 )
 
 const (
-	actionPadding = 30
+	actionPadding = 40
 )
 
 var (
@@ -34,8 +35,34 @@ func (l ActionLogger) End() {
 func (l ActionLogger) Progress() {
 }
 
+func forgeLoggerName(action, subject string) (loggerName string) {
+	loggerName = fmt.Sprintf("%s> %s", action, subject)
+	return
+}
+
+func forgeActionPrefix(action, subject string) (actionPrefix string) {
+	actionPrefix = forgeLoggerName(action, subject)
+	if actionPadding < len(actionPrefix) {
+		// loggerName too long to be displayed
+		subjectParts, separators := stringz.SplitByRegexp(subject, "[ /,;:]")
+		subjectMaxSize := actionPadding - len(forgeLoggerName(action, "")) - len(separators)
+		subjectPartSize := subjectMaxSize / len(subjectParts)
+		shortenedSubject := ""
+		for k, sep := range separators {
+			shortenedSubject += stringz.Left(subjectParts[k], subjectPartSize)
+			shortenedSubject += sep
+		}
+		lastSubjectPart := subjectParts[len(subjectParts)-1]
+		remainingSpace := subjectMaxSize + len(separators) - len(shortenedSubject)
+		shortenedSubject += stringz.Left(lastSubjectPart, remainingSpace)
+		actionPrefix = forgeLoggerName(action, shortenedSubject)
+	}
+	return
+}
+
 func NewAction(outs output.Outputs, action, subject string, filterLevel int) ActionLogger {
-	loggerName := fmt.Sprintf("%s(%s)", action, subject)
+	loggerName := forgeLoggerName(action, subject)
+	actionPrefix := forgeActionPrefix(action, subject)
 
 	// Decorate outputs
 	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
@@ -44,7 +71,7 @@ func NewAction(outs output.Outputs, action, subject string, filterLevel int) Act
 	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "err>", RightPad: 5}
 
 	loggerPrefixedFormatter := inout.LineFormatter{func(line string) string {
-		prefix := fmt.Sprintf("[%s] ", format.PadRight(loggerName, actionPadding))
+		prefix := fmt.Sprintf("%s |", format.PadRight(actionPrefix, actionPadding))
 		return prefix + line
 	}}
 
