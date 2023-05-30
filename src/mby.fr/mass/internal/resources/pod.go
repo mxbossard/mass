@@ -7,6 +7,13 @@ import (
 	"mby.fr/mass/internal/settings"
 )
 
+type Pod struct {
+	fileBase `yaml:"base,inline"`
+	//testable `yaml:"testable,inline"`
+
+	project Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
 type Container struct {
 	Image      string   `yaml:"image"`
 	Entrypoint []string `yaml:"entrypoint,omitempty"`
@@ -37,18 +44,21 @@ const (
 	restartPolicyLimit
 )
 
-type Pod struct {
+type PodSpec struct {
 	fileBase `yaml:"base,inline"`
 	testable `yaml:"testable,inline"`
 	//versionable `yaml:"versionable,inline"`
 
-	project        Project       `yaml:"-"` // Ignore this field for yaml marshalling
+	name           string        `yaml:"name"`
 	InitContainers []*Container  `yaml:"initContainers,omitempty"`
 	Containers     []*Container  `yaml:"containers"`
 	StartupProbe   Probe         `yaml:"startupProbe,omitempty"`
 	ReadinessProbe Probe         `yaml:"readinessProbe,omitempty"`
 	LivenessProbe  Probe         `yaml:"livenessProbe,omitempty"`
 	RestartPolicy  RestartPolicy `yaml:"restartPolicy,omitempty"`
+	//volumeMounts   []VolumeMount `yaml:"volumeMounts,omitempty"`
+
+	project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (p Pod) init() (err error) {
