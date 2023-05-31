@@ -21,15 +21,23 @@ func TestReadService(t *testing.T) {
 	defer os.RemoveAll(expectedProjectDir)
 
 	podSpecFilePath := filepath.Join(expectedProjectDir, "my-pod.yaml")
+
 	expectedServiceName := "my-service"
 	expectedServiceResFileName := forgeServiceResFilename(expectedServiceName)
 	expectedServiceResFilePath := filepath.Join(expectedProjectDir, expectedServiceResFileName)
 	expectedServiceResContent := fmt.Sprintf(`
 resourceKind: service
-ServiceType: K8sService
-ServiceFile: %s
+serviceType: k8s
+serviceFile: %s
 `, podSpecFilePath)
 	err = os.WriteFile(expectedServiceResFilePath, []byte(expectedServiceResContent), 0644)
+	require.NoError(t, err, "should not error")
+
+	expectedProjectResFilepath := filepath.Join(expectedProjectDir, DefaultResourceFile)
+	expectedProjectResContent := `
+resourceKind: project
+`
+	err = os.WriteFile(expectedProjectResFilepath, []byte(expectedProjectResContent), 0644)
 	require.NoError(t, err, "should not error")
 
 	podSpec := `
@@ -47,9 +55,10 @@ spec:
 	err = os.WriteFile(podSpecFilePath, []byte(podSpec), 0644)
 	require.NoError(t, err, "should not error")
 
-	service, err := Read[Pod](expectedServiceResFilePath)
+	service, err := Read[Service](expectedServiceResFilePath)
 	require.NoError(t, err, "should not error")
 	
 	assert.Equal(t, expectedServiceName, service.Name())
 	assert.Equal(t, expectedProjectDir, service.Dir())
+	assert.Equal(t, podSpecFilePath, service.ServiceFile)
 }

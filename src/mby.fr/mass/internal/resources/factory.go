@@ -41,7 +41,7 @@ func BuildAny(kind Kind, name string, parentResOrDir any) (res any, err error) {
 	var parentDir string
 	ok := false
 	switch kind {
-	case ImageKind:
+	case ImageKind, ServiceKind:
 		_, ok = parentResOrDir.(Resourcer)
 		if !ok {
 			err = fmt.Errorf("Expect a Resourcer parentRes to build kind: %v, received %T !", kind, parentResOrDir)
@@ -69,8 +69,15 @@ func BuildAny(kind Kind, name string, parentResOrDir any) (res any, err error) {
 			return
 		}
 		res, err = buildImage(project, name)
-	case PodKind:
-		res, err = buildPod(parentDir, name)
+	//case PodKind:
+	//	res, err = buildPod(project, name)
+	case ServiceKind:
+		project, ok := parentResOrDir.(Project)
+		if !ok {
+			err = fmt.Errorf("Expect a P roject parentRes to build kind: %v, received %T !", kind, parentResOrDir)
+			return
+		}
+		res, err = buildService(project, name)
 	default:
 		err = fmt.Errorf("Unable to build Resource with name: %s in parent dir: %s ! Not supported kind property: [%s].", name, parentDir, kind)
 	}

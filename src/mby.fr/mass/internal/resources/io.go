@@ -48,6 +48,9 @@ func Write(r Resourcer) (err error) {
 }
 
 func ReadAny(path string) (r any, err error) {
+	// If path point a dir => 	parent dir is the parent dir of the path dir.
+	//							path is updated to point DefaultResourceFile in path dir
+	// If path point a file => 	parent dir is the parent dir of the dir containing the file.
 	var parentDir string
 	if ok, _ := filez.IsDirectory(path); ok {
 		parentDir = filepath.Dir(path)
@@ -75,16 +78,32 @@ func ReadAny(path string) (r any, err error) {
 		return
 	}
 
+	resName := filepath.Base(filepath.Dir(path))
 	var parentResOrDir any = parentDir
+	var parentProject Project
 	kind := base.Kind()
 	if kind == ImageKind {
 		parentProjectResPath := filepath.Join(parentDir, DefaultResourceFile)
-		parentResOrDir, err = Read[Project](parentProjectResPath)
+		parentProject, err = Read[Project](parentProjectResPath)
 		if err != nil {
 			return
 		}
+		parentResOrDir = parentProject
+	} else if kind == ServiceKind {
+		projectDir := filepath.Dir(path)
+		parentProject, err = Read[Project](projectDir)
+		if err != nil {
+			return
+		}
+		parentResOrDir = parentProject
+		resFilename := filepath.Base(path)
+		resName, err = serviceNameFromResFilename(resFilename)
+		if err != nil {
+			return r, err
+		}
 	}
-	resName := filepath.Base(filepath.Dir(path))
+
+	
 	res, err := BuildAny(kind, resName, parentResOrDir)
 	if err != nil {
 		return
@@ -102,10 +121,10 @@ func ReadAny(path string) (r any, err error) {
 	case Project:
 		err = yaml.Unmarshal(content, &re)
 		return re, err
-	case Pod:
-		//err = yaml.Unmarshal(content, &re)
-		re, err = buildPod(parentDir, "badName")
-		return re, err
+	//case Pod:
+	//	//err = yaml.Unmarshal(content, &re)
+	//	re, err = buildPod(parentDir, "badName")
+	//	return re, err
 	case Service:
 		err = yaml.Unmarshal(content, &re)
 		return re, err

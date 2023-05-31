@@ -3,6 +3,8 @@ package resources
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"log"
 )
 
 type ServiceType int
@@ -11,16 +13,52 @@ const(
 	K8sService
 	HelmService
 	KustomizeService
+	serviceTypeLimit
 )
+
+func (t ServiceType) String() (s string) {
+	switch t {
+	case K8sService:
+		return "k8s"
+	case HelmService:
+		return "helm"
+	case KustomizeService:
+		return "kustomize"
+	case ComposeService:
+		return "compose"
+	}
+	log.Fatalf("ServiceType %T not configured !", t)
+	return
+}
+
+func (t ServiceType) MarshalYAML() (interface{}, error) {
+	return t.String(), nil
+}
+
+func (st *ServiceType) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	// Iterate over all kinds
+	for serviceType := ServiceType(1); serviceType < serviceTypeLimit; serviceType++ {
+		if s == serviceType.String() {
+			*st = serviceType
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Unable to unmarshal kind: %s", s)
+}
 
 type Service struct {
 	fileBase `yaml:"base,inline"`
 
 	project Project `yaml:"-"` // Ignore this field for yaml marshalling
 
-	ServiceDir string
-	ServiceFile string
-	ServiceKind ServiceType
+	ServiceType ServiceType `yaml:"serviceType"`
+	ServiceDir string `yaml:"serviceDir"`
+	ServiceFile string `yaml:"serviceFile"`
 }
 
 func (s Service) init() (err error) {
@@ -57,17 +95,23 @@ func forgeServiceResFilename(name string) string {
 	return fmt.Sprintf("svc-%s.yaml", name)
 }
 
-func buildService(projectPath, name string) (r Service, err error) {
-	project, err := buildProject(projectPath)
-	if err != nil {
-		return
+func serviceNameFromResFilename(filename string) (string, error) {
+	re := regexp.MustCompile(`^svc-(.+)\.yaml$`)
+	submatch := re.FindStringSubmatch(filename)
+	if len(submatch) == 2 {
+		return submatch[1], nil
 	}
+	return "", fmt.Errorf("Bad service filename: %s !", filename)
+}
+
+func buildService(project Project, name string) (r Service, err error) {
 	backingFilename := forgeServiceResFilename(name)
-	base, err := buildFileBase(ServiceKind, projectPath, backingFilename)
+	base, err := buildFileBase(ServiceKind, project.Dir(), backingFilename)
 	if err != nil {
 		return
 	}
 
 	r = Service{fileBase: base, project: project}
+	r.name = name
 	return
 }
