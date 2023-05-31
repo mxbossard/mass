@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"mby.fr/mass/internal/config"
+	"mby.fr/mass/internal/settings"
 )
 
 const (
@@ -19,7 +20,9 @@ type Uid struct {
 
 type Resourcer interface {
 	Kind() Kind
+	Name() string
 	FullName() string
+	AbsoluteName() (string, error)
 	QualifiedName() string
 	Dir() string
 	//Config() (config.Config, error)
@@ -38,8 +41,21 @@ func (r base) Kind() Kind {
 	return r.ResourceKind
 }
 
-func (r base) FullName() string {
+func (r base) Name() string {
 	return r.name
+}
+
+func (r base) FullName() string {
+	return r.Name()
+}
+
+func (r base) AbsoluteName() (name string, err error) {
+	ss, err := settings.GetSettingsService()
+	if err != nil {
+		return "", err
+	}
+	name = ss.Settings().Name + "-" + r.FullName()
+	return
 }
 
 func (r base) QualifiedName() string {

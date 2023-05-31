@@ -4,38 +4,43 @@ import (
 	//"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	k8s "k8s.io/api"
+	//k8s "k8s.io/api"
 	"os"
 	"testing"
+	"path/filepath"
 
-	"mby.fr/mass/internal/commontest"
+	//"mby.fr/mass/internal/commontest"
+	"mby.fr/utils/test"
 )
 
+
 func TestReadPod(t *testing.T) {
+	t.Skip("WIP")
 	expectedProjectDir, err := test.BuildRandTempPath()
-	os.MkdirAll(path, 0755)
-	defer os.RemoveAll(path)
+	os.MkdirAll(expectedProjectDir, 0755)
+	defer os.RemoveAll(expectedProjectDir)
 
 	expectedPodName := "my-res"
-	expectedPodResFileName := strings.Join("pod-", expectedPodName, " .yaml")
+	expectedPodResFileName := "pod-" + expectedPodName + " .yaml"
 	expectedPodResFilePath := filepath.Join(expectedProjectDir, expectedPodResFileName)
-	expectedPodResContent := """
+	expectedPodResContent := `
 apiVersion: v1
 kind: Pod
 metadata:
-	name: nginx
+  name: nginx
 spec:
-	containers:
-	- name: nginx
-	image: nginx:1.14.2
-	ports:
-	- containerPort: 80
-"""
+  containers:
+  - name: nginx
+    image: nginx:1.14.2
+    ports:
+    - containerPort: 80
+`
 	err = os.WriteFile(expectedPodResFilePath, []byte(expectedPodResContent), 0644)
 	require.NoError(t, err, "should not error")
 
-	pod, err := Read[Pod](expectedProjectDir, expectedPodName)
+	pod, err := Read[Pod](expectedPodResFilePath)
 	require.NoError(t, err, "should not error")
 	
-
+	assert.Equal(t, expectedPodName, pod.Name())
+	assert.Equal(t, expectedProjectDir, pod.Dir())
 }

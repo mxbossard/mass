@@ -94,25 +94,24 @@ func ReadAny(path string) (r any, err error) {
 	switch re := res.(type) {
 	case Env:
 		err = yaml.Unmarshal(content, &re)
-		return re, nil
+		return re, err
 	case Image:
 		err = yaml.Unmarshal(content, &re)
 		//FIXME: set Full Name ?
-		return re, nil
+		return re, err
 	case Project:
 		err = yaml.Unmarshal(content, &re)
-		return re, nil
+		return re, err
 	case Pod:
-		err = yaml.Unmarshal(content, &re)
-		//basename := filepath.Base(path)
-		//resName = strings.TrimSuffix(basename, filepath.Ext(basename))
-		return re, nil
+		//err = yaml.Unmarshal(content, &re)
+		re, err = buildPod(parentDir, "badName")
+		return re, err
 	case Service:
 		err = yaml.Unmarshal(content, &re)
-		return re, nil
+		return re, err
 	case Endpoint:
 		err = yaml.Unmarshal(content, &re)
-		return re, nil
+		return re, err
 	}
 
 	err = fmt.Errorf("Unable to read Resource in file [%s] ! Not supported kind property: [%T].", path, res)

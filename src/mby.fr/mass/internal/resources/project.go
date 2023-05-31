@@ -3,7 +3,6 @@ package resources
 import (
 	//"path/filepath"
 
-	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/filez"
 )
 
@@ -34,6 +33,7 @@ func (p Project) init() (err error) {
 	return
 }
 
+/*
 func (p Project) AbsoluteName() (name string, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
@@ -42,6 +42,7 @@ func (p Project) AbsoluteName() (name string, err error) {
 	name = ss.Settings().Name + "-" + p.FullName()
 	return
 }
+*/
 
 func (p Project) AbsDeployFile() string {
 	return absResourcePath(p.Dir(), p.DeployFile)

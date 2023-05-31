@@ -3,8 +3,6 @@ package resources
 import (
 	"fmt"
 	"path/filepath"
-
-	"mby.fr/mass/internal/settings"
 )
 
 type Pod struct {
@@ -12,6 +10,46 @@ type Pod struct {
 	//testable `yaml:"testable,inline"`
 
 	project Project `yaml:"-"` // Ignore this field for yaml marshalling
+}
+
+func (p Pod) FullName() string {
+	project, _ := p.Project()
+	return project.FullName() + "/" + p.Name()
+}
+
+func (p Pod) Match(name string, k Kind) bool {
+	return p.fileBase.Match(name, k) || name == p.Name() && (k == AllKind || k == p.Kind())
+}
+
+func (p Pod) Project() (project Project, err error) {
+	// Lazy loading
+	if "" == p.project.directoryBase.base.name {
+		projectDir := filepath.Dir(p.Dir())
+		project, err = Read[Project](projectDir)
+		if err != nil {
+			return
+		}
+		p.project = project
+	}
+	return
+}
+
+func forgePodResFilename(name string) string {
+	return fmt.Sprintf("pod-%s.yaml", name)
+}
+
+func buildPod(projectPath, name string) (r Pod, err error) {
+	backingFilename := forgePodResFilename(name)
+	b, err := buildFileBase(PodKind, projectPath, backingFilename)
+	if err != nil {
+		return
+	}
+
+	r = Pod{
+		fileBase: b,
+	}
+
+	return
 }
 
 type Container struct {
@@ -61,7 +99,7 @@ type PodSpec struct {
 	project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
-func (p Pod) init() (err error) {
+func (p PodSpec) init() (err error) {
 	err = p.base.init()
 	if err != nil {
 		return
@@ -76,71 +114,6 @@ func (p Pod) init() (err error) {
 			return
 		}
 	*/
-
-	return
-}
-
-func (p Pod) PodName() string {
-	return p.fileBase.name
-}
-
-func (p Pod) FullName() string {
-	project, _ := p.Project()
-	return project.FullName() + "/" + p.PodName()
-}
-
-/*
-func (p Pod) FullName() string {
-	if i.Version() != "" {
-		return strings.ToLower(p.FullName()) + ":" + p.Version()
-	} else {
-		return strings.ToLower(p.FullName()) + ":latest"
-	}
-}
-*/
-
-func (p Pod) AbsoluteName() (name string, err error) {
-	ss, err := settings.GetSettingsService()
-	if err != nil {
-		return "", err
-	}
-	name = ss.Settings().Name + "-" + p.FullName()
-	return
-}
-
-func (p Pod) Match(name string, k Kind) bool {
-	return p.fileBase.Match(name, k) || name == p.PodName() && (k == AllKind || k == p.Kind())
-}
-
-func (p Pod) Project() (project Project, err error) {
-	// Lazy loading
-	if "" == p.project.directoryBase.base.name {
-		projectDir := filepath.Dir(p.Dir())
-		project, err = Read[Project](projectDir)
-		if err != nil {
-			return
-		}
-		p.project = project
-	}
-	return
-}
-
-func buildPod(projectPath, name string) (r Pod, err error) {
-	backingFilename := fmt.Sprintf("pod-%s.yaml", name)
-	b, err := buildFileBase(PodKind, projectPath, backingFilename)
-	if err != nil {
-		return
-	}
-
-	r = Pod{
-		fileBase: b,
-	}
-
-	t, err := buildTestable(r)
-	if err != nil {
-		return
-	}
-	r.testable = t
 
 	return
 }

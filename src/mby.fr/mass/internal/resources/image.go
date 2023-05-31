@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"mby.fr/mass/internal/settings"
 	"mby.fr/utils/filez"
 )
 
@@ -70,6 +69,7 @@ func (i Image) FullTaggedName() string {
 	}
 }
 
+/*
 func (i Image) AbsoluteName() (name string, err error) {
 	ss, err := settings.GetSettingsService()
 	if err != nil {
@@ -78,6 +78,7 @@ func (i Image) AbsoluteName() (name string, err error) {
 	name = ss.Settings().Name + "-" + i.FullName()
 	return
 }
+*/
 
 func (i Image) Match(name string, k Kind) bool {
 	return i.directoryBase.Match(name, k) || name == i.ImageName() && KindsMatch(k, i.Kind())
