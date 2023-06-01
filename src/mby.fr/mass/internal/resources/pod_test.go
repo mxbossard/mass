@@ -6,13 +6,12 @@ import (
 	"github.com/stretchr/testify/require"
 	//k8s "k8s.io/api"
 	"os"
-	"testing"
 	"path/filepath"
+	"testing"
 
 	//"mby.fr/mass/internal/commontest"
 	"mby.fr/utils/test"
 )
-
 
 func TestReadPod(t *testing.T) {
 	t.Skip("WIP")
@@ -40,7 +39,7 @@ spec:
 
 	pod, err := Read[Pod](expectedPodResFilePath)
 	require.NoError(t, err, "should not error")
-	
+
 	assert.Equal(t, expectedPodName, pod.Name())
 	assert.Equal(t, expectedProjectDir, pod.Dir())
 }

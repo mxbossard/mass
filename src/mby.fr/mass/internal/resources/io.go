@@ -103,7 +103,6 @@ func ReadAny(path string) (r any, err error) {
 		}
 	}
 
-	
 	res, err := BuildAny(kind, resName, parentResOrDir)
 	if err != nil {
 		return
@@ -127,6 +126,13 @@ func ReadAny(path string) (r any, err error) {
 	//	return re, err
 	case Service:
 		err = yaml.Unmarshal(content, &re)
+		if err != nil {
+			return r, err
+		}
+		if re.ServiceDir != "" && re.ServiceFile != "" {
+			err = fmt.Errorf("Both file and dir definition not supported in service file: %s !", path)
+			return re, err
+		}
 		return re, err
 	case Endpoint:
 		err = yaml.Unmarshal(content, &re)
