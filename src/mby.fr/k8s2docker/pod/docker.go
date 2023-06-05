@@ -37,7 +37,7 @@ func (e Executor) createPod(namespace string, pod k8s.core.v1.Pod) (err error) {
 	}
 
 	for _, container := pod.Spec.InitContainers {
-		cmds, err := translator.createContainer(namespace, container)
+		cmds, err := translator.createContainer(namespace, pod, container)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (e Executor) createPod(namespace string, pod k8s.core.v1.Pod) (err error) {
 	}
 
 	for _, container := pod.Spec.Containers {
-		cmds, err := translator.createContainer(namespace, container)
+		cmds, err := translator.createContainer(namespace, pod, container)
 		if err != nil {
 			return err
 		}
@@ -72,15 +72,15 @@ func (t Translator) forgeResName(namespace string, resource any) (name string, e
 }
 
 func (t Translator) createNetworkOwnerContainer(namespace string, pod k8s.core.v1.Pod) (cmds []string, err error) {
-	podName := pod.ObjectMeta.Name
+	podName := t.forgeResName(pod)
 	podMainCtCpus := "0.05"
 	podMainCtMemory := "64m"
 	networkName := ""
 	addHostRules := ""
 	pauseImage := ""
-	cmd := fmt.Sprintf(	"docker run -d --name '%s' --cpus=%s --memory=%s --memory-swap=%s --memory-swappiness=0" + 
+	cmd := fmt.Sprintf(	"%s run -d --name '%s' --cpus=%s --memory=%s --memory-swap=%s --memory-swappiness=0" + 
 						" --network '%s' %s --restart=always '%s' /bin/sleep inf",
-						podName, podMainCtCpus, podMainCtMemory, podMainCtMemory, networkName, addHostRules, pauseImage
+						t.binary, podName, podMainCtCpus, podMainCtMemory, podMainCtMemory, networkName, addHostRules, pauseImage
 	)
 	append(cmds, cmd)
 }
@@ -102,23 +102,25 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8s.core.v1.Vo
 
 	name := t.forgeResName(namespace, vol)
 	path := vol.VolumeSource.HostPathVolumeSource.Path
-	cmd := fmt.Sprintf("docker volume create --driver local -o o=bind -o type=none -o device=%s %s", path, name)
+	cmd := fmt.Sprintf("%s volume create --driver local -o o=bind -o type=none -o device=%s %s", t.binary, path, name)
 	append(cmds, cmd)
 }
 
 func (t Translator) createEmptyDirPodVolume(namespace string, vol k8s.core.v1.Volume) (cmds []string, err error) {
 	if vol.
 	name := t.forgeResName(namespace, vol)
-	cmd := fmt.Sprintf("docker volume create --driver local %s", name)
+	cmd := fmt.Sprintf("%s volume create --driver local %s", t.binary, name)
 	append(cmds, cmd)
 }
 
-func (t Translator) createContainer(podName string, restartPolicy k8s.core.v1.RestartPolicy, container k8s.core.v1.Container) (cmds []string, err error) {
+func (t Translator) createContainer(namespace string, pod k8s.core.v1.Pod, restartPolicy k8s.core.v1.RestartPolicy, container k8s.core.v1.Container) (cmds []string, err error) {
+	podName := t.forgeResName(namespace, pod)
 	ctName := fmt.Sprintf("%s-%s", podName, container.Name)
 	image := container.Image
 	privileged := container.SecurityContext.Privileged
-	tty != container.TTY
+	tty := container.TTY
 	workingDir := container.WorkingDir
+	restartPolicy := pod.PodSpec.RestartPolicy
 	pullPolicy := container.ImagePullPolicy
 	volumeMounts := container.VolumeMounts
 	env := container.Env
@@ -127,11 +129,13 @@ func (t Translator) createContainer(podName string, restartPolicy k8s.core.v1.Re
 	cpuLimitInMilli := container.Resources.Limits.Cpu().MilliValue()
 	memroryRequestInMega := container.Resources.Requests.Memory().AsScale(apimachinery.api.resource.Mega)
 	memoryLimitInMega := container.Resources.Limits.Memory().AsScale(apimachinery.api.resource.Mega)
+	labels := pod.ObjectMeta.Labels
 
 	var runArgs []string
 	var resourcesArgs []string
 	var envArgs []string
 	var cmdArgs []string
+	var labelArgs []string
 
 	if privileged {
 		append(runArgs, "--privileged")
@@ -171,8 +175,21 @@ func (t Translator) createContainer(podName string, restartPolicy k8s.core.v1.Re
 		err = fmt.Errorf("No supported restart policy: %s in container: %s !", restartPolicy, ctName)
 		return
 	}
+	append(runArgs, fmt.Sprintf("--restart=%s", dockerRestartPolicy))
 
-	append(runArgs, "--restart=$dockerRestartPolicy")
+	dockerPullPolicy := ""
+	switch pullPolicy {
+	case k8s.api.core.v1.PullAlways:
+		dockerPullPolicy = "always"
+	case k8s.api.core.v1.PullNever:
+		dockerPullPolicy = "never"
+	case k8s.api.core.v1.PullIfNotPresent:
+		dockerPullPolicy = "missing"
+	default:
+		err = fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)
+		return
+	}
+	append(runArgs, fmt.Sprintf("--pull=%s", dockerPullPolicy))
 
 	if len(volumeMounts) > 0 {
 		for _, volMount := range volumeMounts {
@@ -210,6 +227,27 @@ func (t Translator) createContainer(podName string, restartPolicy k8s.core.v1.Re
 		}
 	}
 
+	for key, value := range labels {
+		append(labelArgs, "-l")
+		append(labelArgs, fmt.Sprintf("%s=%s", key, value))
+	}
+
+
+	// TODO: add annotations ?
+
+	cmd := fmt.Sprintf("%s run --rm %s %s %s %s %s %s", 
+		t.binary, 
+		string.Joins(runArgs, " "),
+		string.Joins(resourcesArgs, " "),
+		string.Joins(envArgs, " "),
+		string.Joins(labelArgs, " "),
+		string.Joins(cmdArgs, " "),
+		image, 
+		string.Joins(cmdArgs, " ")
+	)
+
+	append(cmds, cmd)
+	
 	/*
         # Test if ct already started or start it if excited or create it
         cmd="docker ps --format '{{ .Names }}' | grep -w '$ctName' || docker ps -f 'status=created' -f 'status=exited' --format '{{ .Names }}' | grep -w '$ctName' && docker start '$ctName' || docker run -d --name \"$ctName\" $resourcesArgs --network 'container:$podName' $runArgs $envArgs \"$image\" $entrypointArgs $cmdArgs"
