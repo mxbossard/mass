@@ -2,7 +2,7 @@
 scriptDir=$( dirname $( readlink -f $0 ) )
 
 #packages="src/mby.fr/utils src/mby.fr/mass/cmd src/mby.fr/mass/internal"
-packages="src/mby.fr/utils src/mby.fr/mass"
+packages="src/mby.fr/k8s2docker src/mby.fr/utils src/mby.fr/mass"
 
 success=true
 for pkg in $packages; do
