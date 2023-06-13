@@ -74,6 +74,10 @@ func (t Translator) forgeResName(prefix string, resource any) (name string, err 
 		resName = res.ObjectMeta.Name
 	case k8sv1.Volume:
 		resName = res.Name
+	case k8sv1.VolumeMount:
+		resName = res.Name
+	case k8sv1.Container:
+		resName = res.Name
 	default:
 		err = fmt.Errorf("Cannot forge a name for unknown type: %T !", resource)
 	}
@@ -87,14 +91,26 @@ func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod)
 	if err != nil {
 		return cmds, err
 	}
-	podMainCtCpus := "0.05"
-	podMainCtMemory := "64m"
-	networkName := ""
+	ctName := fmt.Sprintf("%s_root", podName)
+	cpusArgs := "--cpus=0.05"
+	memoryArgs := "--memory=64m"
+	//swapArgs := "--memory-swap=128m"
+	networkName := fmt.Sprintf("%s_net", podName)
 	addHostRules := ""
-	pauseImage := ""
-	cmd := fmt.Sprintf("%s run -d --name '%s' --cpus=%s --memory=%s --memory-swap=%s --memory-swappiness=0"+
-		" --network '%s' %s --restart=always '%s' /bin/sleep inf",
-		t.binary, podName, podMainCtCpus, podMainCtMemory, podMainCtMemory, networkName, addHostRules, pauseImage,
+	pauseImage := "alpine:3.17.3"
+
+	runArgs := []string{"--rm", "-d", "--name", ctName, "--restart=always", "--network", networkName,
+		cpusArgs, memoryArgs, "--memory-swappiness=0"}
+
+	if addHostRules != "" {
+		runArgs = append(runArgs, addHostRules)
+	}
+
+	runArgs = append(runArgs, pauseImage)
+	runArgs = append(runArgs, "/bin/sleep inf")
+
+	cmd := fmt.Sprintf("%s run %s",
+		t.binary, strings.Join(runArgs, " "),
 	)
 	cmds = append(cmds, cmd)
 	return
@@ -145,7 +161,10 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 	if err != nil {
 		return cmds, err
 	}
-	ctName := fmt.Sprintf("%s-%s", podName, container.Name)
+	ctName, err := t.forgeResName(podName, container)
+	if err != nil {
+		return cmds, err
+	}
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
 	tty := container.TTY
@@ -168,6 +187,10 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 	var envArgs []string
 	var cmdArgs []string
 	var labelArgs []string
+
+	runArgs = append(runArgs, "--rm")
+	runArgs = append(runArgs, "--name")
+	runArgs = append(runArgs, ctName)
 
 	if privileged {
 		runArgs = append(runArgs, "--privileged")
@@ -269,13 +292,13 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 
 	// TODO: add annotations ?
 
-	cmd := fmt.Sprintf("%s run --rm %s %s %s %s %s %s %s",
+	cmd := fmt.Sprintf("%s run %s %s %s %s %s %s",
 		t.binary,
 		strings.Join(runArgs, " "),
 		strings.Join(resourcesArgs, " "),
 		strings.Join(envArgs, " "),
 		strings.Join(labelArgs, " "),
-		strings.Join(cmdArgs, " "),
+		//strings.Join(cmdArgs, " "),
 		image,
 		strings.Join(cmdArgs, " "),
 	)
