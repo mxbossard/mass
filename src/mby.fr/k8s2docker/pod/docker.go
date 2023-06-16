@@ -2,7 +2,10 @@ package pod
 
 import (
 	"fmt"
-	"strings"
+	//"strings"
+
+	"mby.fr/utils/cmdz"
+	//"mby.fr/utils/promise"
 
 	k8sv1 "k8s.io/api/core/v1"
 )
@@ -12,7 +15,15 @@ type Executor struct {
 	translator Translator
 }
 
-func (e Executor) exec(commands []string, retries int) (status int, err error) {
+func (e Executor) exec(cmds []cmdz.Exec, retries int) (status []int, err error) {
+	remainingCmds := cmds
+	for i := 0; i < retries; i++ {
+		p := cmdz.AsyncRunAll(remainingCmds...)
+		vals, err := cmdz.WaitAllResults(p)
+		_ = vals
+		_ = err
+	}
+
 	return
 }
 
@@ -86,7 +97,7 @@ func (t Translator) forgeResName(prefix string, resource any) (name string, err 
 	return
 }
 
-func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []string, err error) {
+func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []cmdz.Exec, err error) {
 	podName, err := t.forgeResName(namespace, pod)
 	if err != nil {
 		return cmds, err
@@ -109,14 +120,13 @@ func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod)
 	runArgs = append(runArgs, pauseImage)
 	runArgs = append(runArgs, "/bin/sleep inf")
 
-	cmd := fmt.Sprintf("%s run %s",
-		t.binary, strings.Join(runArgs, " "),
-	)
+	cmd := cmdz.Execution(t.binary, "run")
+	cmd.AddArgs(runArgs...)
 	cmds = append(cmds, cmd)
 	return
 }
 
-func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []string, err error) {
+func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
 	} else if vol.VolumeSource.EmptyDir != nil {
@@ -126,7 +136,7 @@ func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []str
 	return
 }
 
-func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmds []string, err error) {
+func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
 	hostPathType := *vol.VolumeSource.HostPath.Type
 	if hostPathType != k8sv1.HostPathUnset {
 		err = fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
@@ -137,12 +147,14 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) 
 		return cmds, err
 	}
 	path := vol.VolumeSource.HostPath.Path
-	cmd := fmt.Sprintf("%s volume create --driver local -o o=bind -o type=none -o device=%s %s", t.binary, path, name)
+	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local")
+	cmd.AddArgs("-o", "o=bind", "-o", "type=none", "-o", "device="+path)
+	cmd.AddArgs(name)
 	cmds = append(cmds, cmd)
 	return
 }
 
-func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmds []string, err error) {
+func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
 	if vol.VolumeSource.EmptyDir == nil {
 		err = fmt.Errorf("Bad EmptyDirVolume !")
 		return
@@ -151,12 +163,12 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 	if err != nil {
 		return cmds, err
 	}
-	cmd := fmt.Sprintf("%s volume create --driver local %s", t.binary, name)
+	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local", name)
 	cmds = append(cmds, cmd)
 	return
 }
 
-func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []string, err error) {
+func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []cmdz.Exec, err error) {
 	podName, err := t.forgeResName(namespace, pod)
 	if err != nil {
 		return cmds, err
@@ -292,17 +304,13 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 
 	// TODO: add annotations ?
 
-	cmd := fmt.Sprintf("%s run %s %s %s %s %s %s",
-		t.binary,
-		strings.Join(runArgs, " "),
-		strings.Join(resourcesArgs, " "),
-		strings.Join(envArgs, " "),
-		strings.Join(labelArgs, " "),
-		//strings.Join(cmdArgs, " "),
-		image,
-		strings.Join(cmdArgs, " "),
-	)
-
+	cmd := cmdz.Execution(t.binary, "run")
+	cmd.AddArgs(runArgs...)
+	cmd.AddArgs(resourcesArgs...)
+	cmd.AddArgs(envArgs...)
+	cmd.AddArgs(labelArgs...)
+	cmd.AddArgs(image)
+	cmd.AddArgs(cmdArgs...)
 	cmds = append(cmds, cmd)
 
 	/*

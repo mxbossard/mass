@@ -190,13 +190,13 @@ func TestCreateVolume(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds1, 1)
 	expectedCmd1 := fmt.Sprintf("%s volume create --driver local %s_%s", expectedBinary, expectedNamespace1, volume1Name)
-	assert.Equal(t, expectedCmd1, cmds1[0])
+	assert.Equal(t, expectedCmd1, cmds1[0].String())
 
 	cmds2, err := translator.createVolume(expectedNamespace1, volume2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds2, 1)
 	expectedCmd2 := fmt.Sprintf("%s volume create --driver local -o o=bind -o type=none -o device=%s %s_%s", expectedBinary, volume2Path, expectedNamespace1, volume2Name)
-	assert.Equal(t, expectedCmd2, cmds2[0])
+	assert.Equal(t, expectedCmd2, cmds2[0].String())
 }
 
 func TestCreateContainer(t *testing.T) {
@@ -206,15 +206,15 @@ func TestCreateContainer(t *testing.T) {
 	cmds1, err := translator.createContainer(expectedNamespace1, pod1, ct1)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds1, 1)
-	expectedCmd1 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --workdir=ct1_workdir1 --restart=always --pull=always -v namespace1_ct1-vol1:/foo/bar:ro -v namespace1_ct1-vol2:/foo/baz:ro --entrypoint ct1_cmd1  -e "ct1envKey1=ct1envVal1" -e "ct1envKey2=ct1envVal2" -e "ct1envKey3=ct1envVal3" -l pod1_labelKey1=pod1_labelVal2 ct1-image ct1_cmd2 ct1_arg1 ct1_arg2 ct1_arg3`, expectedBinary, expectedNamespace1, pod1.Name, ct1.Name)
-	assert.Equal(t, expectedCmd1, cmds1[0])
+	expectedCmd1 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --workdir=ct1_workdir1 --restart=always --pull=always -v namespace1_ct1-vol1:/foo/bar:ro -v namespace1_ct1-vol2:/foo/baz:ro --entrypoint ct1_cmd1 -e "ct1envKey1=ct1envVal1" -e "ct1envKey2=ct1envVal2" -e "ct1envKey3=ct1envVal3" -l pod1_labelKey1=pod1_labelVal2 ct1-image ct1_cmd2 ct1_arg1 ct1_arg2 ct1_arg3`, expectedBinary, expectedNamespace1, pod1.Name, ct1.Name)
+	assert.Equal(t, expectedCmd1, cmds1[0].String())
 
 	ct2 := pod1.Spec.InitContainers[1]
 	cmds2, err := translator.createContainer(expectedNamespace1, pod1, ct2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds2, 1)
-	expectedCmd2 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --privileged --workdir=ct2_workdir1 --restart=always --pull=never -v namespace1_ct2-vol1:/foo/bar:ro -v namespace1_ct2-vol2:/foo/baz:ro --entrypoint ct2_cmd1  -e "ct2envKey1=ct2envVal1" -e "ct2envKey2=ct2envVal2" -e "ct2envKey3=ct2envVal3" -l pod1_labelKey1=pod1_labelVal2 ct2-image ct2_cmd2 ct2_arg1 ct2_arg2 ct2_arg3`, expectedBinary, expectedNamespace1, pod1.Name, ct2.Name)
-	assert.Equal(t, expectedCmd2, cmds2[0])
+	expectedCmd2 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --privileged --workdir=ct2_workdir1 --restart=always --pull=never -v namespace1_ct2-vol1:/foo/bar:ro -v namespace1_ct2-vol2:/foo/baz:ro --entrypoint ct2_cmd1 -e "ct2envKey1=ct2envVal1" -e "ct2envKey2=ct2envVal2" -e "ct2envKey3=ct2envVal3" -l pod1_labelKey1=pod1_labelVal2 ct2-image ct2_cmd2 ct2_arg1 ct2_arg2 ct2_arg3`, expectedBinary, expectedNamespace1, pod1.Name, ct2.Name)
+	assert.Equal(t, expectedCmd2, cmds2[0].String())
 }
 
 func TestCreateNetworkOwnerContainer(t *testing.T) {
@@ -224,11 +224,11 @@ func TestCreateNetworkOwnerContainer(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds1, 1)
 	expectedCmd1 := fmt.Sprintf(`%s run --rm -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m --memory-swappiness=0 alpine:3.17.3 /bin/sleep inf`, expectedBinary, expectedNamespace1, pod1.Name)
-	assert.Equal(t, expectedCmd1, cmds1[0])
+	assert.Equal(t, expectedCmd1, cmds1[0].String())
 
 	cmds2, err := translator.createNetworkOwnerContainer(expectedNamespace1, pod2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds2, 1)
 	expectedCmd2 := fmt.Sprintf(`%s run --rm -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m --memory-swappiness=0 alpine:3.17.3 /bin/sleep inf`, expectedBinary, expectedNamespace1, pod2.Name)
-	assert.Equal(t, expectedCmd2, cmds2[0])
+	assert.Equal(t, expectedCmd2, cmds2[0].String())
 }

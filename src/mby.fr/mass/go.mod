@@ -4,6 +4,8 @@ go 1.18
 
 replace mby.fr/utils => ../utils
 
+replace mby.fr/k8s2docker => ../k8s2docker
+
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/spf13/cobra v1.5.0
