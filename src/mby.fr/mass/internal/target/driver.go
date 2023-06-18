@@ -1,26 +1,28 @@
 package target
 
+import "mby.fr/mass/internal/resources"
+
 type Describer interface {
-	Describe(Service) ([]string, error)
+	Describe(resources.Service) ([]string, error)
 }
 
 type Upper interface {
-	Up(Service) error
+	Up(resources.Service) error
 }
 
 type Downer interface {
-	Down(Service) error
+	Down(resources.Service) error
 }
 
 type Puller interface {
-	Pull(Service) error
+	Pull(resources.Service) error
 }
 
 type Runner interface {
-	Run(Service) error
+	Run(resources.Service) error
 }
 
-type Driver {
+type Driver struct {
 	Describer
 	Upper
 	Downer
