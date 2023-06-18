@@ -15,5 +15,7 @@ ENV TERM=xterm-256color
 COPY --from=go /usr/local/go /usr/local/go
 RUN ln -s /usr/local/go/bin/go /usr/bin/go
 
+RUN apk update ; apk add build-base
+
 #ENTRYPOINT ["/usr/local/go/bin/go"]
 
