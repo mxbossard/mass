@@ -173,13 +173,11 @@ func TestForgeResName(t *testing.T) {
 	translator := Translator{expectedBinary}
 	prefix := "pre-foo"
 	expectedVolume1Name := prefix + "_" + volume1Name
-	volumeName, err := translator.forgeResName(prefix, volume1)
-	require.NoError(t, err, "should not error")
+	volumeName := translator.forgeResName(prefix, volume1)
 	assert.Equal(t, expectedVolume1Name, volumeName, "Bad Volume name !")
 
 	expectedPod1Name := prefix + "_" + pod1Name
-	podName, err := translator.forgeResName(prefix, pod1)
-	require.NoError(t, err, "should not error")
+	podName := translator.forgeResName(prefix, pod1)
 	assert.Equal(t, expectedPod1Name, podName, "Bad Pod name !")
 }
 

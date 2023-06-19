@@ -2,6 +2,8 @@ package pod
 
 import (
 	"fmt"
+	"log"
+
 	//"strings"
 
 	"mby.fr/utils/cmdz"
@@ -13,10 +15,11 @@ import (
 type Executor struct {
 	config     []string
 	translator Translator
+	forkCount  int
 }
 
-func (e Executor) exec(retries int, execs ...*cmdz.Exec) ([]int, error) {
-	return cmdz.ParallelRetriedRun(retries, execs...)
+func (e Executor) exec(execs ...*cmdz.Exec) ([]int, error) {
+	return cmdz.ParallelRunAll(e.forkCount, execs...)
 }
 
 func (e Executor) Create(namespace string, resource any) (err error) {
@@ -30,20 +33,27 @@ func (e Executor) Create(namespace string, resource any) (err error) {
 }
 
 func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+	podName := e.translator.forgeResName(namespace, pod)
+
 	execs, err := e.translator.createNetworkOwnerContainer(namespace, pod)
 	if err != nil {
 		return err
 	}
-	status, err := e.exec(-1, execs...)
-	_ = status
+	status, err := e.exec(execs...)
+	if cmdz.Failed(status...) {
+		return fmt.Errorf("Unable to create Network owner container for pod: %s. Caused by: %w", podName, err)
+	}
 
 	for _, volume := range pod.Spec.Volumes {
 		execs, err := e.translator.createVolume(namespace, volume)
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(-1, execs...)
-		_ = status
+		status, err := e.exec(execs...)
+		if cmdz.Failed(status...) {
+			volName := e.translator.forgeResName(podName, volume)
+			return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
+		}
 	}
 
 	for _, container := range pod.Spec.InitContainers {
@@ -51,8 +61,10 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(-1, execs...)
-		_ = status
+		status, err := e.exec(execs...)
+		if cmdz.Failed(status...) {
+			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
+		}
 	}
 
 	for _, container := range pod.Spec.Containers {
@@ -60,8 +72,10 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(-1, execs...)
-		_ = status
+		status, err := e.exec(execs...)
+		if cmdz.Failed(status...) {
+			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
+		}
 	}
 	return
 }
@@ -70,7 +84,7 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) forgeResName(prefix string, resource any) (name string, err error) {
+func (t Translator) forgeResName(prefix string, resource any) (name string) {
 	var resName string
 	switch res := resource.(type) {
 	case k8sv1.Pod:
@@ -82,7 +96,7 @@ func (t Translator) forgeResName(prefix string, resource any) (name string, err 
 	case k8sv1.Container:
 		resName = res.Name
 	default:
-		err = fmt.Errorf("Cannot forge a name for unknown type: %T !", resource)
+		log.Fatalf("Cannot forge a name for unknown type: %T !", resource)
 	}
 
 	name = fmt.Sprintf("%s_%s", prefix, resName)
@@ -90,10 +104,7 @@ func (t Translator) forgeResName(prefix string, resource any) (name string, err 
 }
 
 func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
-	podName, err := t.forgeResName(namespace, pod)
-	if err != nil {
-		return cmds, err
-	}
+	podName := t.forgeResName(namespace, pod)
 	ctName := fmt.Sprintf("%s_root", podName)
 	cpusArgs := "--cpus=0.05"
 	memoryArgs := "--memory=64m"
@@ -134,10 +145,7 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) 
 		err = fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
 	}
 
-	name, err := t.forgeResName(namespace, vol)
-	if err != nil {
-		return cmds, err
-	}
+	name := t.forgeResName(namespace, vol)
 	path := vol.VolumeSource.HostPath.Path
 	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local")
 	cmd.AddArgs("-o", "o=bind", "-o", "type=none", "-o", "device="+path)
@@ -151,24 +159,15 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 		err = fmt.Errorf("Bad EmptyDirVolume !")
 		return
 	}
-	name, err := t.forgeResName(namespace, vol)
-	if err != nil {
-		return cmds, err
-	}
+	name := t.forgeResName(namespace, vol)
 	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local", name)
 	cmds = append(cmds, cmd)
 	return
 }
 
 func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []*cmdz.Exec, err error) {
-	podName, err := t.forgeResName(namespace, pod)
-	if err != nil {
-		return cmds, err
-	}
-	ctName, err := t.forgeResName(podName, container)
-	if err != nil {
-		return cmds, err
-	}
+	podName := t.forgeResName(namespace, pod)
+	ctName := t.forgeResName(podName, container)
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
 	tty := container.TTY
@@ -236,10 +235,7 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 
 	if len(volumeMounts) > 0 {
 		for _, volMount := range volumeMounts {
-			volumeName, err := t.forgeResName(namespace, volMount)
-			if err != nil {
-				return cmds, err
-			}
+			volumeName := t.forgeResName(namespace, volMount)
 			mountPath := volMount.MountPath
 			readOnly := volMount.ReadOnly
 			mountOpts := "rw"
