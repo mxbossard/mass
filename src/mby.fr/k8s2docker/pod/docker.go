@@ -15,16 +15,8 @@ type Executor struct {
 	translator Translator
 }
 
-func (e Executor) exec(cmds []cmdz.Exec, retries int) (status []int, err error) {
-	remainingCmds := cmds
-	for i := 0; i < retries; i++ {
-		p := cmdz.AsyncRunAll(remainingCmds...)
-		vals, err := cmdz.WaitAllResults(p)
-		_ = vals
-		_ = err
-	}
-
-	return
+func (e Executor) exec(retries int, execs ...*cmdz.Exec) ([]int, error) {
+	return cmdz.ParallelRetriedRun(retries, execs...)
 }
 
 func (e Executor) Create(namespace string, resource any) (err error) {
@@ -38,37 +30,37 @@ func (e Executor) Create(namespace string, resource any) (err error) {
 }
 
 func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
-	cmds, err := e.translator.createNetworkOwnerContainer(namespace, pod)
+	execs, err := e.translator.createNetworkOwnerContainer(namespace, pod)
 	if err != nil {
 		return err
 	}
-	status, err := e.exec(cmds, -1)
+	status, err := e.exec(-1, execs...)
 	_ = status
 
 	for _, volume := range pod.Spec.Volumes {
-		cmds, err := e.translator.createVolume(namespace, volume)
+		execs, err := e.translator.createVolume(namespace, volume)
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(cmds, -1)
+		status, err := e.exec(-1, execs...)
 		_ = status
 	}
 
 	for _, container := range pod.Spec.InitContainers {
-		cmds, err := e.translator.createContainer(namespace, pod, container)
+		execs, err := e.translator.createContainer(namespace, pod, container)
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(cmds, -1)
+		status, err := e.exec(-1, execs...)
 		_ = status
 	}
 
 	for _, container := range pod.Spec.Containers {
-		cmds, err := e.translator.createContainer(namespace, pod, container)
+		execs, err := e.translator.createContainer(namespace, pod, container)
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(cmds, -1)
+		status, err := e.exec(-1, execs...)
 		_ = status
 	}
 	return
@@ -97,7 +89,7 @@ func (t Translator) forgeResName(prefix string, resource any) (name string, err 
 	return
 }
 
-func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []cmdz.Exec, err error) {
+func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
 	podName, err := t.forgeResName(namespace, pod)
 	if err != nil {
 		return cmds, err
@@ -126,7 +118,7 @@ func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod)
 	return
 }
 
-func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
+func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
 	} else if vol.VolumeSource.EmptyDir != nil {
@@ -136,7 +128,7 @@ func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []cmd
 	return
 }
 
-func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
+func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
 	hostPathType := *vol.VolumeSource.HostPath.Type
 	if hostPathType != k8sv1.HostPathUnset {
 		err = fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
@@ -154,7 +146,7 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) 
 	return
 }
 
-func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmds []cmdz.Exec, err error) {
+func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
 	if vol.VolumeSource.EmptyDir == nil {
 		err = fmt.Errorf("Bad EmptyDirVolume !")
 		return
@@ -168,7 +160,7 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 	return
 }
 
-func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []cmdz.Exec, err error) {
+func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []*cmdz.Exec, err error) {
 	podName, err := t.forgeResName(namespace, pod)
 	if err != nil {
 		return cmds, err
