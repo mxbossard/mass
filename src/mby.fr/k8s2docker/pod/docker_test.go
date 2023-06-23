@@ -171,14 +171,13 @@ func forgePod(name string, volumes []k8sv1.Volume, initContainers, containers []
 }
 
 func TestForgeResName(t *testing.T) {
-	translator := Translator{expectedBinary0}
 	prefix := "pre-foo"
 	expectedVolume1Name := prefix + "_" + volume1Name
-	volumeName := translator.forgeResName(prefix, volume1)
+	volumeName := forgeResName(prefix, volume1)
 	assert.Equal(t, expectedVolume1Name, volumeName, "Bad Volume name !")
 
 	expectedPod1Name := prefix + "_" + pod1Name
-	podName := translator.forgeResName(prefix, pod1)
+	podName := forgeResName(prefix, pod1)
 	assert.Equal(t, expectedPod1Name, podName, "Bad Pod name !")
 }
 
@@ -205,41 +204,53 @@ func TestCreateContainer(t *testing.T) {
 	cmds1, err := translator.createContainer(expectedNamespace1, pod1, ct1)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds1, 1)
-	expectedCmd1 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --workdir=ct1_workdir1 --restart=always --pull=always -v namespace1_ct1-vol1:/foo/bar:ro -v namespace1_ct1-vol2:/foo/baz:ro --entrypoint ct1_cmd1 -e "ct1envKey1=ct1envVal1" -e "ct1envKey2=ct1envVal2" -e "ct1envKey3=ct1envVal3" -l pod1_labelKey1=pod1_labelVal2 ct1-image ct1_cmd2 ct1_arg1 ct1_arg2 ct1_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name)
+	expectedCmd1 := fmt.Sprintf(`%s run --name %s_%s_%s --workdir=ct1_workdir1 --restart=always --pull=always -v namespace1_ct1-vol1:/foo/bar:ro -v namespace1_ct1-vol2:/foo/baz:ro --entrypoint ct1_cmd1 -e "ct1envKey1=ct1envVal1" -e "ct1envKey2=ct1envVal2" -e "ct1envKey3=ct1envVal3" -l pod1_labelKey1=pod1_labelVal2 ct1-image ct1_cmd2 ct1_arg1 ct1_arg2 ct1_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name)
 	assert.Equal(t, expectedCmd1, cmds1[0].String())
 
 	ct2 := pod1.Spec.InitContainers[1]
 	cmds2, err := translator.createContainer(expectedNamespace1, pod1, ct2)
 	require.NoError(t, err, "should not error")
 	assert.Len(t, cmds2, 1)
-	expectedCmd2 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --privileged --workdir=ct2_workdir1 --restart=always --pull=never -v namespace1_ct2-vol1:/foo/bar:ro -v namespace1_ct2-vol2:/foo/baz:ro --entrypoint ct2_cmd1 -e "ct2envKey1=ct2envVal1" -e "ct2envKey2=ct2envVal2" -e "ct2envKey3=ct2envVal3" -l pod1_labelKey1=pod1_labelVal2 ct2-image ct2_cmd2 ct2_arg1 ct2_arg2 ct2_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name)
+	expectedCmd2 := fmt.Sprintf(`%s run --name %s_%s_%s --privileged --workdir=ct2_workdir1 --restart=always --pull=never -v namespace1_ct2-vol1:/foo/bar:ro -v namespace1_ct2-vol2:/foo/baz:ro --entrypoint ct2_cmd1 -e "ct2envKey1=ct2envVal1" -e "ct2envKey2=ct2envVal2" -e "ct2envKey3=ct2envVal3" -l pod1_labelKey1=pod1_labelVal2 ct2-image ct2_cmd2 ct2_arg1 ct2_arg2 ct2_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name)
 	assert.Equal(t, expectedCmd2, cmds2[0].String())
 }
 
-func TestCreateNetworkOwnerContainer(t *testing.T) {
+func TestCreatePodNetwork(t *testing.T) {
 	translator := Translator{expectedBinary0}
 
-	cmds1, err := translator.createNetworkOwnerContainer(expectedNamespace1, pod1)
+	cmds1, err := translator.createPodNetwork(expectedNamespace1, pod1)
 	require.NoError(t, err, "should not error")
-	assert.Len(t, cmds1, 2)
+	require.Len(t, cmds1, 1)
 	expectedCmd10 := fmt.Sprintf(`%s network create %s_%s_net`, expectedBinary0, expectedNamespace1, pod1.Name)
-	expectedCmd11 := fmt.Sprintf(`%s run -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
 	assert.Equal(t, expectedCmd10, cmds1[0].String())
-	assert.Equal(t, expectedCmd11, cmds1[1].String())
 
-	cmds2, err := translator.createNetworkOwnerContainer(expectedNamespace1, pod2)
+	cmds2, err := translator.createPodNetwork(expectedNamespace1, pod2)
 	require.NoError(t, err, "should not error")
-	assert.Len(t, cmds2, 2)
+	require.Len(t, cmds2, 1)
 	expectedCmd20 := fmt.Sprintf(`%s network create %s_%s_net`, expectedBinary0, expectedNamespace1, pod2.Name)
-	expectedCmd21 := fmt.Sprintf(`%s run -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
 	assert.Equal(t, expectedCmd20, cmds2[0].String())
-	assert.Equal(t, expectedCmd21, cmds2[1].String())
+}
+
+func TestCreatePodRootContainer(t *testing.T) {
+	translator := Translator{expectedBinary0}
+
+	cmds1, err := translator.createPodRootContainer(expectedNamespace1, pod1)
+	require.NoError(t, err, "should not error")
+	require.Len(t, cmds1, 1)
+	expectedCmd11 := fmt.Sprintf(`%s run -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
+	assert.Equal(t, expectedCmd11, cmds1[0].String())
+
+	cmds2, err := translator.createPodRootContainer(expectedNamespace1, pod2)
+	require.NoError(t, err, "should not error")
+	require.Len(t, cmds2, 1)
+	expectedCmd21 := fmt.Sprintf(`%s run -d --name %[2]s_%[3]s_root --restart=always --network %[2]s_%[3]s_net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
+	assert.Equal(t, expectedCmd21, cmds2[0].String())
 }
 
 func TestRunPod(t *testing.T) {
 	translator := Translator{expectedBinary}
 	executor := Executor{translator: translator}
-	err := executor.runPod(expectedNamespace1, pod1)
+	err := executor.createPod(expectedNamespace1, pod1)
 	require.NoError(t, err)
 
 }

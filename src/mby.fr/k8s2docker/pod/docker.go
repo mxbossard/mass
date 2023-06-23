@@ -18,46 +18,47 @@ type Executor struct {
 	forkCount  int
 }
 
-func (e Executor) exec(execs ...*cmdz.Exec) error {
-	statuses, err := cmdz.ParallelRunAll(e.forkCount, execs...)
-
-	if err != nil {
-		return err
-	}
-	if cmdz.Failed(statuses...) {
-		errorMessages := ""
-		for idx, status := range statuses {
-			if status != 0 {
-				//stdout := execs[idx].StdoutRecord.String()
-				stderr := execs[idx].StderrRecord.String()
-				errorMessages += fmt.Sprintf("\nRC=%d ERR> %s", status, strings.TrimSpace(stderr))
-			}
-		}
-		return fmt.Errorf("Encountered some execution failure: %s", errorMessages)
-	}
-	return nil
-}
-
 func (e Executor) Create(namespace string, resource any) (err error) {
 	switch res := resource.(type) {
 	case k8sv1.Pod:
-		err = e.runPod(namespace, res)
+		err = e.createPod(namespace, res)
 	default:
 		err = fmt.Errorf("Cannot create not supported type %T", res)
 	}
 	return
 }
 
-func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
-	podName := e.translator.forgeResName(namespace, pod)
+func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+	podName := forgeResName(namespace, pod)
 
-	execs, err := e.translator.createNetworkOwnerContainer(namespace, pod)
+	netId, err := e.translator.podNetworkId(namespace, pod)
 	if err != nil {
 		return err
 	}
-	err = e.exec(execs...)
+	if netId == "" {
+		execs, err := e.translator.createPodNetwork(namespace, pod)
+		if err != nil {
+			return err
+		}
+		err = cmdz.Sequential(execs...)
+		if err != nil {
+			return fmt.Errorf("Unable to create Network for pod: %s. Caused by: %w", podName, err)
+		}
+	}
+
+	ctId, err := e.translator.podRootContainerId(namespace, pod)
 	if err != nil {
-		return fmt.Errorf("Unable to create Network owner container for pod: %s. Caused by: %w", podName, err)
+		return err
+	}
+	if ctId == "" {
+		execs, err := e.translator.createPodRootContainer(namespace, pod)
+		if err != nil {
+			return err
+		}
+		err = cmdz.Sequential(execs...)
+		if err != nil {
+			return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
+		}
 	}
 
 	for _, volume := range pod.Spec.Volumes {
@@ -65,9 +66,9 @@ func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = e.exec(execs...)
+		err = cmdz.Parallel(e.forkCount, execs...)
 		if err != nil {
-			volName := e.translator.forgeResName(podName, volume)
+			volName := forgeResName(podName, volume)
 			return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
 		}
 	}
@@ -77,7 +78,7 @@ func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = e.exec(execs...)
+		err = cmdz.Parallel(e.forkCount, execs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 		}
@@ -88,7 +89,7 @@ func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = e.exec(execs...)
+		err = cmdz.Parallel(e.forkCount, execs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 		}
@@ -96,11 +97,19 @@ func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
 	return
 }
 
-type Translator struct {
-	binary string
+func networkName(namespace string, pod k8sv1.Pod) string {
+	podName := forgeResName(namespace, pod)
+	networkName := fmt.Sprintf("%s_net", podName)
+	return networkName
 }
 
-func (t Translator) forgeResName(prefix string, resource any) (name string) {
+func podRootContainerName(namespace string, pod k8sv1.Pod) string {
+	podName := forgeResName(namespace, pod)
+	ctName := fmt.Sprintf("%s_root", podName)
+	return ctName
+}
+
+func forgeResName(prefix string, resource any) (name string) {
 	var resName string
 	switch res := resource.(type) {
 	case k8sv1.Pod:
@@ -119,17 +128,60 @@ func (t Translator) forgeResName(prefix string, resource any) (name string) {
 	return
 }
 
-func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
-	podName := t.forgeResName(namespace, pod)
-	ctName := fmt.Sprintf("%s_root", podName)
-	cpusArgs := "--cpus=0.05"
-	memoryArgs := "--memory=64m"
-	//swapArgs := "--memory-swap=128m"
-	networkName := fmt.Sprintf("%s_net", podName)
-	addHostRules := ""
-	pauseImage := "alpine:3.17.3"
+type Translator struct {
+	binary string
+}
+
+func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) { 
+	networkName := networkName(namespace, pod)
+	script := fmt.Sprintf("%s network ls -f 'Name=%s' -q", t.binary, networkName)
+	exec := cmdz.Execution("/bin/sh", "-c", script)
+	stdout := &strings.Builder{}
+	exec.RecordingOutputs(stdout, nil)
+	exec.Retries = 2
+
+	err := cmdz.Sequential(exec)
+	if err != nil {
+		return "", err
+	}
+	id := stdout.String()
+	return id, nil
+}
+
+func (t Translator) createPodNetwork(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
+	networkName := networkName(namespace, pod)
 
 	networkArgs := []string{"network", "create", networkName}
+
+	cmd := cmdz.Execution(t.binary, networkArgs...)
+	cmd.Retries = 2
+	cmds = append(cmds, cmd)
+	return
+}
+
+func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string, error) { 
+	ctName := podRootContainerName(namespace, pod)
+	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
+	exec := cmdz.Execution("/bin/sh", "-c", script)
+	stdout := &strings.Builder{}
+	exec.RecordingOutputs(stdout, nil)
+	exec.Retries = 2
+
+	err := cmdz.Sequential(exec)
+	if err != nil {
+		return "", err
+	}
+	id := stdout.String()
+	return id, nil
+}
+
+func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
+	ctName := podRootContainerName(namespace, pod)
+	cpusArgs := "--cpus=0.05"
+	memoryArgs := "--memory=64m"
+	networkName := networkName(namespace, pod)
+	addHostRules := ""
+	pauseImage := "alpine:3.17.3"
 
 	runArgs := []string{"run", "-d", "--name", ctName, "--restart=always", "--network", networkName,
 		cpusArgs, memoryArgs} //"--memory-swappiness=0"
@@ -141,9 +193,9 @@ func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod)
 	runArgs = append(runArgs, pauseImage)
 	runArgs = append(runArgs, "/bin/sleep", "inf")
 
-	cmdNetwork := cmdz.Execution(t.binary, networkArgs...)
-	cmdRun := cmdz.Execution(t.binary, runArgs...)
-	cmds = append(cmds, cmdNetwork, cmdRun)
+	cmd := cmdz.Execution(t.binary, runArgs...)
+	cmd.Retries = 2
+	cmds = append(cmds, cmd)
 	return
 }
 
@@ -163,9 +215,10 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) 
 		err = fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
 	}
 
-	name := t.forgeResName(namespace, vol)
+	name := forgeResName(namespace, vol)
 	path := vol.VolumeSource.HostPath.Path
 	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local")
+	cmd.Retries = 2
 	cmd.AddArgs("-o", "o=bind", "-o", "type=none", "-o", "device="+path)
 	cmd.AddArgs(name)
 	cmds = append(cmds, cmd)
@@ -177,15 +230,16 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 		err = fmt.Errorf("Bad EmptyDirVolume !")
 		return
 	}
-	name := t.forgeResName(namespace, vol)
+	name := forgeResName(namespace, vol)
 	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local", name)
+	cmd.Retries = 2
 	cmds = append(cmds, cmd)
 	return
 }
 
 func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []*cmdz.Exec, err error) {
-	podName := t.forgeResName(namespace, pod)
-	ctName := t.forgeResName(podName, container)
+	podName := forgeResName(namespace, pod)
+	ctName := forgeResName(podName, container)
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
 	tty := container.TTY
@@ -209,7 +263,7 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 	var cmdArgs []string
 	var labelArgs []string
 
-	runArgs = append(runArgs, "--rm")
+	//runArgs = append(runArgs, "--rm")
 	runArgs = append(runArgs, "--name")
 	runArgs = append(runArgs, ctName)
 
@@ -253,7 +307,7 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 
 	if len(volumeMounts) > 0 {
 		for _, volMount := range volumeMounts {
-			volumeName := t.forgeResName(namespace, volMount)
+			volumeName := forgeResName(namespace, volMount)
 			mountPath := volMount.MountPath
 			readOnly := volMount.ReadOnly
 			mountOpts := "rw"
@@ -311,6 +365,7 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 	// TODO: add annotations ?
 
 	cmd := cmdz.Execution(t.binary, "run")
+	cmd.Retries = 2
 	cmd.AddArgs(runArgs...)
 	cmd.AddArgs(resourcesArgs...)
 	cmd.AddArgs(envArgs...)
