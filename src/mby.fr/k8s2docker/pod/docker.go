@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	//"strings"
+	"strings"
 
 	"mby.fr/utils/cmdz"
 	//"mby.fr/utils/promise"
@@ -13,34 +13,50 @@ import (
 )
 
 type Executor struct {
-	config     []string
 	translator Translator
+	config     []string
 	forkCount  int
 }
 
-func (e Executor) exec(execs ...*cmdz.Exec) ([]int, error) {
-	return cmdz.ParallelRunAll(e.forkCount, execs...)
+func (e Executor) exec(execs ...*cmdz.Exec) error {
+	statuses, err := cmdz.ParallelRunAll(e.forkCount, execs...)
+
+	if err != nil {
+		return err
+	}
+	if cmdz.Failed(statuses...) {
+		errorMessages := ""
+		for idx, status := range statuses {
+			if status != 0 {
+				//stdout := execs[idx].StdoutRecord.String()
+				stderr := execs[idx].StderrRecord.String()
+				errorMessages += fmt.Sprintf("\nRC=%d ERR> %s", status, strings.TrimSpace(stderr))
+			}
+		}
+		return fmt.Errorf("Encountered some execution failure: %s", errorMessages)
+	}
+	return nil
 }
 
 func (e Executor) Create(namespace string, resource any) (err error) {
 	switch res := resource.(type) {
 	case k8sv1.Pod:
-		err = e.createPod(namespace, res)
+		err = e.runPod(namespace, res)
 	default:
 		err = fmt.Errorf("Cannot create not supported type %T", res)
 	}
 	return
 }
 
-func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) runPod(namespace string, pod k8sv1.Pod) (err error) {
 	podName := e.translator.forgeResName(namespace, pod)
 
 	execs, err := e.translator.createNetworkOwnerContainer(namespace, pod)
 	if err != nil {
 		return err
 	}
-	status, err := e.exec(execs...)
-	if cmdz.Failed(status...) {
+	err = e.exec(execs...)
+	if err != nil {
 		return fmt.Errorf("Unable to create Network owner container for pod: %s. Caused by: %w", podName, err)
 	}
 
@@ -49,8 +65,8 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(execs...)
-		if cmdz.Failed(status...) {
+		err = e.exec(execs...)
+		if err != nil {
 			volName := e.translator.forgeResName(podName, volume)
 			return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
 		}
@@ -61,8 +77,8 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(execs...)
-		if cmdz.Failed(status...) {
+		err = e.exec(execs...)
+		if err != nil {
 			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 		}
 	}
@@ -72,8 +88,8 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		status, err := e.exec(execs...)
-		if cmdz.Failed(status...) {
+		err = e.exec(execs...)
+		if err != nil {
 			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 		}
 	}
@@ -113,19 +129,21 @@ func (t Translator) createNetworkOwnerContainer(namespace string, pod k8sv1.Pod)
 	addHostRules := ""
 	pauseImage := "alpine:3.17.3"
 
-	runArgs := []string{"--rm", "-d", "--name", ctName, "--restart=always", "--network", networkName,
-		cpusArgs, memoryArgs, "--memory-swappiness=0"}
+	networkArgs := []string{"network", "create", networkName}
+
+	runArgs := []string{"run", "-d", "--name", ctName, "--restart=always", "--network", networkName,
+		cpusArgs, memoryArgs} //"--memory-swappiness=0"
 
 	if addHostRules != "" {
 		runArgs = append(runArgs, addHostRules)
 	}
 
 	runArgs = append(runArgs, pauseImage)
-	runArgs = append(runArgs, "/bin/sleep inf")
+	runArgs = append(runArgs, "/bin/sleep", "inf")
 
-	cmd := cmdz.Execution(t.binary, "run")
-	cmd.AddArgs(runArgs...)
-	cmds = append(cmds, cmd)
+	cmdNetwork := cmdz.Execution(t.binary, networkArgs...)
+	cmdRun := cmdz.Execution(t.binary, runArgs...)
+	cmds = append(cmds, cmdNetwork, cmdRun)
 	return
 }
 
