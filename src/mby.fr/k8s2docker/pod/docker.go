@@ -166,14 +166,14 @@ func forgeResName(prefix string, resource any) (name string) {
 }
 
 func escapeCmdArg(arg string) string {
-	if ! strings.Contains(arg, " ") {
+	if !strings.Contains(arg, " ") {
 		return arg
 	}
-	
+
 	// If spaces in arg
-	if ! strings.Contains(arg, `"`) {
+	if !strings.Contains(arg, `"`) {
 		return `"` + arg + `"`
-	} else if ! strings.Contains(arg, "'") {
+	} else if !strings.Contains(arg, "'") {
 		return "'" + arg + "'"
 	}
 	escapedArg := strings.Replace(arg, `"`, `\"`, -1)
@@ -184,15 +184,21 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodePhase, error) { 
- 	// TODO
+func (t Translator) setPodPhase(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec) {
+	cmd := cmdz.Execution(t.binary, "")
+	cmds = append(cmds, cmd)
+	return
 }
 
-func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (k8sv1.ContainerState, error) { 
+func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodePhase, error) {
 	// TODO
 }
 
-func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) { 
+func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (k8sv1.ContainerState, error) {
+	// TODO
+}
+
+func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) {
 	networkName := networkName(namespace, pod)
 	script := fmt.Sprintf("%s network ls -f 'Name=%s' -q", t.binary, networkName)
 	exec := cmdz.Execution("/bin/sh", "-c", script)
@@ -219,7 +225,7 @@ func (t Translator) createPodNetwork(namespace string, pod k8sv1.Pod) (cmds []*c
 	return
 }
 
-func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string, error) { 
+func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string, error) {
 	ctName := podRootContainerName(namespace, pod)
 	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
 	exec := cmdz.Execution("/bin/sh", "-c", script)
@@ -259,7 +265,7 @@ func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmd
 	return
 }
 
-func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error) { 
+func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error) {
 	volName := forgeResName(namespace, vol)
 	script := fmt.Sprintf("%s volume ls -f 'Name=%s' -q", t.binary, volName)
 	exec := cmdz.Execution("/bin/sh", "-c", script)
@@ -313,7 +319,7 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 	return
 }
 
-func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) { 
+func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) {
 	ctName := podContainerName(namespace, pod, container)
 	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
 	exec := cmdz.Execution("/bin/sh", "-c", script)
@@ -422,15 +428,15 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {
-		for _, arg := range(entrypoint[1:]) {
+		for _, arg := range entrypoint[1:] {
 			cmdArgs = append(cmdArgs, arg)
-		} 
+		}
 	}
 
 	if len(args) > 0 {
-		for _, arg := range(args) {
+		for _, arg := range args {
 			cmdArgs = append(cmdArgs, arg)
-		} 
+		}
 	}
 
 	if cpuLimitInMilli > 0 {
