@@ -14,7 +14,8 @@ import (
 var (
 	expectedBinary0    = "docker0"
 	expectedBinary     = "docker"
-	expectedNamespace1 = "namespace1"
+	expectedNamespace1 = "ns1"
+	expectedNamespace2 = "ns2"
 
 	volume1Name             = "vol1"
 	expectedVolume1EmptyDir = k8sv1.EmptyDirVolumeSource{}
@@ -36,20 +37,28 @@ var (
 	}
 
 	container1Name = "ct1"
-	container1     = forgeContainer(container1Name, k8sv1.PullAlways, false, false, false)
+	container1Image = "busybox:1.36.1-musl"
+	container1     = forgeContainer(container1Name, container1Image, k8sv1.PullAlways, false, false, false, []string{"/bin/sleep"}, []string{"0.1"})
 	container2Name = "ct2"
-	container2     = forgeContainer(container2Name, k8sv1.PullNever, true, false, false)
+	container2Image = "alpine:3.18.2"
+	container2     = forgeContainer(container2Name, container2Image, k8sv1.PullIfNotPresent, true, false, false, []string{"/bin/sleep"}, []string{"10"})
 	container3Name = "ct3"
-	container3     = forgeContainer(container3Name, k8sv1.PullIfNotPresent, false, true, false)
+	container3Image = "busybox:1.35.0-musl"
+	container3     = forgeContainer(container3Name, container3Image, k8sv1.PullAlways, false, true, false, []string{"/bin/sleep", "0.1"}, []string{})
 	container4Name = "ct4"
-	container4     = forgeContainer(container4Name, k8sv1.PullAlways, false, false, true)
+	container4Image = "alpine:3.17.4"
+	container4     = forgeContainer(container4Name, container4Image, k8sv1.PullIfNotPresent, false, false, true, []string{"/bin/sleep", "10"}, []string{})
 	container5Name = "ct5"
-	container5     = forgeContainer(container5Name, k8sv1.PullAlways, true, true, true)
+	container5Image = "busybox:1.34.1-musl"
+	container5     = forgeContainer(container5Name, container5Image, k8sv1.PullNever, true, true, false, []string{"/bin/sh"}, []string{"-c", "sleep 0.1"})
+	container6Name = "ct6"
+	container6Image = "busybox:1.34.1-musl"
+	container6     = forgeContainer(container6Name, container6Image, k8sv1.PullIfNotPresent, true, true, false, []string{"/bin/sh", "-c"}, []string{"/bin/sleep 0.1"})
 
 	pod1Name                   = "pod1"
 	expectedPod1Volumes        = []k8sv1.Volume{volume1, volume2}
-	expectedPod1InitContainers = []k8sv1.Container{container1, container2}
-	expectedPod1Containers     = []k8sv1.Container{container3, container4, container5}
+	expectedPod1InitContainers = []k8sv1.Container{container1, container2, container6}
+	expectedPod1Containers     = []k8sv1.Container{container3, container4}
 	expectedPod1RestartPolicy  = k8sv1.RestartPolicyAlways
 	pod1                       = forgePod(pod1Name, expectedPod1Volumes, expectedPod1InitContainers, expectedPod1Containers, expectedPod1RestartPolicy, false)
 
@@ -62,34 +71,34 @@ var (
 
 	pod3Name                   = "pod3"
 	expectedPod3Volumes        = []k8sv1.Volume{}
-	expectedPod3InitContainers = []k8sv1.Container{container1}
+	expectedPod3InitContainers = []k8sv1.Container{container1, container5}
 	expectedPod3Containers     = []k8sv1.Container{container3, container4}
 	expectedPod3RestartPolicy  = k8sv1.RestartPolicyNever
 	pod3                       = forgePod(pod3Name, expectedPod3Volumes, expectedPod3InitContainers, expectedPod3Containers, expectedPod3RestartPolicy, false)
 )
 
-func forgeContainer(name string, pp k8sv1.PullPolicy, privileged, roRootFs, tty bool) k8sv1.Container {
+func forgeContainer(name, image string, pp k8sv1.PullPolicy, privileged, roRootFs, tty bool, cmd, args []string) k8sv1.Container {
 	containerName := name
-	expectedContainer1Image := name + "-image"
-	expectedContainer1Command := []string{name + "_cmd1", name + "_cmd2"}
-	expectedContainer1Args := []string{name + "_arg1", name + "_arg2", name + "_arg3"}
-	expectedContainer1WorkingDir := name + "_workdir1"
-	expectedContainer1Ports := []k8sv1.ContainerPort{
+	expectedContainerImage := image
+	expectedContainerCommand := cmd
+	expectedContainerArgs := args
+	expectedContainerWorkingDir := "/tmp/" + name + "_workdir1"
+	expectedContainerPorts := []k8sv1.ContainerPort{
 		k8sv1.ContainerPort{Name: name + "-port1", HostPort: 8080, ContainerPort: 80, HostIP: "1.2.3.4"},
 	}
-	expectedContainer1Env := []k8sv1.EnvVar{
+	expectedContainerEnv := []k8sv1.EnvVar{
 		k8sv1.EnvVar{Name: name + "envKey1", Value: name + "envVal1"},
 		k8sv1.EnvVar{Name: name + "envKey2", Value: name + "envVal2"},
 		k8sv1.EnvVar{Name: name + "envKey3", Value: name + "envVal3"},
 	}
-	expectedContainer1VolumeMounts := []k8sv1.VolumeMount{
+	expectedContainerVolumeMounts := []k8sv1.VolumeMount{
 		k8sv1.VolumeMount{Name: name + "-vol1", ReadOnly: true, MountPath: "/foo/bar"},
 		k8sv1.VolumeMount{Name: name + "-vol2", ReadOnly: true, MountPath: "/foo/baz"},
 	}
 	var uid int64 = 1001
 	var gid int64 = 1001
 	nonRoot := true
-	expectedContainer1SecurityContext := k8sv1.SecurityContext{
+	expectedContainerSecurityContext := k8sv1.SecurityContext{
 		Privileged:             &privileged,
 		RunAsUser:              &uid,
 		RunAsGroup:             &gid,
@@ -99,15 +108,15 @@ func forgeContainer(name string, pp k8sv1.PullPolicy, privileged, roRootFs, tty 
 
 	container := k8sv1.Container{
 		Name:            containerName,
-		Image:           expectedContainer1Image,
-		Command:         expectedContainer1Command,
-		Args:            expectedContainer1Args,
-		WorkingDir:      expectedContainer1WorkingDir,
-		Ports:           expectedContainer1Ports,
-		Env:             expectedContainer1Env,
-		VolumeMounts:    expectedContainer1VolumeMounts,
+		Image:           expectedContainerImage,
+		Command:         expectedContainerCommand,
+		Args:            expectedContainerArgs,
+		WorkingDir:      expectedContainerWorkingDir,
+		Ports:           expectedContainerPorts,
+		Env:             expectedContainerEnv,
+		VolumeMounts:    expectedContainerVolumeMounts,
 		ImagePullPolicy: pp,
-		SecurityContext: &expectedContainer1SecurityContext,
+		SecurityContext: &expectedContainerSecurityContext,
 		TTY:             tty,
 	}
 	return container
@@ -124,24 +133,24 @@ func forgePod(name string, volumes []k8sv1.Volume, initContainers, containers []
 		name + "_annotationKkey2": name + "_annotationVal2",
 	}
 
-	expectedPod1Hostname := name + "-hostname"
-	expectedPod1Subdomain := name + "-subdomain"
-	expectedPod1HostNetwork := hostNetwork
+	expectedPodHostname := name + "-hostname"
+	expectedPodSubdomain := name + "-subdomain"
+	expectedPodHostNetwork := hostNetwork
 	var uid int64 = 1001
 	var gid int64 = 1001
 	nonRoot := true
-	expectedPod1SecurityContext1 := k8sv1.PodSecurityContext{
+	expectedPodSecurityContext := k8sv1.PodSecurityContext{
 		RunAsUser:          &uid,
 		RunAsGroup:         &gid,
 		RunAsNonRoot:       &nonRoot,
 		SupplementalGroups: []int64{1, 2, 3},
 	}
 
-	expectedPod1HostAliases := []k8sv1.HostAlias{
+	expectedPodHostAliases := []k8sv1.HostAlias{
 		k8sv1.HostAlias{IP: "1.1.1.1", Hostnames: []string{name + "-foo", name + "-bar"}},
 		k8sv1.HostAlias{IP: "2.2.2.2", Hostnames: []string{name + "-baz"}},
 	}
-	expectedPod1DnsConfig := k8sv1.PodDNSConfig{
+	expectedPodDnsConfig := k8sv1.PodDNSConfig{
 		Nameservers: []string{"8.8.8.8", "8.8.9.9"},
 		Searches:    []string{name + ".foo.local"},
 		Options:     []k8sv1.PodDNSConfigOption{},
@@ -154,16 +163,16 @@ func forgePod(name string, volumes []k8sv1.Volume, initContainers, containers []
 			Annotations: expectedPod1Annotations,
 		},
 		Spec: k8sv1.PodSpec{
-			Volumes:         expectedPod1Volumes,
-			InitContainers:  expectedPod1InitContainers,
-			Containers:      expectedPod1Containers,
+			Volumes:         volumes,
+			InitContainers:  initContainers,
+			Containers:      containers,
 			RestartPolicy:   rp,
-			HostNetwork:     expectedPod1HostNetwork,
-			SecurityContext: &expectedPod1SecurityContext1,
-			Hostname:        expectedPod1Hostname,
-			Subdomain:       expectedPod1Subdomain,
-			HostAliases:     expectedPod1HostAliases,
-			DNSConfig:       &expectedPod1DnsConfig,
+			HostNetwork:     expectedPodHostNetwork,
+			SecurityContext: &expectedPodSecurityContext,
+			Hostname:        expectedPodHostname,
+			Subdomain:       expectedPodSubdomain,
+			HostAliases:     expectedPodHostAliases,
+			DNSConfig:       &expectedPodDnsConfig,
 		},
 	}
 
@@ -197,22 +206,29 @@ func TestCreateVolume(t *testing.T) {
 	assert.Equal(t, expectedCmd2, cmds2[0].String())
 }
 
-func TestCreateContainer(t *testing.T) {
+func TestCreatePodContainer(t *testing.T) {
 	translator := Translator{expectedBinary0}
 
 	ct1 := pod1.Spec.InitContainers[0]
-	cmds1, err := translator.createContainer(expectedNamespace1, pod1, ct1)
+	cmds1, err := translator.createPodContainer(expectedNamespace1, pod1, ct1, true)
 	require.NoError(t, err, "should not error")
-	assert.Len(t, cmds1, 1)
-	expectedCmd1 := fmt.Sprintf(`%s run --name %s_%s_%s --workdir=ct1_workdir1 --restart=always --pull=always -v namespace1_ct1-vol1:/foo/bar:ro -v namespace1_ct1-vol2:/foo/baz:ro --entrypoint ct1_cmd1 -e "ct1envKey1=ct1envVal1" -e "ct1envKey2=ct1envVal2" -e "ct1envKey3=ct1envVal3" -l pod1_labelKey1=pod1_labelVal2 ct1-image ct1_cmd2 ct1_arg1 ct1_arg2 ct1_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name)
+	require.Len(t, cmds1, 1)
+	expectedCmd1 := fmt.Sprintf(`%[1]s run --rm --name %[2]s_%s_%s --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=always -v %[2]s_%[4]s-vol1:/foo/bar:ro -v %[2]s_%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 0.1`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name, ct1.Image)
 	assert.Equal(t, expectedCmd1, cmds1[0].String())
 
 	ct2 := pod1.Spec.InitContainers[1]
-	cmds2, err := translator.createContainer(expectedNamespace1, pod1, ct2)
+	cmds2, err := translator.createPodContainer(expectedNamespace1, pod1, ct2, true)
 	require.NoError(t, err, "should not error")
-	assert.Len(t, cmds2, 1)
-	expectedCmd2 := fmt.Sprintf(`%s run --name %s_%s_%s --privileged --workdir=ct2_workdir1 --restart=always --pull=never -v namespace1_ct2-vol1:/foo/bar:ro -v namespace1_ct2-vol2:/foo/baz:ro --entrypoint ct2_cmd1 -e "ct2envKey1=ct2envVal1" -e "ct2envKey2=ct2envVal2" -e "ct2envKey3=ct2envVal3" -l pod1_labelKey1=pod1_labelVal2 ct2-image ct2_cmd2 ct2_arg1 ct2_arg2 ct2_arg3`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name)
+	require.Len(t, cmds2, 1)
+	expectedCmd2 := fmt.Sprintf(`%[1]s run --rm --name %[2]s_%s_%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=missing -v %[2]s_%[4]s-vol1:/foo/bar:ro -v %[2]s_%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 10`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name, ct2.Image)
 	assert.Equal(t, expectedCmd2, cmds2[0].String())
+
+	ct5 := pod3.Spec.InitContainers[1]
+	cmds3, err := translator.createPodContainer(expectedNamespace2, pod3, ct5, true)
+	require.NoError(t, err, "should not error")
+	require.Len(t, cmds3, 1)
+	expectedCmd3 := fmt.Sprintf(`%s run --rm --name %s_%s_%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=never -v %[2]s_%[4]s-vol1:/foo/bar:ro -v %[2]s_%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sh -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s -c sleep 0.1`, expectedBinary0, expectedNamespace2, pod3.Name, ct5.Name, ct5.Image)
+	assert.Equal(t, expectedCmd3, cmds3[0].String())
 }
 
 func TestCreatePodNetwork(t *testing.T) {

@@ -62,38 +62,69 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 	}
 
 	for _, volume := range pod.Spec.Volumes {
-		execs, err := e.translator.createVolume(namespace, volume)
+		volId, err := e.translator.volumeId(namespace, volume)
 		if err != nil {
 			return err
 		}
-		err = cmdz.Parallel(e.forkCount, execs...)
-		if err != nil {
-			volName := forgeResName(podName, volume)
-			return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
+		if volId == "" {
+			execs, err := e.translator.createVolume(namespace, volume)
+			if err != nil {
+				return err
+			}
+			err = cmdz.Parallel(e.forkCount, execs...)
+			if err != nil {
+				volName := forgeResName(podName, volume)
+				return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
+			}
 		}
 	}
 
+	var ictExecs []*cmdz.Exec
 	for _, container := range pod.Spec.InitContainers {
-		execs, err := e.translator.createContainer(namespace, pod, container)
+		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
 			return err
 		}
-		err = cmdz.Parallel(e.forkCount, execs...)
+		if ctId != "" {
+			ctName := podContainerName(namespace, pod, container)
+			err = fmt.Errorf("Init Container %s already exists !", ctName)
+			return err
+		} else {
+			execs, err := e.translator.createPodContainer(namespace, pod, container, true)
+			if err != nil {
+				return err
+			}
+			ictExecs = append(ictExecs, execs...)
+		}
+	}
+	if len(ictExecs) > 0 {
+		err = cmdz.Parallel(e.forkCount, ictExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 		}
 	}
 
+	var ctExecs []*cmdz.Exec
 	for _, container := range pod.Spec.Containers {
-		execs, err := e.translator.createContainer(namespace, pod, container)
+		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
 			return err
 		}
-		err = cmdz.Parallel(e.forkCount, execs...)
+		if ctId == "" {
+			execs, err := e.translator.createPodContainer(namespace, pod, container, false)
+			if err != nil {
+				return err
+			}
+			ctExecs = append(ctExecs, execs...)
+		}
+	}
+	if len(ctExecs) > 0 {
+		err = cmdz.Parallel(e.forkCount, ctExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 		}
 	}
+
 	return
 }
 
@@ -106,6 +137,12 @@ func networkName(namespace string, pod k8sv1.Pod) string {
 func podRootContainerName(namespace string, pod k8sv1.Pod) string {
 	podName := forgeResName(namespace, pod)
 	ctName := fmt.Sprintf("%s_root", podName)
+	return ctName
+}
+
+func podContainerName(namespace string, pod k8sv1.Pod, container k8sv1.Container) string {
+	podName := forgeResName(namespace, pod)
+	ctName := forgeResName(podName, container)
 	return ctName
 }
 
@@ -128,8 +165,31 @@ func forgeResName(prefix string, resource any) (name string) {
 	return
 }
 
+func escapeCmdArg(arg string) string {
+	if ! strings.Contains(arg, " ") {
+		return arg
+	}
+	
+	// If spaces in arg
+	if ! strings.Contains(arg, `"`) {
+		return `"` + arg + `"`
+	} else if ! strings.Contains(arg, "'") {
+		return "'" + arg + "'"
+	}
+	escapedArg := strings.Replace(arg, `"`, `\"`, -1)
+	return `"` + escapedArg + `"`
+}
+
 type Translator struct {
 	binary string
+}
+
+func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodePhase, error) { 
+ 	// TODO
+}
+
+func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (k8sv1.ContainerState, error) { 
+	// TODO
 }
 
 func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) { 
@@ -199,6 +259,22 @@ func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmd
 	return
 }
 
+func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error) { 
+	volName := forgeResName(namespace, vol)
+	script := fmt.Sprintf("%s volume ls -f 'Name=%s' -q", t.binary, volName)
+	exec := cmdz.Execution("/bin/sh", "-c", script)
+	stdout := &strings.Builder{}
+	exec.RecordingOutputs(stdout, nil)
+	exec.Retries = 2
+
+	err := cmdz.Sequential(exec)
+	if err != nil {
+		return "", err
+	}
+	id := stdout.String()
+	return id, nil
+}
+
 func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
@@ -237,9 +313,24 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 	return
 }
 
-func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container) (cmds []*cmdz.Exec, err error) {
-	podName := forgeResName(namespace, pod)
-	ctName := forgeResName(podName, container)
+func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) { 
+	ctName := podContainerName(namespace, pod, container)
+	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
+	exec := cmdz.Execution("/bin/sh", "-c", script)
+	stdout := &strings.Builder{}
+	exec.RecordingOutputs(stdout, nil)
+	exec.Retries = 2
+
+	err := cmdz.Sequential(exec)
+	if err != nil {
+		return "", err
+	}
+	id := stdout.String()
+	return id, nil
+}
+
+func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container, init bool) (cmds []*cmdz.Exec, err error) {
+	ctName := podContainerName(namespace, pod, container)
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
 	tty := container.TTY
@@ -263,7 +354,11 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 	var cmdArgs []string
 	var labelArgs []string
 
-	//runArgs = append(runArgs, "--rm")
+	if init {
+		restartPolicy = k8sv1.RestartPolicyNever
+		runArgs = append(runArgs, "--rm")
+	}
+
 	runArgs = append(runArgs, "--name")
 	runArgs = append(runArgs, ctName)
 
@@ -327,11 +422,15 @@ func (t Translator) createContainer(namespace string, pod k8sv1.Pod, container k
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {
-		cmdArgs = append(cmdArgs, entrypoint[1:]...)
+		for _, arg := range(entrypoint[1:]) {
+			cmdArgs = append(cmdArgs, arg)
+		} 
 	}
 
 	if len(args) > 0 {
-		cmdArgs = append(cmdArgs, args...)
+		for _, arg := range(args) {
+			cmdArgs = append(cmdArgs, arg)
+		} 
 	}
 
 	if cpuLimitInMilli > 0 {
