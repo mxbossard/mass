@@ -40,7 +40,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = cmdz.Sequential(execs...)
+		err = cmdz.BlockSerial(execs...)
 		if err != nil {
 			return fmt.Errorf("Unable to create Network for pod: %s. Caused by: %w", podName, err)
 		}
@@ -55,7 +55,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = cmdz.Sequential(execs...)
+		err = cmdz.BlockSerial(execs...)
 		if err != nil {
 			return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 		}
@@ -71,7 +71,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 			if err != nil {
 				return err
 			}
-			err = cmdz.Parallel(e.forkCount, execs...)
+			err = cmdz.BlockParallel(e.forkCount, execs...)
 			if err != nil {
 				volName := forgeResName(podName, volume)
 				return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
@@ -98,7 +98,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		}
 	}
 	if len(ictExecs) > 0 {
-		err = cmdz.Parallel(e.forkCount, ictExecs...)
+		err = cmdz.BlockParallel(e.forkCount, ictExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 		}
@@ -119,7 +119,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		}
 	}
 	if len(ctExecs) > 0 {
-		err = cmdz.Parallel(e.forkCount, ctExecs...)
+		err = cmdz.BlockParallel(e.forkCount, ctExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 		}
@@ -206,7 +206,7 @@ func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error
 	exec.RecordingOutputs(stdout, nil)
 	exec.Retries = 2
 
-	err := cmdz.Sequential(exec)
+	err := cmdz.BlockSerial(exec)
 	if err != nil {
 		return "", err
 	}
@@ -233,7 +233,7 @@ func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string,
 	exec.RecordingOutputs(stdout, nil)
 	exec.Retries = 2
 
-	err := cmdz.Sequential(exec)
+	err := cmdz.BlockSerial(exec)
 	if err != nil {
 		return "", err
 	}
@@ -273,7 +273,7 @@ func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error)
 	exec.RecordingOutputs(stdout, nil)
 	exec.Retries = 2
 
-	err := cmdz.Sequential(exec)
+	err := cmdz.BlockSerial(exec)
 	if err != nil {
 		return "", err
 	}
@@ -327,7 +327,7 @@ func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8
 	exec.RecordingOutputs(stdout, nil)
 	exec.Retries = 2
 
-	err := cmdz.Sequential(exec)
+	err := cmdz.BlockSerial(exec)
 	if err != nil {
 		return "", err
 	}
