@@ -36,11 +36,11 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		return err
 	}
 	if netId == "" {
-		execs, err := e.translator.createPodNetwork(namespace, pod)
+		exec, err := e.translator.createPodNetwork(namespace, pod)
 		if err != nil {
 			return err
 		}
-		err = cmdz.BlockSerial(execs...)
+		_, err = exec.BlockRun()
 		if err != nil {
 			return fmt.Errorf("Unable to create Network for pod: %s. Caused by: %w", podName, err)
 		}
@@ -55,31 +55,32 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return err
 		}
-		err = cmdz.BlockSerial(execs...)
+		_, err = execs.BlockRun()
 		if err != nil {
 			return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 		}
 	}
 
+	volExec := cmdz.Parallel().ErrorOnFailure(true)
 	for _, volume := range pod.Spec.Volumes {
 		volId, err := e.translator.volumeId(namespace, volume)
 		if err != nil {
 			return err
 		}
 		if volId == "" {
-			execs, err := e.translator.createVolume(namespace, volume)
+			exec, err := e.translator.createVolume(namespace, volume)
 			if err != nil {
 				return err
 			}
-			err = cmdz.BlockParallel(e.forkCount, execs...)
-			if err != nil {
-				volName := forgeResName(podName, volume)
-				return fmt.Errorf("Unable to create volume %s. Caused by: %w", volName, err)
-			}
+			volExec.Add(exec)
 		}
 	}
+	_, err = volExec.BlockRun()
+	if err != nil {
+		return fmt.Errorf("Unable to create a volume ! Caused by: %w", err)
+	}
 
-	var ictExecs []*cmdz.Exec
+	ictExec := cmdz.Parallel().ErrorOnFailure(true)
 	for _, container := range pod.Spec.InitContainers {
 		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
@@ -90,39 +91,49 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 			err = fmt.Errorf("Init Container %s already exists !", ctName)
 			return err
 		} else {
-			execs, err := e.translator.createPodContainer(namespace, pod, container, true)
+			exec, err := e.translator.createPodContainer(namespace, pod, container, true)
 			if err != nil {
 				return err
 			}
-			ictExecs = append(ictExecs, execs...)
+			ictExec.Add(exec)
 		}
 	}
+	/*
 	if len(ictExecs) > 0 {
 		err = cmdz.BlockParallel(e.forkCount, ictExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 		}
+	}*/
+	_, err = ictExec.BlockRun()
+	if err != nil {
+		return fmt.Errorf("Unable to create init containers ! Caused by: %w", err)
 	}
 
-	var ctExecs []*cmdz.Exec
+	ctExec := cmdz.Parallel().ErrorOnFailure(true)
 	for _, container := range pod.Spec.Containers {
 		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
 			return err
 		}
 		if ctId == "" {
-			execs, err := e.translator.createPodContainer(namespace, pod, container, false)
+			exec, err := e.translator.createPodContainer(namespace, pod, container, false)
 			if err != nil {
 				return err
 			}
-			ctExecs = append(ctExecs, execs...)
+			ctExec.Add(exec)
 		}
 	}
+	/*
 	if len(ctExecs) > 0 {
 		err = cmdz.BlockParallel(e.forkCount, ctExecs...)
 		if err != nil {
 			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 		}
+	}*/
+	_, err = ctExec.BlockRun()
+	if err != nil {
+		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
 	}
 
 	return
@@ -184,64 +195,51 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) setPodPhase(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec) {
-	cmd := cmdz.Execution(t.binary, "")
-	cmds = append(cmds, cmd)
+func (t Translator) setPodPhase(namespace string, pod k8sv1.Pod) cmdz.Executer {
+	exec := cmdz.Cmd(t.binary, "")
+	return exec
+}
+
+func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (p k8sv1.PodPhase, e error) {
 	return
 }
 
-func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodePhase, error) {
-	// TODO
-}
-
-func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (k8sv1.ContainerState, error) {
-	// TODO
+func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (p k8sv1.ContainerState, e error) {
+	return
 }
 
 func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) {
 	networkName := networkName(namespace, pod)
-	script := fmt.Sprintf("%s network ls -f 'Name=%s' -q", t.binary, networkName)
-	exec := cmdz.Execution("/bin/sh", "-c", script)
-	stdout := &strings.Builder{}
-	exec.RecordingOutputs(stdout, nil)
-	exec.Retries = 2
-
-	err := cmdz.BlockSerial(exec)
+	networkArgs := []string{"network", "ls", "-q", "-f", fmt.Sprintf("Name=%s", networkName)}
+	exec := cmdz.Cmd(t.binary, networkArgs...).ErrorOnFailure(true)
+	_, err := exec.BlockRun()
 	if err != nil {
 		return "", err
 	}
-	id := stdout.String()
+	id := exec.StdoutRecord()
 	return id, nil
 }
 
-func (t Translator) createPodNetwork(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createPodNetwork(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
 	networkName := networkName(namespace, pod)
-
 	networkArgs := []string{"network", "create", networkName}
-
-	cmd := cmdz.Execution(t.binary, networkArgs...)
-	cmd.Retries = 2
-	cmds = append(cmds, cmd)
-	return
+	exec := cmdz.Cmd(t.binary, networkArgs...).ErrorOnFailure(true)
+	return exec, nil
 }
 
 func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string, error) {
 	ctName := podRootContainerName(namespace, pod)
-	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
-	exec := cmdz.Execution("/bin/sh", "-c", script)
-	stdout := &strings.Builder{}
-	exec.RecordingOutputs(stdout, nil)
-	exec.Retries = 2
+	exec := cmdz.Cmd(t.binary, "ps", "-q", "-f", fmt.Sprintf("Name=%s", ctName)).ErrorOnFailure(true)
 
-	err := cmdz.BlockSerial(exec)
+	_, err := exec.BlockRun()
 	if err != nil {
 		return "", err
 	}
-	id := stdout.String()
+	id := exec.StdoutRecord()
 	return id, nil
 }
 
-func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
 	ctName := podRootContainerName(namespace, pod)
 	cpusArgs := "--cpus=0.05"
 	memoryArgs := "--memory=64m"
@@ -259,83 +257,72 @@ func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmd
 	runArgs = append(runArgs, pauseImage)
 	runArgs = append(runArgs, "/bin/sleep", "inf")
 
-	cmd := cmdz.Execution(t.binary, runArgs...)
-	cmd.Retries = 2
-	cmds = append(cmds, cmd)
-	return
+	exec := cmdz.Cmd(t.binary, runArgs...).ErrorOnFailure(true)
+	return exec, nil
 }
 
 func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error) {
 	volName := forgeResName(namespace, vol)
-	script := fmt.Sprintf("%s volume ls -f 'Name=%s' -q", t.binary, volName)
-	exec := cmdz.Execution("/bin/sh", "-c", script)
-	stdout := &strings.Builder{}
-	exec.RecordingOutputs(stdout, nil)
-	exec.Retries = 2
+	volumeArgs := []string{"volume", "ls", "-q", "-f", fmt.Sprintf("Name=%s", volName)}
+	exec := cmdz.Cmd(t.binary, volumeArgs...).ErrorOnFailure(true)
 
-	err := cmdz.BlockSerial(exec)
+	_, err := exec.BlockRun()
 	if err != nil {
 		return "", err
 	}
-	id := stdout.String()
+	id := exec.StdoutRecord()
 	return id, nil
 }
 
-func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
 	} else if vol.VolumeSource.EmptyDir != nil {
 		return t.createEmptyDirPodVolume(namespace, vol)
 	}
-	err = fmt.Errorf("Not supported volume type for volume: %s !", vol.Name)
-	return
+	err := fmt.Errorf("Not supported volume type for volume: %s !", vol.Name)
+	return nil, err
 }
 
-func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
 	hostPathType := *vol.VolumeSource.HostPath.Type
 	if hostPathType != k8sv1.HostPathUnset {
-		err = fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
+		err := fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
+		return nil, err
 	}
 
 	name := forgeResName(namespace, vol)
 	path := vol.VolumeSource.HostPath.Path
-	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local")
-	cmd.Retries = 2
-	cmd.AddArgs("-o", "o=bind", "-o", "type=none", "-o", "device="+path)
-	cmd.AddArgs(name)
-	cmds = append(cmds, cmd)
-	return
+	exec := cmdz.Cmd(t.binary, "volume", "create", "--driver", "local")
+	exec.AddArgs("-o", "o=bind", "-o", "type=none", "-o", "device="+path)
+	exec.AddArgs(name)
+	return exec, nil
 }
 
-func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.EmptyDir == nil {
-		err = fmt.Errorf("Bad EmptyDirVolume !")
-		return
+		err := fmt.Errorf("Bad EmptyDirVolume !")
+		return nil, err
 	}
 	name := forgeResName(namespace, vol)
-	cmd := cmdz.Execution(t.binary, "volume", "create", "--driver", "local", name)
-	cmd.Retries = 2
-	cmds = append(cmds, cmd)
-	return
+	exec := cmdz.Cmd(t.binary, "volume", "create", "--driver", "local", name)
+	return exec, nil
 }
 
 func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) {
 	ctName := podContainerName(namespace, pod, container)
-	script := fmt.Sprintf("%s ps -f 'Name=%s' -q", t.binary, ctName)
-	exec := cmdz.Execution("/bin/sh", "-c", script)
-	stdout := &strings.Builder{}
-	exec.RecordingOutputs(stdout, nil)
-	exec.Retries = 2
+	psArgs := []string{"ps", "-q", "-f", fmt.Sprintf("Name=%s",ctName)}
+	exec := cmdz.Cmd(t.binary, psArgs...).ErrorOnFailure(true)
 
-	err := cmdz.BlockSerial(exec)
+	_, err := exec.BlockRun()
 	if err != nil {
 		return "", err
 	}
-	id := stdout.String()
+	id := exec.StdoutRecord()
 	return id, nil
 }
 
-func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container, init bool) (cmds []*cmdz.Exec, err error) {
+func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container, init bool) (cmdz.Executer, error) {
 	ctName := podContainerName(namespace, pod, container)
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
@@ -387,8 +374,8 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 	case "OnFailure":
 		dockerRestartPolicy = "on-failure"
 	default:
-		err = fmt.Errorf("No supported restart policy: %s in container: %s !", restartPolicy, ctName)
-		return
+		err := fmt.Errorf("No supported restart policy: %s in container: %s !", restartPolicy, ctName)
+		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--restart=%s", dockerRestartPolicy))
 
@@ -401,8 +388,8 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 	case k8sv1.PullIfNotPresent:
 		dockerPullPolicy = "missing"
 	default:
-		err = fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)
-		return
+		err := fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)
+		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--pull=%s", dockerPullPolicy))
 
@@ -469,15 +456,15 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 
 	// TODO: add annotations ?
 
-	cmd := cmdz.Execution(t.binary, "run")
-	cmd.Retries = 2
-	cmd.AddArgs(runArgs...)
-	cmd.AddArgs(resourcesArgs...)
-	cmd.AddArgs(envArgs...)
-	cmd.AddArgs(labelArgs...)
-	cmd.AddArgs(image)
-	cmd.AddArgs(cmdArgs...)
-	cmds = append(cmds, cmd)
+	exec := cmdz.Cmd(t.binary, "run")
+	//cmd.Retries = 2
+	exec.AddArgs(runArgs...)
+	exec.AddArgs(resourcesArgs...)
+	exec.AddArgs(envArgs...)
+	exec.AddArgs(labelArgs...)
+	exec.AddArgs(image)
+	exec.AddArgs(cmdArgs...)
+	//cmds = append(cmds, cmd)
 
 	/*
 	   # Test if ct already started or start it if excited or create it
@@ -492,5 +479,5 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 	   #echo "$cmd"
 	*/
 
-	return
+	return exec, nil
 }
