@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"encoding/json"
 	"strings"
 
 	"mby.fr/utils/cmdz"
@@ -18,17 +19,18 @@ type Executor struct {
 	forkCount  int
 }
 
-func (e Executor) Create(namespace string, resource any) (err error) {
+func (e Executor) Apply(namespace string, resource any) (err error) {
 	switch res := resource.(type) {
 	case k8sv1.Pod:
-		err = e.createPod(namespace, res)
+		err = e.applyPod(namespace, res)
 	default:
 		err = fmt.Errorf("Cannot create not supported type %T", res)
 	}
 	return
 }
 
-func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
+
 	podName := forgeResName(namespace, pod)
 
 	netId, err := e.translator.podNetworkId(namespace, pod)
@@ -59,6 +61,17 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		if err != nil {
 			return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 		}
+	} else {
+		podConfig, err := e.translator.getCommitedPodConfig(namespace, pod)
+		if err != nil {
+			return err
+		}
+
+		podPhase, err := e.translator.getCommitedPodPhase(namespace, pod)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	volExec := cmdz.Parallel().ErrorOnFailure(true)
@@ -99,12 +112,12 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		}
 	}
 	/*
-	if len(ictExecs) > 0 {
-		err = cmdz.BlockParallel(e.forkCount, ictExecs...)
-		if err != nil {
-			return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
-		}
-	}*/
+		if len(ictExecs) > 0 {
+			err = cmdz.BlockParallel(e.forkCount, ictExecs...)
+			if err != nil {
+				return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
+			}
+		}*/
 	_, err = ictExec.BlockRun()
 	if err != nil {
 		return fmt.Errorf("Unable to create init containers ! Caused by: %w", err)
@@ -125,12 +138,12 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		}
 	}
 	/*
-	if len(ctExecs) > 0 {
-		err = cmdz.BlockParallel(e.forkCount, ctExecs...)
-		if err != nil {
-			return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
-		}
-	}*/
+		if len(ctExecs) > 0 {
+			err = cmdz.BlockParallel(e.forkCount, ctExecs...)
+			if err != nil {
+				return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
+			}
+		}*/
 	_, err = ctExec.BlockRun()
 	if err != nil {
 		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
@@ -195,13 +208,50 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) setPodPhase(namespace string, pod k8sv1.Pod) cmdz.Executer {
-	exec := cmdz.Cmd(t.binary, "")
+func (t Translator) commitPodConfig(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
+	b, err := json.Marshal(pod)
+	if err != nil {
+		return nil, err
+	}
+	ctName := podRootContainerName(namespace, pod)
+	execArgs := []string{"exec", ctName, "/bin/sh", "-c", fmt.Sprintf("echo %s > /podConfig.txt", string(b))}
+	exec := cmdz.Cmd(t.binary, execArgs...)
 	return exec
 }
 
-func (t Translator) podPhase(namespace string, pod k8sv1.Pod) (p k8sv1.PodPhase, e error) {
-	return
+func (t Translator) getCommitedPodConfig(namespace string, pod k8sv1.Pod) (k8sv1.Pod, error) {
+	ctName := podRootContainerName(namespace, pod)
+	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podConfig.txt"}
+	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure()
+	_, err := exec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+	jsonBlob := exec.StdoutRecord
+	var p k8sv1.Pod
+	err = json.Unmarshal(jsonBlob, &p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (t Translator) commitPodPhase(namespace string, pod k8sv1.Pod, phase k8sv1.PodPhase) cmdz.Executer {
+	ctName := podRootContainerName(namespace, pod)
+	execArgs := []string{"exec", ctName, "/bin/sh", "-c", fmt.Sprintf("echo %s > /podPhase.txt", phase)}
+	exec := cmdz.Cmd(t.binary, execArgs...)
+	return exec
+}
+
+func (t Translator) getCommitedPodPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodPhase, error) {
+	ctName := podRootContainerName(namespace, pod)
+	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podPhase.txt"}
+	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure()
+	_, err := exec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+	return k8sv1.PodPhase(exec.StdoutRecord)
 }
 
 func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (p k8sv1.ContainerState, e error) {
@@ -311,7 +361,7 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 
 func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) {
 	ctName := podContainerName(namespace, pod, container)
-	psArgs := []string{"ps", "-q", "-f", fmt.Sprintf("Name=%s",ctName)}
+	psArgs := []string{"ps", "-q", "-f", fmt.Sprintf("Name=%s", ctName)}
 	exec := cmdz.Cmd(t.binary, psArgs...).ErrorOnFailure(true)
 
 	_, err := exec.BlockRun()

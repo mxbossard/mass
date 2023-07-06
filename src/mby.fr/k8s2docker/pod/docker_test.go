@@ -36,24 +36,24 @@ var (
 		VolumeSource: k8sv1.VolumeSource{HostPath: &expectedVolume2HostPath},
 	}
 
-	container1Name = "ct1"
+	container1Name  = "ct1"
 	container1Image = "busybox:1.36.1-musl"
-	container1     = forgeContainer(container1Name, container1Image, k8sv1.PullAlways, false, false, false, []string{"/bin/sleep"}, []string{"0.1"})
-	container2Name = "ct2"
+	container1      = forgeContainer(container1Name, container1Image, k8sv1.PullAlways, false, false, false, []string{"/bin/sleep"}, []string{"0.1"})
+	container2Name  = "ct2"
 	container2Image = "alpine:3.18.2"
-	container2     = forgeContainer(container2Name, container2Image, k8sv1.PullIfNotPresent, true, false, false, []string{"/bin/sleep"}, []string{"10"})
-	container3Name = "ct3"
+	container2      = forgeContainer(container2Name, container2Image, k8sv1.PullIfNotPresent, true, false, false, []string{"/bin/sleep"}, []string{"10"})
+	container3Name  = "ct3"
 	container3Image = "busybox:1.35.0-musl"
-	container3     = forgeContainer(container3Name, container3Image, k8sv1.PullAlways, false, true, false, []string{"/bin/sleep", "0.1"}, []string{})
-	container4Name = "ct4"
+	container3      = forgeContainer(container3Name, container3Image, k8sv1.PullAlways, false, true, false, []string{"/bin/sleep", "0.1"}, []string{})
+	container4Name  = "ct4"
 	container4Image = "alpine:3.17.4"
-	container4     = forgeContainer(container4Name, container4Image, k8sv1.PullIfNotPresent, false, false, true, []string{"/bin/sleep", "10"}, []string{})
-	container5Name = "ct5"
+	container4      = forgeContainer(container4Name, container4Image, k8sv1.PullIfNotPresent, false, false, true, []string{"/bin/sleep", "10"}, []string{})
+	container5Name  = "ct5"
 	container5Image = "busybox:1.34.1-musl"
-	container5     = forgeContainer(container5Name, container5Image, k8sv1.PullNever, true, true, false, []string{"/bin/sh"}, []string{"-c", "sleep 0.1"})
-	container6Name = "ct6"
+	container5      = forgeContainer(container5Name, container5Image, k8sv1.PullNever, true, true, false, []string{"/bin/sh"}, []string{"-c", "sleep 0.1"})
+	container6Name  = "ct6"
 	container6Image = "busybox:1.34.1-musl"
-	container6     = forgeContainer(container6Name, container6Image, k8sv1.PullIfNotPresent, true, true, false, []string{"/bin/sh", "-c"}, []string{"/bin/sleep 0.1"})
+	container6      = forgeContainer(container6Name, container6Image, k8sv1.PullIfNotPresent, true, true, false, []string{"/bin/sh", "-c"}, []string{"/bin/sleep 0.1"})
 
 	pod1Name                   = "pod1"
 	expectedPod1Volumes        = []k8sv1.Volume{volume1, volume2}
@@ -254,10 +254,10 @@ func TestCreatePodRootContainer(t *testing.T) {
 	assert.Equal(t, expectedCmd21, cmds2.String())
 }
 
-func TestRunPod(t *testing.T) {
+func TestApplyPod(t *testing.T) {
 	translator := Translator{expectedBinary}
 	executor := Executor{translator: translator}
-	err := executor.createPod(expectedNamespace1, pod1)
+	err := executor.applyPod(expectedNamespace1, pod1)
 	require.NoError(t, err)
 
 }
