@@ -1,81 +1,163 @@
 package compare
 
 import (
+	"reflect"
+
+	"mby.fr/utils/collections"
+
 	k8sv1 "k8s.io/api/core/v1"
 )
 
-type differ[T any] interface {
-	Kind() string
-	Old() T
-	New() T
-}
-
-type diff[T any] struct {
-	name string
-	old  T
-	new  T
-}
-
-func (d diff[T]) Kind() string {
-	return d.name
-}
-
-func (d diff[T]) Old() T {
-	return d.old
-}
-
-func (d diff[T]) New() T {
-	return d.new
+type diff struct {
+	Path  string
+	Left  any
+	Right any
 }
 
 type podDiff struct {
-	diff[k8sv1.Pod]
+	diffs []diff
+}
 
-	initContainers []containerDiff
-	containers     []containerDiff
-	volumes        []volumeDiff
+func (d podDiff) Diffs() []diff {
+	return d.diffs
 }
 
 func (d podDiff) DoDiffer() bool {
-
+	return len(d.diffs) > 0
 }
 
-func (d podDiff) IsRestartNeeded() bool {
-
+func (d podDiff) IsUpdatable() bool {
+	return len(d.diffs) == len(d.updatableDiffs())
 }
 
-func (d podDiff) UpdatableDiffs() []differ[any] {
-
+func (d podDiff) updatableDiffs() []diff {
+	return collections.Filter(d.diffs, func(df diff) bool {
+		return df.Path == "pod.metadata.labels" || df.Path == "pod.metadata.annotations" ||
+			df.Path == "pod.spec.hostname" || df.Path == "pod.spec.subdomain" ||
+			df.Path == "pod.spec.hostAliases" || df.Path == "pod.spec.dnsConfig"
+	})
 }
 
-func (d podDiff) Diffs() (diffs []differ[any]) {
-	//var d1 differ[any]
-	d1 := d.initContainers[0]
+func ComparePods(left, right k8sv1.Pod) (pd podDiff) {
+	d := &pd.diffs
+	if anyEquals(left, right) || appendNilDiff(d, "pod", &left, &right) {
+		return
+	}
 
-	diffs = append(diffs, d1.image)
+	if !anyEquals(left.ObjectMeta, right.ObjectMeta) {
+		if !appendNilDiff(d, "pod.metadata", &left.ObjectMeta, &right.ObjectMeta) {
+			appendDiff(d, "pod.metadata.name", &left.ObjectMeta.Name, &right.ObjectMeta.Name)
+			appendDiff(d, "pod.metadata.namespace", &left.ObjectMeta.Namespace, &right.ObjectMeta.Namespace)
+			appendDiff(d, "pod.metadata.labels", &left.ObjectMeta.Labels, &right.ObjectMeta.Labels)
+			appendDiff(d, "pod.metadata.annotations", &left.ObjectMeta.Annotations, &right.ObjectMeta.Annotations)
+		}
+	}
+
+	if !anyEquals(left.Spec, right.Spec) {
+		if !appendNilDiff(d, "pod.spec", &left.Spec, &right.Spec) {
+			//appendDiff(d, "pod.spec.volumes", &left.Spec.Volumes, &right.Spec.Volumes)
+			/*
+				if !anyEquals(left.Spec.Volumes, right.Spec.Volumes) {
+					var matched []k8sv1.Volume
+					for _, l := range left.Spec.Volumes {
+						for _, r := range right.Spec.Volumes {
+							if l.name == r.name {
+								appendDiff(d, "pod.spec.volumes", l, r)
+								matched = append(matched, l, r)
+							}
+						}
+					}
+
+					// Mark removed l
+					for _, l := range left.Spec.Volumes {
+						if !collections.Contains(matched, l) {
+							appendDiff(d, "pod.spec.volumes", l, nil)
+						}
+					}
+
+					// Mark added r
+					for _, r := range right.Spec.Volumes {
+						if !collections.Contains(matched, r) {
+							appendDiff(d, "pod.spec.volumes", nil, r)
+						}
+					}
+				}
+			*/
+
+			volPredicater := func(l, r k8sv1.Volume) bool {
+				return l.Name == r.Name
+			}
+			volDiffAppender := appendDiff[k8sv1.Volume]
+			appendArrayDiff(d, "pod.spec.volumes", &left.Spec.Volumes, &right.Spec.Volumes, volPredicater, volDiffAppender)
+
+			appendDiff(d, "pod.spec.initContainers", &left.Spec.InitContainers, &right.Spec.InitContainers)
+			appendDiff(d, "pod.spec.containers", &left.Spec.Containers, &right.Spec.Containers)
+			appendDiff(d, "pod.spec.restartPolicy", &left.Spec.RestartPolicy, &right.Spec.RestartPolicy)
+			appendDiff(d, "pod.spec.securityContext", &left.Spec.SecurityContext, &right.Spec.SecurityContext)
+			appendDiff(d, "pod.spec.hostname", &left.Spec.Hostname, &right.Spec.Hostname)
+			appendDiff(d, "pod.spec.subdomain", &left.Spec.Subdomain, &right.Spec.Subdomain)
+			appendDiff(d, "pod.spec.hostAliases", &left.Spec.HostAliases, &right.Spec.HostAliases)
+			appendDiff(d, "pod.spec.dnsConfig", &left.Spec.DNSConfig, &right.Spec.DNSConfig)
+		}
+	}
+
+	return pd
 }
 
-type volumeDiff struct {
-	diff[k8sv1.Volume]
+func appendArrayDiff[T any](d *[]diff, path string, left, right *[]T, predicater func(T, T) bool, diffAppender func(*[]diff, string, *T, *T) bool) bool {
+	ok := false
+	if !anyEquals(left, right) {
+		var matched []*T
+		for _, l := range *left {
+			for _, r := range *right {
+				if predicater(l, r) {
+					ok = ok || diffAppender(d, path, &l, &r)
+					matched = append(matched, &l, &r)
+				}
+			}
+		}
 
-	data diff[string]
+		// Mark removed l
+		for _, l := range *left {
+			if !collections.Contains(matched, &l) {
+				ok = ok || diffAppender(d, path, &l, nil)
+			}
+		}
+
+		// Mark added r
+		for _, r := range *right {
+			if !collections.Contains(matched, &r) {
+				ok = ok || diffAppender(d, path, nil, &r)
+			}
+		}
+	}
+	return ok
 }
 
-type containerDiff struct {
-	diff[any]
-
-	image       diff[string]
-	command     diff[[]string]
-	args        diff[[]string]
-	volumeMonts []volumeMountDiff
+func anyEquals(left, right any) bool {
+	return reflect.DeepEqual(left, right)
 }
 
-type volumeMountDiff struct {
-	diff[k8sv1.VolumeMount]
-
-	data diff[string]
+// Add a diff if one of items is nil
+// return true if added a diff
+func appendNilDiff[T any](diffs *[]diff, path string, left, right *T) bool {
+	if (left == nil || right == nil) && left != right {
+		*diffs = append(*diffs, diff{path, left, right})
+		return true
+	}
+	return false
 }
 
-func comparePods(pod1, pod2 k8sv1.Pod) podDiff {
-
+// Add a diff if items are differents
+// return true if added a diff
+func appendDiff[T any](diffs *[]diff, path string, left, right *T) bool {
+	ok := appendNilDiff(diffs, path, left, right)
+	if ok {
+		return true
+	}
+	if !reflect.DeepEqual(left, right) {
+		*diffs = append(*diffs, diff{path, left, right})
+		return true
+	}
+	return false
 }
