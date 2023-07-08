@@ -52,7 +52,7 @@ spec:
     image: nginx:1.15.3
     ports:
     - containerPort: 80
-    hostname: example.com
+  hostname: example.com
 `
 )
 
@@ -95,60 +95,27 @@ func TestAnyEquals(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestAppendNilDiff(t *testing.T) {
-	var d []diff
-	ok := appendNilDiff(&d, "foo", nil, nil)
-	assert.False(t, ok)
-	assert.Len(t, d, 0)
-
-	d = nil
-	ok = appendNilDiff(&d, "foo", "abc", nil)
-	assert.True(t, ok)
-	require.Len(t, d, 1)
-	assert.Equal(t, "foo", d[0].Path)
-	assert.Equal(t, "abc", d[0].Left)
-	assert.Nil(t, d[0].Right)
-
-	d = nil
-	ok = appendNilDiff(&d, "bar", nil, "bcd")
-	assert.True(t, ok)
-	require.Len(t, d, 1)
-	assert.Equal(t, "bar", d[0].Path)
-	assert.Nil(t, d[0].Left)
-	assert.Equal(t, "bcd", d[0].Right)
-
-	d = nil
-	ok = appendNilDiff(&d, "baz", "cde", "cde")
-	assert.False(t, ok)
-	require.Len(t, d, 0)
-
-	d = nil
-	ok = appendNilDiff(&d, "baz", "cde", "def")
-	assert.False(t, ok)
-	require.Len(t, d, 0)
-}
-
 func TestAppendDiff(t *testing.T) {
-	var d []diff
-	ok := appendDiff(&d, "foo", nil, nil)
+	var d []differ
+	ok := appendDiff(&d, "foo", "", "")
 	assert.False(t, ok)
 	assert.Len(t, d, 0)
 
 	d = nil
-	ok = appendDiff(&d, "foo", "abc", nil)
+	ok = appendDiff(&d, "foo", "abc", "")
 	assert.True(t, ok)
 	require.Len(t, d, 1)
-	assert.Equal(t, "foo", d[0].Path)
-	assert.Equal(t, "abc", d[0].Left)
-	assert.Nil(t, d[0].Right)
+	assert.Equal(t, "foo", d[0].Path())
+	assert.Equal(t, "abc", d[0].Left())
+	assert.Equal(t, "", d[0].Right())
 
 	d = nil
-	ok = appendDiff(&d, "bar", nil, "bcd")
+	ok = appendDiff(&d, "bar", "", "bcd")
 	assert.True(t, ok)
 	require.Len(t, d, 1)
-	assert.Equal(t, "bar", d[0].Path)
-	assert.Nil(t, d[0].Left)
-	assert.Equal(t, "bcd", d[0].Right)
+	assert.Equal(t, "bar", d[0].Path())
+	assert.Equal(t, "", d[0].Left())
+	assert.Equal(t, "bcd", d[0].Right())
 
 	d = nil
 	ok = appendDiff(&d, "baz", "cde", "cde")
@@ -159,9 +126,9 @@ func TestAppendDiff(t *testing.T) {
 	ok = appendDiff(&d, "baz", "cde", "def")
 	assert.True(t, ok)
 	require.Len(t, d, 1)
-	assert.Equal(t, "baz", d[0].Path)
-	assert.Equal(t, "cde", d[0].Left)
-	assert.Equal(t, "def", d[0].Right)
+	assert.Equal(t, "baz", d[0].Path())
+	assert.Equal(t, "cde", d[0].Left())
+	assert.Equal(t, "def", d[0].Right())
 }
 
 func TestComparePods_Empty(t *testing.T) {
@@ -209,9 +176,10 @@ func TestComparePods_Differents(t *testing.T) {
 	podDiff := ComparePods(pod1a, pod1b)
 	require.NotNil(t, podDiff)
 	assert.True(t, podDiff.DoDiffer())
-	assert.Len(t, podDiff.Diffs(), 1)
 	assert.Len(t, podDiff.updatableDiffs(), 0)
 	assert.False(t, podDiff.IsUpdatable())
+	require.Len(t, podDiff.Diffs(), 1)
+	assert.Contains(t, podDiff.DiffPathes(), "pod.spec.containers.image")
 }
 
 func TestComparePods_Updatable(t *testing.T) {
@@ -222,8 +190,8 @@ func TestComparePods_Updatable(t *testing.T) {
 	require.NotNil(t, podDiff)
 	assert.True(t, podDiff.DoDiffer())
 	assert.Len(t, podDiff.updatableDiffs(), 2)
-	require.Len(t, podDiff.Diffs(), 2)
 	assert.True(t, podDiff.IsUpdatable())
-	assert.Equal(t, "pod.metadata.labels", podDiff.Diffs()[0].Path)
-	assert.Equal(t, "pod.spec.containers.hostname", podDiff.Diffs()[0].Path)
+	require.Len(t, podDiff.Diffs(), 2)
+	assert.Contains(t, podDiff.DiffPathes(), "pod.metadata.labels")
+	assert.Contains(t, podDiff.DiffPathes(), "pod.spec.hostname")
 }
