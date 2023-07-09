@@ -6,8 +6,10 @@ replace mby.fr/utils => ../utils
 
 require (
 	github.com/stretchr/testify v1.8.1
-	k8s.io/api v0.27.2
-	k8s.io/apimachinery v0.27.2
+	github.com/yannh/kubeconform v0.6.2
+	k8s.io/api v0.27.3
+	k8s.io/apimachinery v0.27.3
+	k8s.io/client-go v0.27.3
 	mby.fr/utils v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -21,6 +23,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

@@ -80,9 +80,20 @@ func (d podDiff) IsUpdatable() bool {
 
 func (d podDiff) updatableDiffs() []differ {
 	return collections.Filter(d.diffs, func(df differ) bool {
-		return df.Path() == "pod.metadata.labels" || df.Path() == "pod.metadata.annotations" ||
-			df.Path() == "pod.spec.hostname" || df.Path() == "pod.spec.subdomain" ||
-			df.Path() == "pod.spec.hostAliases" || df.Path() == "pod.spec.dnsConfig"
+		return df.Path() == "pod.metadata.labels" ||
+			df.Path() == "pod.metadata.annotations" ||
+			//df.Path() == "pod.spec.hostname" ||
+			//df.Path() == "pod.spec.subdomain" ||
+			//df.Path() == "pod.spec.hostAliases" ||
+			//df.Path() == "pod.spec.dnsConfig" ||
+			df.Path() == "pod.spec.restartPolicy" ||
+			df.Path() == "pod.spec.volumes" ||
+			df.Path() == "pod.spec.containers" ||
+			df.Path() == "pod.spec.initContainers" ||
+			df.Path() == "pod.spec.containers.livenessProbe" ||
+			df.Path() == "pod.spec.containers.readynessProbe" ||
+			df.Path() == "pod.spec.containers.startupProbe" ||
+			df.Path() == "pod.spec.containers.resources"
 	})
 }
 
@@ -114,18 +125,41 @@ func ComparePods(left, right k8sv1.Pod) (pd podDiff) {
 		ctDiffAppender := func(d *[]differ, path string, l, r k8sv1.Container) bool {
 			changed := false
 			changed = changed || appendDiff(d, path+".image", l.Image, r.Image)
+			changed = changed || appendDiff(d, path+".command", l.Command, r.Command)
+			changed = changed || appendDiff(d, path+".args", l.Args, r.Args)
+			changed = changed || appendDiff(d, path+".workingDir", l.WorkingDir, r.WorkingDir)
+			changed = changed || appendDiff(d, path+".ports", l.Ports, r.Ports)
+			changed = changed || appendDiff(d, path+".env", l.Env, r.Env)
+			changed = changed || appendDiff(d, path+".resources", l.Resources, r.Resources)
+			changed = changed || appendDiff(d, path+".volumeMounts", l.VolumeMounts, r.VolumeMounts)
+			changed = changed || appendDiff(d, path+".livenessProbe", l.LivenessProbe, r.LivenessProbe)
+			changed = changed || appendDiff(d, path+".readinessProbe", l.ReadinessProbe, r.ReadinessProbe)
+			changed = changed || appendDiff(d, path+".startupProbe", l.StartupProbe, r.StartupProbe)
+			changed = changed || appendDiff(d, path+".imagePullPolicy", l.ImagePullPolicy, r.ImagePullPolicy)
+			changed = changed || appendDiff(d, path+".securityContext", l.SecurityContext, r.SecurityContext)
+			changed = changed || appendDiff(d, path+".stdin", l.Stdin, r.Stdin)
+			changed = changed || appendDiff(d, path+".stdinOnce", l.StdinOnce, r.StdinOnce)
+			changed = changed || appendDiff(d, path+".tty", l.TTY, r.TTY)
 			return changed
 		}
 		appendArrayDiff(d, "pod.spec.initContainers", &left.Spec.InitContainers, &right.Spec.InitContainers, ctPredicater, ctDiffAppender)
 		appendArrayDiff(d, "pod.spec.containers", &left.Spec.Containers, &right.Spec.Containers, ctPredicater, ctDiffAppender)
 
-		appendDiff(d, "pod.spec.hostAliases", &left.Spec.HostAliases, &right.Spec.HostAliases)
-		appendDiff(d, "pod.spec.restartPolicy", &left.Spec.RestartPolicy, &right.Spec.RestartPolicy)
-		appendDiff(d, "pod.spec.securityContext", &left.Spec.SecurityContext, &right.Spec.SecurityContext)
-		appendDiff(d, "pod.spec.hostname", &left.Spec.Hostname, &right.Spec.Hostname)
-		appendDiff(d, "pod.spec.subdomain", &left.Spec.Subdomain, &right.Spec.Subdomain)
-		appendDiff(d, "pod.spec.dnsConfig", &left.Spec.DNSConfig, &right.Spec.DNSConfig)
-		//}
+		/*
+			appendDiff(d, "pod.spec.hostAliases", &left.Spec.HostAliases, &right.Spec.HostAliases)
+			appendDiff(d, "pod.spec.restartPolicy", &left.Spec.RestartPolicy, &right.Spec.RestartPolicy)
+			appendDiff(d, "pod.spec.securityContext", &left.Spec.SecurityContext, &right.Spec.SecurityContext)
+			appendDiff(d, "pod.spec.hostname", &left.Spec.Hostname, &right.Spec.Hostname)
+			appendDiff(d, "pod.spec.subdomain", &left.Spec.Subdomain, &right.Spec.Subdomain)
+			appendDiff(d, "pod.spec.dnsConfig", &left.Spec.DNSConfig, &right.Spec.DNSConfig)
+		*/
+
+		appendDiff(d, "pod.spec.hostAliases", left.Spec.HostAliases, right.Spec.HostAliases)
+		appendDiff(d, "pod.spec.restartPolicy", left.Spec.RestartPolicy, right.Spec.RestartPolicy)
+		appendDiff(d, "pod.spec.securityContext", left.Spec.SecurityContext, right.Spec.SecurityContext)
+		appendDiff(d, "pod.spec.hostname", left.Spec.Hostname, right.Spec.Hostname)
+		appendDiff(d, "pod.spec.subdomain", left.Spec.Subdomain, right.Spec.Subdomain)
+		appendDiff(d, "pod.spec.dnsConfig", left.Spec.DNSConfig, right.Spec.DNSConfig)
 	}
 
 	return pd
@@ -176,10 +210,28 @@ func appendDiff[T any](diffs *[]differ, path string, left, right T) bool {
 		if ok {
 			return true
 		}*/
+	/*
+		l := reflect.ValueOf(left)
+		r := reflect.ValueOf(right)
+		if l.Kind() == reflect.Ptr {
+			l = reflect.Indirect(l)
+			r = reflect.Indirect(r)
+			if !reflect.DeepEqual(l.Interface(), r.Interface()) {
+				*diffs = append(*diffs, diff[any]{path, l.Interface(), r.Interface()})
+				return true
+			}
+		} else {
+			if !reflect.DeepEqual(left, right) {
+				*diffs = append(*diffs, diff[T]{path, left, right})
+				return true
+			}
+		}
+	*/
 	if !reflect.DeepEqual(left, right) {
 		*diffs = append(*diffs, diff[T]{path, left, right})
 		return true
 	}
+
 	return false
 }
 

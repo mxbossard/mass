@@ -9,6 +9,8 @@ import (
 
 	"mby.fr/utils/cmdz"
 	//"mby.fr/utils/promise"
+	"mby.fr/k8s2docker/compare"
+	"mby.fr/k8s2docker/descriptor"
 
 	k8sv1 "k8s.io/api/core/v1"
 )
@@ -22,15 +24,20 @@ type Executor struct {
 func (e Executor) Apply(namespace string, resource any) (err error) {
 	switch res := resource.(type) {
 	case k8sv1.Pod:
-		err = e.applyPod(namespace, res)
+		err = e.createPod(namespace, res)
 	default:
 		err = fmt.Errorf("Cannot create not supported type %T", res)
 	}
 	return
+
 }
 
-func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) deletePod(namespace string, pod k8sv1.Pod) (err error) {
+	//TODO
+	return
+}
 
+func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 	podName := forgeResName(namespace, pod)
 
 	netId, err := e.translator.podNetworkId(namespace, pod)
@@ -48,30 +55,13 @@ func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
 		}
 	}
 
-	ctId, err := e.translator.podRootContainerId(namespace, pod)
+	execs, err := e.translator.createPodRootContainer(namespace, pod)
 	if err != nil {
 		return err
 	}
-	if ctId == "" {
-		execs, err := e.translator.createPodRootContainer(namespace, pod)
-		if err != nil {
-			return err
-		}
-		_, err = execs.BlockRun()
-		if err != nil {
-			return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
-		}
-	} else {
-		podConfig, err := e.translator.getCommitedPodConfig(namespace, pod)
-		if err != nil {
-			return err
-		}
-
-		podPhase, err := e.translator.getCommitedPodPhase(namespace, pod)
-		if err != nil {
-			return err
-		}
-
+	_, err = execs.BlockRun()
+	if err != nil {
+		return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 	}
 
 	volExec := cmdz.Parallel().ErrorOnFailure(true)
@@ -152,6 +142,44 @@ func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
 	return
 }
 
+func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
+	// TODO: how to use a kubelet ?
+	// Kubelet should be responsible for create / update / delete
+
+	// TODO : check for pod existance. If it already exists and phase is ok check for "updateness"
+	// THEN update pod or delete/create pod
+
+	ctId, err := e.translator.podRootContainerId(namespace, pod)
+	if err != nil {
+		return err
+	}
+	if ctId == "" {
+		// Create pod
+	} else {
+		podPhase, err := e.translator.getCommitedPodPhase(namespace, pod)
+		if err != nil {
+			log.Printf("Swallowed error: %s", err)
+			// TODO recreate pod
+		}
+		// TODO what to do with podPhase ?
+		_ = podPhase
+
+		commitedPod, err := e.translator.getCommitedPod(namespace, pod)
+		if err != nil {
+			log.Printf("Swallowed error: %s", err)
+			// TODO recreate pod
+		}
+		if podPhase != nil && commitedPod != nil {
+			diff := compare.ComparePods(*commitedPod, pod)
+			if diff.IsUpdatable() {
+				// TODO update pod
+			}
+		}
+	}
+
+	return
+}
+
 func networkName(namespace string, pod k8sv1.Pod) string {
 	podName := forgeResName(namespace, pod)
 	networkName := fmt.Sprintf("%s_net", podName)
@@ -208,32 +236,31 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) commitPodConfig(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
+func (t Translator) commitPod(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
 	b, err := json.Marshal(pod)
 	if err != nil {
 		return nil, err
 	}
 	ctName := podRootContainerName(namespace, pod)
-	execArgs := []string{"exec", ctName, "/bin/sh", "-c", fmt.Sprintf("echo %s > /podConfig.txt", string(b))}
+	execArgs := []string{"exec", ctName, "/bin/sh", "-c", fmt.Sprintf("echo '%s' > /podConfig.txt", string(b))}
 	exec := cmdz.Cmd(t.binary, execArgs...)
-	return exec
+	return exec, nil
 }
 
-func (t Translator) getCommitedPodConfig(namespace string, pod k8sv1.Pod) (k8sv1.Pod, error) {
+func (t Translator) getCommitedPod(namespace string, pod k8sv1.Pod) (*k8sv1.Pod, error) {
 	ctName := podRootContainerName(namespace, pod)
 	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podConfig.txt"}
-	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure()
+	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure(true)
 	_, err := exec.BlockRun()
 	if err != nil {
 		return nil, err
 	}
-	jsonBlob := exec.StdoutRecord
-	var p k8sv1.Pod
-	err = json.Unmarshal(jsonBlob, &p)
+	jsonBlob := exec.StdoutRecord()
+	p, err := descriptor.LoadPod([]byte(jsonBlob))
 	if err != nil {
 		return nil, err
 	}
-	return p, nil
+	return &p, nil
 }
 
 func (t Translator) commitPodPhase(namespace string, pod k8sv1.Pod, phase k8sv1.PodPhase) cmdz.Executer {
@@ -243,15 +270,16 @@ func (t Translator) commitPodPhase(namespace string, pod k8sv1.Pod, phase k8sv1.
 	return exec
 }
 
-func (t Translator) getCommitedPodPhase(namespace string, pod k8sv1.Pod) (k8sv1.PodPhase, error) {
+func (t Translator) getCommitedPodPhase(namespace string, pod k8sv1.Pod) (*k8sv1.PodPhase, error) {
 	ctName := podRootContainerName(namespace, pod)
 	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podPhase.txt"}
-	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure()
+	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure(true)
 	_, err := exec.BlockRun()
 	if err != nil {
 		return nil, err
 	}
-	return k8sv1.PodPhase(exec.StdoutRecord)
+	p := k8sv1.PodPhase(exec.StdoutRecord())
+	return &p, nil
 }
 
 func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (p k8sv1.ContainerState, e error) {
