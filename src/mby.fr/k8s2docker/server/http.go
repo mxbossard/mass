@@ -1,14 +1,14 @@
 package server
 
 import (
-	"net/http"
-	"regexp"
-	"time"
-	"log"
-	"io"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"mby.fr/k8s2docker/repo"
 )
@@ -19,31 +19,31 @@ var (
 	// pattern /api/v1/namespaces/NAMESPACE_NAME/RESOURCE_KINDs/RESOURCE_NAME
 	// /api/v1/namespaces(?:/([a-z0-9][a-z0-9-]*[a-z0-9])(?:/([a-z]+))(?:/([a-z0-9][a-z0-9-.]*[a-z0-9]))?)?
 	/*
-	/api/v1/namespaces
-	/api/v1/namespaces/
-	/api/v1/namespaces/default
-	/api/v1/namespaces/default/
-	/api/v1/namespaces/default/pods
-	/api/v1/namespaces/default/pods.foo
-	/api/v1/namespaces/default/pods/
-	/api/v1/namespaces/default/pods/name.foo
-	/api/v1/namespaces/default/pods/name
-	/api/v1/namespaces/default/pods/name/
+		/api/v1/namespaces
+		/api/v1/namespaces/
+		/api/v1/namespaces/default
+		/api/v1/namespaces/default/
+		/api/v1/namespaces/default/pods
+		/api/v1/namespaces/default/pods.foo
+		/api/v1/namespaces/default/pods/
+		/api/v1/namespaces/default/pods/name.foo
+		/api/v1/namespaces/default/pods/name
+		/api/v1/namespaces/default/pods/name/
 	*/
 	serveCoreResourcesPattern = regexp.MustCompile("^" + serveCoreResourcesRootPath + "(?:/(?P<namespace>[^/]+)(?:/(?P<kind>[^/]+)?(?:/(?P<name>[^/]+)?)?)?)?/?$")
-	
+
 	namespaceNamePattern = regexp.MustCompile("^[a-z0-9][a-z0-9-.]*[a-z0-9]$")
-	resourceKindPattern = regexp.MustCompile("^([a-z]+)s$")
-	resourceNamePattern = regexp.MustCompile("^[a-z0-9][a-z0-9-.]*[a-z0-9]$")
-	ContentTypeHeader = "Content-Type"
-	JsonContentType = "application/json"
+	resourceKindPattern  = regexp.MustCompile("^([a-z]+)s$")
+	resourceNamePattern  = regexp.MustCompile("^[a-z0-9][a-z0-9-.]*[a-z0-9]$")
+	ContentTypeHeader    = "Content-Type"
+	JsonContentType      = "application/json"
 )
 
 type ServerError struct {
-	Status string
+	Status     string
 	StatusCode int
-	Message string
-	Path string
+	Message    string
+	Path       string
 }
 
 func (e ServerError) Error() string {
@@ -54,7 +54,7 @@ func ReadServerError(r *http.Response) error {
 	if r.StatusCode == 200 {
 		return nil
 	}
-	se := ServerError {}
+	se := ServerError{}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func Start() (err error) {
 
 	http.HandleFunc("/", defaultHandler)
 	http.HandleFunc(serveCoreResourcesRootPath, coreResourcesHandler)
-	http.HandleFunc(serveCoreResourcesRootPath + "/", coreResourcesHandler)
+	http.HandleFunc(serveCoreResourcesRootPath+"/", coreResourcesHandler)
 
 	err = server.ListenAndServe()
 	log.Printf("Server error: %s", err)
@@ -149,13 +149,13 @@ func writeJsonResponse(w http.ResponseWriter, statusCode int, object any) {
 	}
 	w.WriteHeader(statusCode)
 	w.Write(jsonBytes)
-	
+
 }
 
 func serveErrors(w http.ResponseWriter, r *http.Request, statusCode int, messages ...string) {
 	err := ServerError{
 		Message: strings.Join(messages, "\n"),
-		Path: r.URL.Path,
+		Path:    r.URL.Path,
 	}
 	writeJsonResponse(w, statusCode, err)
 }
@@ -170,23 +170,23 @@ func serveMessages(w http.ResponseWriter, r *http.Request, messages ...string) {
 }
 
 func serveNamespacesHandler(w http.ResponseWriter, r *http.Request, namespace string) {
-	jsonOut, err = repo.Interract(kind, json, r.Method)
+	jsonOut, err := repo.Interract(kind, json, r.Method)
 	if err != nil {
-		serveErrors(w, r, 500, err.Error()))
+		serveErrors(w, r, 500, err.Error(""))
 	}
 }
 
 func serveKindsHandler(w http.ResponseWriter, r *http.Request, namespace, kind string) {
-	jsonOut, err = repo.Interract(kind, json, r.Method)
+	jsonOut, err := repo.Interract(kind, json, r.Method)
 	if err != nil {
-		serveErrors(w, r, 500, err.Error()))
+		serveErrors(w, r, 500, err.Error(""))
 	}
 }
 
 func serveCoreResourcesHandler(w http.ResponseWriter, r *http.Request, namespace, kind, name string) {
-	jsonOut, err = repo.Interract(kind, json, r.Method)
+	jsonOut, err := repo.Interract(kind, json, r.Method)
 	if err != nil {
-		serveErrors(w, r, 500, err.Error()))
+		serveErrors(w, r, 500, err.Error(""))
 	}
 }
 
@@ -202,7 +202,7 @@ func assertKind(kind string) (formattedKind string, err error) {
 		err = fmt.Errorf("Bad resource kind format: [%s] !", kind)
 	} else {
 		// rewrite kind: pods => Pod
-		formattedKind = strings.ToUpper(kind[0:1]) + kind[1:len(kind) - 1]
+		formattedKind = strings.ToUpper(kind[0:1]) + kind[1:len(kind)-1]
 	}
 	return
 }
