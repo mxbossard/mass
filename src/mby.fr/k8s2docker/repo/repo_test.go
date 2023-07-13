@@ -18,7 +18,7 @@ var (
 func init() {
 }
 
-func TestReadWriteString(t *testing.T) {
+func TestReadWrite_String(t *testing.T) {
 	initDb(testDbPath)
 	defer os.RemoveAll(testDbPath)
 
@@ -32,7 +32,7 @@ func TestReadWriteString(t *testing.T) {
 	v, err = read[string]("strings", key)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrNotExist)
-	
+
 	// Write
 	err = write("strings", key, expectedValue)
 	require.NoError(t, err)
@@ -48,14 +48,19 @@ func TestReadWriteString(t *testing.T) {
 	assert.ErrorIs(t, err, os.ErrNotExist)
 }
 
-func TestReadWriteMap(t *testing.T) {
+func TestReadWrite_Map(t *testing.T) {
 	initDb(testDbPath)
 	defer os.RemoveAll(testDbPath)
-	
+
 	key := "key"
-	expectedValue := map[string]any {
+	expectedValue := map[string]any{
 		"a": "foo",
 		"b": "bar",
+		"c": []any{
+			map[string]any{"k1": "v1", "k2": float64(1)},
+			map[string]any{"k1": "v2", "k2": float64(2)},
+		},
+		"d": map[string]any{"p1": float64(3), "p2": false},
 	}
 
 	var v map[string]any
@@ -65,7 +70,7 @@ func TestReadWriteMap(t *testing.T) {
 	v, err = read[map[string]any]("maps", key)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrNotExist)
-	
+
 	// Write
 	err = write("maps", key, expectedValue)
 	require.NoError(t, err)
@@ -79,4 +84,8 @@ func TestReadWriteMap(t *testing.T) {
 	v, err = read[map[string]any]("maps", "otherKey")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestReadWrite_Struct(t *testing.T) {
+	//TODO
 }
