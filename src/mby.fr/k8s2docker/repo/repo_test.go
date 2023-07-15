@@ -6,86 +6,464 @@ import (
 	_ "net/http/httptest"
 	"os"
 	"testing"
+	"gopkg.in/yaml.v3"
 
+	"mby.fr/utils/serializ"
+	
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+
+
 var (
-	testDbPath = "/tmp/mydb"
+	testDbPath = "./testMyDb"
+
+	expectedNsYaml1 = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns1
+`
+	expectedNsYaml2 = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns2
+`
+	expectedNsYaml3 = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns3
+`
+
+	expectedPodYaml1 = `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod1
+`
+	expectedPodYaml2 = `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod2
+`
+	expectedPodYaml3 = `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3
+`
+
+	expectedServiceYaml1 = `
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc1
+`
+	expectedServiceYaml2 = `
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc2
+`
+	expectedServiceYaml3 = `
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc3
+`
+
 )
 
-func init() {
+func initTestDb() {
+	initDb(testDbPath)
 }
 
-func TestReadWrite_String(t *testing.T) {
-	initDb(testDbPath)
-	defer os.RemoveAll(testDbPath)
+func clearTestDb() {
+	os.RemoveAll(testDbPath)
+}
 
-	key := "key"
-	expectedValue := "foo"
+func mapYaml(t *testing.T, yamlIn string) map[string]any {
+	var tree map[string]any
+	err := yaml.Unmarshal([]byte(yamlIn), &tree)
+	require.NoErrorf(t, err, "Unable to map yaml: [%s]", yamlIn)
+	return tree
+}
 
-	var v string
+func yamlToJson(t *testing.T, yamlIn string) string {
+	json, err := serializ.YamlToJsonString(yamlIn)
+	require.NoErrorf(t, err, "Unable to convert to json: [%s]", yamlIn)
+	return json
+}
+
+func storeYamlResource(t *testing.T, namespace, yamlIn string) {
+	tree := mapYaml(t, yamlIn)
+	_, err := storeResource(namespace, tree)
+	require.NoErrorf(t, err, "Unable to store res in namespace %s : from yaml: [%s]", namespace, yamlIn)
+}
+
+func TestDevelopNamespaceNames(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	res, err := developNamespaceNames("")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	res, err = developNamespaceNames("foo")
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.Contains(t, res, "foo")
+
+	res, err = developNamespaceNames("all")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	storeYamlResource(t, "", expectedNsYaml1)
+	require.NoError(t, err)
+	storeYamlResource(t, "", expectedNsYaml2)
+	require.NoError(t, err)
+	res, err = developNamespaceNames("all")
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Contains(t, res, "ns1")
+	assert.Contains(t, res, "ns2")
+}
+
+func TestListResourcesAsMap_Namespaces(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
+	var err error
+	res, err = listResourcesAsMap("", "", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	// Add some Namespaces in repo
+	storeYamlResource(t, "", expectedNsYaml1)
+	require.NoError(t, err)
+	res, err = listResourcesAsMap("", "", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+
+
+	storeYamlResource(t, "", expectedNsYaml2)
+	storeYamlResource(t, "", expectedNsYaml3)
+	res, err = listResourcesAsMap("", "", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 3)
+}
+
+func TestListResourcesAsMap_Namespace_AllKinds(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
 	var err error
 
-	// Read from not existing collection
-	v, err = read[string]("strings", key)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, os.ErrNotExist)
+	// Add some Namespaces in repo
+	//storeYamlResource(t, "", expectedNsYaml1)
+	//storeYamlResource(t, "", expectedNsYaml2)
 
-	// Write
-	err = write("strings", key, expectedValue)
+	// List all resources in ns1
+	res, err = listResourcesAsMap("ns1", "", "")
 	require.NoError(t, err)
+	assert.Len(t, res, 0)
 
-	// Read existing
-	v, err = read[string]("strings", key)
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+	
+	res, err = listResourcesAsMap("ns1", "", "")
 	require.NoError(t, err)
-	assert.Equal(t, expectedValue, v)
+	assert.Len(t, res, 4)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml2))
+	
 
-	// Read not existing
-	v, err = read[string]("strings", "otherKey")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, os.ErrNotExist)
+	res, err = listResourcesAsMap("ns2", "", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml3))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml3))
 }
 
-func TestReadWrite_Map(t *testing.T) {
-	initDb(testDbPath)
-	defer os.RemoveAll(testDbPath)
+func TestListResourcesAsMap_AllNamespaces_AllKinds(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
 
-	key := "key"
-	expectedValue := map[string]any{
-		"a": "foo",
-		"b": "bar",
-		"c": []any{
-			map[string]any{"k1": "v1", "k2": float64(1)},
-			map[string]any{"k1": "v2", "k2": float64(2)},
-		},
-		"d": map[string]any{"p1": float64(3), "p2": false},
-	}
-
-	var v map[string]any
+	var res []map[string]any
 	var err error
 
-	// Read from not existing collection
-	v, err = read[map[string]any]("maps", key)
-	require.Error(t, err)
-	assert.ErrorIs(t, err, os.ErrNotExist)
-
-	// Write
-	err = write("maps", key, expectedValue)
+	res, err = listResourcesAsMap("all", "", "")
 	require.NoError(t, err)
+	assert.Len(t, res, 0)
 
-	// Read existing
-	v, err = read[map[string]any]("maps", key)
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+	
+	res, err = listResourcesAsMap("all", "", "")
 	require.NoError(t, err)
-	assert.Equal(t, expectedValue, v)
-
-	// Read not existing
-	v, err = read[map[string]any]("maps", "otherKey")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, os.ErrNotExist)
+	assert.Len(t, res, 6)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml2))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml3))
+	assert.Contains(t, res, mapYaml(t, expectedServiceYaml3))
 }
 
-func TestReadWrite_Struct(t *testing.T) {
-	//TODO
+func TestListResourcesAsMap_Namespace_Kind(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
+	var err error
+
+	res, err = listResourcesAsMap("ns1", "Pod", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+		
+	res, err = listResourcesAsMap("ns1", "Pod", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+}
+
+func TestListResourcesAsMap_AllNamespaces_Kind(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
+	var err error
+
+	res, err = listResourcesAsMap("all", "Pod", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+		
+	res, err = listResourcesAsMap("all", "Pod", "")
+	require.NoError(t, err)
+	assert.Len(t, res, 3)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml3))
+}
+
+func TestListResourcesAsMap_Namespace_Kind_Name(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
+	var err error
+
+	res, err = listResourcesAsMap("all", "Pod", "pod1")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+		
+	res, err = listResourcesAsMap("ns1", "Pod", "pod1")
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+
+	res, err = listResourcesAsMap("ns1", "Pod", "pod2")
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+}
+
+func TestListResourcesAsMap_AllNamespaces_Kind_Name(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var res []map[string]any
+	var err error
+
+	res, err = listResourcesAsMap("all", "Pod", "pod1")
+	require.NoError(t, err)
+	assert.Len(t, res, 0)
+
+	// Add some resources in repo
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+		
+	res, err = listResourcesAsMap("all", "Pod", "pod1")
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml1))
+
+	res, err = listResourcesAsMap("all", "Pod", "pod2")
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.Contains(t, res, mapYaml(t, expectedPodYaml2))
+}
+
+func TestGet_Namespace(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	// List all namespaces
+	out, err := Get("", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "", expectedNsYaml1)
+	storeYamlResource(t, "", expectedNsYaml2)
+	storeYamlResource(t, "", expectedNsYaml3)
+
+	// List all namespaces
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml2))
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml3))
+
+	// List all resources of ns1
+	out, err = Get("ns1", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+		
+	// List all resources of ns1
+	out, err = Get("ns1", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml2))
+	assert.NotContains(t, out, yamlToJson(t, expectedPodYaml3))
+	assert.Contains(t, out, yamlToJson(t, expectedServiceYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedServiceYaml2))
+	assert.NotContains(t, out, yamlToJson(t, expectedServiceYaml3))
+
+	// List all resources of all namespaces
+	out, err = Get("all", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml2))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml3))
+	assert.Contains(t, out, yamlToJson(t, expectedServiceYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedServiceYaml2))
+	assert.Contains(t, out, yamlToJson(t, expectedServiceYaml3))
+}
+
+func TestGet_Kind(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	// List all Pods of ns1 namespace
+	out, err := Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+
+	out, err = Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml2))
+	assert.NotContains(t, out, yamlToJson(t, expectedPodYaml3))
+
+	out, err = Get("all", "Pod", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml2))
+	assert.Contains(t, out, yamlToJson(t, expectedPodYaml3))
+
+	// FIXME: what to do ?
+	out, err = Get("", "Pod", "", "")
+	_ = out
+	_ = err
+}
+
+func TestPost_Namespace(t *testing.T) {
+	//t.Skip()
+	initTestDb()
+	defer clearTestDb()
+
+	out, err := Get("", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	out, err = Post("ns1", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml1))
+	assert.NotContains(t, out, yamlToJson(t, expectedNsYaml2))
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml1))
+	assert.NotContains(t, out, yamlToJson(t, expectedNsYaml2))
+
+	out, err = Post("ns2", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml2))
+	assert.NotContains(t, out, yamlToJson(t, expectedNsYaml1))
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml1))
+	assert.Contains(t, out, yamlToJson(t, expectedNsYaml2))
+
 }

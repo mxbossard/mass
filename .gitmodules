@@ -1,0 +1,3 @@
+[submodule "src/mby.fr/scribble"]
+	path = src/mby.fr/scribble
+	url = git@github.com:mxbossard/scribble.git
