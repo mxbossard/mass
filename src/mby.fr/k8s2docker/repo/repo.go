@@ -245,7 +245,44 @@ func listResourcesAsMap(namespace, kind, name string) ([]map[string]any, error) 
 	return filteredResources, mappingError
 }
 
+func consolidateMetadata(namespace, kind, name, jsonIn string) (string, string, string) {
+	var k, n, ns string
+	if jsonIn != "" {
+		// Read namespace from jsonIn (swallow error because optional)
+		ns, _ = serializ.ResolveJsonString[string](jsonIn, "metadata.namespace")
+		// Read kind from jsonIn (swallow error because optional)
+		k, _ = serializ.ResolveJsonString[string](jsonIn, "kind")
+		// Read name from jsonIn (swallow error because optional)
+		n, _ = serializ.ResolveJsonString[string](jsonIn, "metadata.name")
+	}
+	if ns == "" {
+		ns = namespace
+	}
+	if k == "" {
+		k = kind
+	}
+	if n == "" {
+		n = name
+	}
+	return ns, k, n
+}
+
+func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, error) {
+	resourceTree := forgeResource(namespace, kind, name)
+	log.Printf("completing JsonInput: %s with forged %s", jsonIn, resourceTree)
+	if jsonIn != "" {
+		err := yaml.Unmarshal([]byte(jsonIn), &resourceTree)
+		if err != nil {
+			return nil, err
+		}
+		// TODO complete missing data (ns, kind, name)
+	}
+	return resourceTree, nil
+}
+
+// Get resources list (get json description of resources)
 func Get(namespace, kind, name, jsonIn string) (string, error) {
+	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
 	mappedResources, err := listResourcesAsMap(namespace, kind, name)
 	if err != nil {
 		return "", err
@@ -266,20 +303,23 @@ func Get(namespace, kind, name, jsonIn string) (string, error) {
 	return jsonOut, nil
 }
 
-func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, error) {
-	resourceTree := forgeResource(namespace, kind, name)
-	log.Printf("completing JsonInput: %s with forged %s", jsonIn, resourceTree)
-	if jsonIn != "" {
-		err := yaml.Unmarshal([]byte(jsonIn), &resourceTree)
-		if err != nil {
-			return nil, err
-		}
-		// TODO complete missing data (ns, kind, name)
+// Create resources (do not overwrite nor update)
+func Post(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
+	out, err := Get(namespace, kind, name, jsonIn)
+	if err != nil {
+		return "", err
 	}
-	return resourceTree, nil
+	if out != "" {
+		// Should not overwrite a resource in Post
+		namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
+		err = fmt.Errorf("Resource %s/%s already exists in namespace: %s !", kind, name, namespace)
+		return "", err
+	}
+	return Put(namespace, kind, name, jsonIn)
 }
 
-func Post(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
+// Create or Update resources
+func Put(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
 	resourceTree, err := completeJsonInput(namespace, kind, name, jsonIn)
 	if err != nil {
 		return "", err
@@ -306,14 +346,12 @@ func Post(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
 	return sb.String(), nil
 }
 
-func Put(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
-	return
-}
-
+// Update parts of resources
 func Patch(namespace, kind, name, jsonText string) (jsonOut string, err error) {
 	return
 }
 
+// Delete resources
 func Delete(namespace, kind, name, jsonText string) (jsonOut string, err error) {
 	return
 }
