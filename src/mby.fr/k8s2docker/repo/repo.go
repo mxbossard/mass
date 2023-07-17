@@ -2,11 +2,11 @@ package repo
 
 import (
 	"encoding/json"
+	_ "errors"
 	"fmt"
 	"log"
-	"strings"
-	_ "errors"
 	_ "os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 	//corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	db    *scribble.Driver
+	db                 *scribble.Driver
 	meta_ns_collection = "__meta"
 	//dbDir = "mydb"
 )
@@ -60,10 +60,10 @@ func Interract(namespace, kind, name, jsonIn, method string) (jsonOut string, er
 	return
 }
 
-func forgeNamespace(name string) (map[string]any) {
-	ns := map[string]any {
+func forgeNamespace(name string) map[string]any {
+	ns := map[string]any{
 		"apiVersion": "v1",
-		"kind": "Namespace",
+		"kind":       "Namespace",
 		"metadata": map[string]any{
 			"name": name,
 		},
@@ -71,15 +71,15 @@ func forgeNamespace(name string) (map[string]any) {
 	return ns
 }
 
-func forgeResource(namespace, kind, name string) (map[string]any) {
+func forgeResource(namespace, kind, name string) map[string]any {
 	if kind == "" {
 		return forgeNamespace(namespace)
 	}
-	ns := map[string]any {
+	ns := map[string]any{
 		"apiVersion": "v1",
-		"kind": kind,
+		"kind":       kind,
 		"metadata": map[string]any{
-			"name": name,
+			"name":      name,
 			"namespace": namespace,
 		},
 	}
@@ -167,7 +167,7 @@ func listResourcesCollections(namespace string) (collections []string, err error
 // List namespace names corresponding to input.
 func developNamespaceNames(namespaceIn string) (namespaces []string, err error) {
 	if namespaceIn == "" {
-		return	
+		return
 	} else if namespaceIn == "all" {
 		// Browse all NS
 		allNs, err := listResourcesAsMap("", "", "")
@@ -276,6 +276,7 @@ func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, er
 			return nil, err
 		}
 		// TODO complete missing data (ns, kind, name)
+
 	}
 	return resourceTree, nil
 }
