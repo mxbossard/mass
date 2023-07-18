@@ -112,6 +112,12 @@ func storeYamlResource(t *testing.T, namespace, yamlIn string) {
 	require.NoErrorf(t, err, "Unable to store res in namespace %s : from yaml: [%s]", namespace, yamlIn)
 }
 
+func resourcesToJson(t *testing.T, resources []map[string]any) string {
+	out, err := mappedResourcesToJson(resources)
+	require.NoErrorf(t, err, "Unable to map to json resources: [%s] !", resources)
+	return out
+}
+
 func TestConsolidateMetadata(t *testing.T) {
 	var ns, k, n string
 	ns, k, n = consolidateMetadata("", "", "", "")

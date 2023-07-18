@@ -44,20 +44,42 @@ func Interract(namespace, kind, name, jsonIn, method string) (jsonOut string, er
 		err = fmt.Errorf("Not supported kind: %s !", kind)
 	}
 
+	var resources []map[string]any
 	if method == "GET" {
-		return Get(namespace, kind, name, jsonIn)
+		resources, err = Get(namespace, kind, name, jsonIn)
 	} else if method == "POST" {
-		return Post(namespace, kind, name, jsonIn)
+		resources, err = Post(namespace, kind, name, jsonIn)
 	} else if method == "PUT" {
-		return Put(namespace, kind, name, jsonIn)
+		resources, err = Put(namespace, kind, name, jsonIn)
 	} else if method == "PATCH" {
-		return Patch(namespace, kind, name, jsonIn)
+		resources, err = Patch(namespace, kind, name, jsonIn)
 	} else if method == "DELETE" {
-		return Delete(namespace, kind, name, jsonIn)
+		resources, err = Delete(namespace, kind, name, jsonIn)
 	} else {
 		err = fmt.Errorf("Not supported method: %s !", method)
 	}
-	return
+	if err != nil {
+		return "", err
+	}
+
+	return mappedResourcesToJson(resources)
+}
+
+func mappedResourcesToJson(resources []map[string]any) (string, error) {
+	var mappingError error
+	jsonResources := collections.Map(resources, func(i map[string]any) string {
+		outBytes, err := json.Marshal(i)
+		if err != nil {
+			mappingError = err
+			return ""
+		}
+		return string(outBytes)
+	})
+	if mappingError != nil {
+		return "", fmt.Errorf("Unable to map resources ! Caused by: %w", mappingError)
+	}
+	out := strings.Join(jsonResources, "\n---\n")
+	return out, mappingError
 }
 
 func forgeNamespace(name string) map[string]any {
@@ -164,7 +186,7 @@ func listResourcesCollections(namespace string) (collections []string, err error
 	return
 }
 
-func listNamespaces() (namespaces []string, err error) {
+func ListNamespaces() (namespaces []string, err error) {
 	// Browse all NS
 	allNs, err := listResourcesAsMap("", "", "")
 	if err != nil {
@@ -187,7 +209,7 @@ func developNamespaceNames(namespaceIn string) (namespaces []string, err error) 
 		return
 	} else if namespaceIn == "all" {
 		// Browse all NS
-		allNs, err := listNamespaces()
+		allNs, err := ListNamespaces()
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +316,6 @@ func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, er
 			return nil, err
 		}
 	}
-	// TODO complete missing data (ns, kind, name)
 	var err error
 	resourceTree, err = serializ.PatcherMap(resourceTree).
 		Default("/kind", kind).
@@ -311,92 +332,60 @@ func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, er
 }
 
 // Get resources list (get json description of resources)
-func Get(namespace, kind, name, jsonIn string) (string, error) {
+func Get(namespace, kind, name, jsonIn string) ([]map[string]any, error) {
 	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
 	mappedResources, err := listResourcesAsMap(namespace, kind, name)
-	if err != nil {
-		return "", err
-	}
-	var mappingError error
-	jsonResources := collections.Map(mappedResources, func(i map[string]any) string {
-		outBytes, err := json.Marshal(i)
-		if err != nil {
-			mappingError = err
-			return ""
-		}
-		return string(outBytes)
-	})
-	if mappingError != nil {
-		return "", fmt.Errorf("Unable to map resources ! Caused by: %w", mappingError)
-	}
-	jsonOut := strings.Join(jsonResources, "\n---\n")
-	return jsonOut, nil
+	return mappedResources, err
 }
 
 // Create resources (do not overwrite nor update)
-func Post(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
+func Post(namespace, kind, name, jsonIn string) (resources []map[string]any, err error) {
 	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
 	if kind == "" || kind == "Namespace" {
 		// Special case, we need to verify if NS exists
-		allNs, err := listNamespaces()
+		allNs, err := ListNamespaces()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if collections.Contains(&allNs, namespace) {
 			// namespace already exists
 			err = fmt.Errorf("Namespace %s already exists !", namespace)
-			return "", err
+			return nil, err
 		}
 	} else {
 		// Verify if resource already exists
 		out, err := Get(namespace, kind, name, jsonIn)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		if out != "" {
+		if len(out) > 0 {
 			// Should not overwrite a resource in Post
 			namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
 			err = fmt.Errorf("Resource %s/%s already exists in namespace: %s !", kind, name, namespace)
-			return "", err
+			return nil, err
 		}
 	}
 	return Put(namespace, kind, name, jsonIn)
 }
 
 // Create or Update resources
-func Put(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
+func Put(namespace, kind, name, jsonIn string) (resources []map[string]any, err error) {
 	resourceTree, err := completeJsonInput(namespace, kind, name, jsonIn)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Printf("PUT resourceTree: %s", resourceTree)
 	// TODO: update tree with namespace kind and name ?
 	storedResources, err := storeResource(namespace, resourceTree)
-	if err != nil {
-		return
-	}
-
-	sb := strings.Builder{}
-	for i, res := range storedResources {
-		if i > 0 {
-			sb.WriteString("\n---\n")
-		}
-		jsonBytes, err := json.Marshal(res)
-		if err != nil {
-			return "", err
-		}
-		sb.Write(jsonBytes)
-	}
-
-	return sb.String(), nil
+	return storedResources, err
 }
 
 // Update parts of resources
-func Patch(namespace, kind, name, jsonText string) (jsonOut string, err error) {
-	return
+func Patch(namespace, kind, name, jsonText string) (resources []map[string]any, err error) {
+	return nil, fmt.Errorf("Not implemented yet !")
 }
 
 // Delete resources
-func Delete(namespace, kind, name, jsonText string) (jsonOut string, err error) {
-	return
+func Delete(namespace, kind, name, jsonText string) (resources []map[string]any, err error) {
+	return nil, fmt.Errorf("Not implemented yet !")
 }
