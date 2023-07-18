@@ -102,17 +102,17 @@ func loadResource(namespace, kind, name string) (map[string]any, error) {
 func storeResource(namespace string, resourceTree map[string]any) ([]map[string]any, error) {
 	var storedResources []map[string]any
 	// Read kind from tree
-	kind, err := serializ.ResolveJsonMap[string](resourceTree, "kind")
+	kind, err := serializ.ResolveJsonMap[string](resourceTree, "/kind")
 	if err != nil {
 		return nil, err
 	}
 	// Read name from tree
-	name, err := serializ.ResolveJsonMap[string](resourceTree, "metadata.name")
+	name, err := serializ.ResolveJsonMap[string](resourceTree, "/metadata/name")
 	if err != nil {
 		return nil, err
 	}
 	// swallow error namespace is optionnal in tree
-	jsonNamespace, _ := serializ.ResolveJsonMap[string](resourceTree, "metadata.namespace")
+	jsonNamespace, _ := serializ.ResolveJsonMap[string](resourceTree, "/metadata/namespace")
 	if jsonNamespace != "" {
 		namespace = jsonNamespace
 	}
@@ -164,24 +164,34 @@ func listResourcesCollections(namespace string) (collections []string, err error
 	return
 }
 
+func listNamespaces() (namespaces []string, err error) {
+	// Browse all NS
+	allNs, err := listResourcesAsMap("", "", "")
+	if err != nil {
+		return nil, err
+	}
+	for _, ns := range allNs {
+		name, err := serializ.ResolveJsonMap[string](ns, "/metadata/name")
+		if err != nil {
+			//err = fmt.Errorf("Bad NS format: %s !", ns)
+			return nil, err
+		}
+		namespaces = append(namespaces, name)
+	}
+	return
+}
+
 // List namespace names corresponding to input.
 func developNamespaceNames(namespaceIn string) (namespaces []string, err error) {
 	if namespaceIn == "" {
 		return
 	} else if namespaceIn == "all" {
 		// Browse all NS
-		allNs, err := listResourcesAsMap("", "", "")
+		allNs, err := listNamespaces()
 		if err != nil {
 			return nil, err
 		}
-		for _, ns := range allNs {
-			name, err := serializ.ResolveJsonMap[string](ns, "metadata.name")
-			if err != nil {
-				//err = fmt.Errorf("Bad NS format: %s !", ns)
-				return nil, err
-			}
-			namespaces = append(namespaces, name)
-		}
+		namespaces = append(namespaces, allNs...)
 	} else {
 		namespaces = append(namespaces, namespaceIn)
 	}
@@ -249,11 +259,11 @@ func consolidateMetadata(namespace, kind, name, jsonIn string) (string, string, 
 	var k, n, ns string
 	if jsonIn != "" {
 		// Read namespace from jsonIn (swallow error because optional)
-		ns, _ = serializ.ResolveJsonString[string](jsonIn, "metadata.namespace")
+		ns, _ = serializ.ResolveJsonString[string](jsonIn, "/metadata/namespace")
 		// Read kind from jsonIn (swallow error because optional)
-		k, _ = serializ.ResolveJsonString[string](jsonIn, "kind")
+		k, _ = serializ.ResolveJsonString[string](jsonIn, "/kind")
 		// Read name from jsonIn (swallow error because optional)
-		n, _ = serializ.ResolveJsonString[string](jsonIn, "metadata.name")
+		n, _ = serializ.ResolveJsonString[string](jsonIn, "/metadata/name")
 	}
 	if ns == "" {
 		ns = namespace
@@ -264,6 +274,14 @@ func consolidateMetadata(namespace, kind, name, jsonIn string) (string, string, 
 	if n == "" {
 		n = name
 	}
+	/*
+		if k == "" || kind == "Namespace" {
+			if name == "" {
+				name = namespace
+			}
+			kind = "Namespace"
+		}
+	*/
 	return ns, k, n
 }
 
@@ -275,9 +293,20 @@ func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, er
 		if err != nil {
 			return nil, err
 		}
-		// TODO complete missing data (ns, kind, name)
-
 	}
+	// TODO complete missing data (ns, kind, name)
+	var err error
+	resourceTree, err = serializ.PatcherMap(resourceTree).
+		Default("/kind", kind).
+		Default("/metadata/name", name).
+		Default("/metadata/namespace", namespace).
+		Test("/kind", "Namespace").SwallowError().Then(serializ.OpRemove("/metadata/namespace")).
+		ResolveMap()
+	if err != nil {
+		log.Printf("Found error: %s", err)
+		return nil, err
+	}
+	log.Printf("completed Json: %s", resourceTree)
 	return resourceTree, nil
 }
 
@@ -306,15 +335,30 @@ func Get(namespace, kind, name, jsonIn string) (string, error) {
 
 // Create resources (do not overwrite nor update)
 func Post(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
-	out, err := Get(namespace, kind, name, jsonIn)
-	if err != nil {
-		return "", err
-	}
-	if out != "" {
-		// Should not overwrite a resource in Post
-		namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
-		err = fmt.Errorf("Resource %s/%s already exists in namespace: %s !", kind, name, namespace)
-		return "", err
+	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
+	if kind == "" || kind == "Namespace" {
+		// Special case, we need to verify if NS exists
+		allNs, err := listNamespaces()
+		if err != nil {
+			return "", err
+		}
+		if collections.Contains(&allNs, namespace) {
+			// namespace already exists
+			err = fmt.Errorf("Namespace %s already exists !", namespace)
+			return "", err
+		}
+	} else {
+		// Verify if resource already exists
+		out, err := Get(namespace, kind, name, jsonIn)
+		if err != nil {
+			return "", err
+		}
+		if out != "" {
+			// Should not overwrite a resource in Post
+			namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
+			err = fmt.Errorf("Resource %s/%s already exists in namespace: %s !", kind, name, namespace)
+			return "", err
+		}
 	}
 	return Put(namespace, kind, name, jsonIn)
 }
@@ -325,7 +369,7 @@ func Put(namespace, kind, name, jsonIn string) (jsonOut string, err error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("POST resourceTree: %s", resourceTree)
+	log.Printf("PUT resourceTree: %s", resourceTree)
 	// TODO: update tree with namespace kind and name ?
 	storedResources, err := storeResource(namespace, resourceTree)
 	if err != nil {
