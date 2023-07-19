@@ -1,4 +1,4 @@
-package pod
+package driver
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	//"mby.fr/utils/promise"
 	"mby.fr/k8s2docker/compare"
 	"mby.fr/k8s2docker/descriptor"
+	"mby.fr/utils/stringz"
 
 	k8sv1 "k8s.io/api/core/v1"
 )
@@ -26,18 +27,43 @@ func (e Executor) Apply(namespace string, resource any) (err error) {
 	case k8sv1.Pod:
 		err = e.createPod(namespace, res)
 	default:
-		err = fmt.Errorf("Cannot create not supported type %T", res)
+		err = fmt.Errorf("Cannot Apply type: %T not supported !", res)
 	}
 	return
 
 }
 
-func (e Executor) deletePod(namespace string, pod k8sv1.Pod) (err error) {
-	//TODO
+func (e Executor) ListPods(namespace string) (pods []k8sv1.Pod, err error) {
+	return e.translator.listPods(namespace)
+}
+
+func (e Executor) Delete(namespace, kind, name string) (err error) {
+	switch kind {
+	case "Pod":
+		err = e.deletePod(namespace, name)
+	default:
+		err = fmt.Errorf("Cannot List kind: %s not supported yet !", kind)
+	}
 	return
 }
 
+/*
+func (e Executor) listPods(namespace string) (pods []k8sv1.Pod, err error) {
+	//TODO
+	return
+}
+*/
+
+func (e Executor) deletePod(namespace, name string) (err error) {
+	log.Printf("Deleting pod %s in ns %s ...", name, namespace)
+
+	//TODO
+	return fmt.Errorf("deletePod not implemented yet !")
+}
+
 func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+	log.Printf("Creating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
+
 	podName := forgeResName(namespace, pod)
 
 	netId, err := e.translator.podNetworkId(namespace, pod)
@@ -139,10 +165,21 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
 	}
 
+	ctExec2, err := e.translator.commitPod(namespace, pod)
+	if err != nil {
+		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
+	}
+	_, err = ctExec2.FailOnError().BlockRun()
+	if err != nil {
+		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
+	}
+
 	return
 }
 
-func (e Executor) applyPod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) updatePod(namespace string, pod k8sv1.Pod) (err error) {
+	log.Printf("Updating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
+
 	// TODO: how to use a kubelet ?
 	// Kubelet should be responsible for create / update / delete
 
@@ -236,6 +273,27 @@ type Translator struct {
 	binary string
 }
 
+func (t Translator) listPods(namespace string) (pods []k8sv1.Pod, err error) {
+	nsFilter := "name=" + namespace + "_"
+	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", nsFilter).ErrorOnFailure(true)
+	_, err = exec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+	//log.Printf("listPods: RC=%d, stdout=%s", rc, exec.StdoutRecord())
+	stdOut := strings.TrimSpace(exec.StdoutRecord())
+	podRootCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
+	//log.Printf("list of pods: %v", podRootCtNames)
+	for _, podRootCtName := range podRootCtNames {
+		pod, err := t.getCommitedRootPod(podRootCtName)
+		if err != nil {
+			return nil, err
+		}
+		pods = append(pods, *pod)
+	}
+	return
+}
+
 func (t Translator) commitPod(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
 	b, err := json.Marshal(pod)
 	if err != nil {
@@ -247,9 +305,8 @@ func (t Translator) commitPod(namespace string, pod k8sv1.Pod) (cmdz.Executer, e
 	return exec, nil
 }
 
-func (t Translator) getCommitedPod(namespace string, pod k8sv1.Pod) (*k8sv1.Pod, error) {
-	ctName := podRootContainerName(namespace, pod)
-	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podConfig.txt"}
+func (t Translator) getCommitedRootPod(rootPodName string) (*k8sv1.Pod, error) {
+	execArgs := []string{"exec", rootPodName, "/bin/sh", "-c", "cat /podConfig.txt"}
 	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure(true)
 	_, err := exec.BlockRun()
 	if err != nil {
@@ -261,6 +318,11 @@ func (t Translator) getCommitedPod(namespace string, pod k8sv1.Pod) (*k8sv1.Pod,
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (t Translator) getCommitedPod(namespace string, pod k8sv1.Pod) (*k8sv1.Pod, error) {
+	ctName := podRootContainerName(namespace, pod)
+	return t.getCommitedRootPod(ctName)
 }
 
 func (t Translator) commitPodPhase(namespace string, pod k8sv1.Pod, phase k8sv1.PodPhase) cmdz.Executer {
@@ -558,4 +620,10 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 	*/
 
 	return exec, nil
+}
+
+func DockerExecutor() K8sDriver {
+	translator := Translator{"docker"}
+	executor := Executor{translator: translator}
+	return executor
 }

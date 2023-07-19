@@ -24,10 +24,10 @@ var (
 )
 
 func init() {
-	//initDb()
+	//InitDb()
 }
 
-func initDb(dbDirPath string) {
+func InitDb(dbDirPath string) {
 	if db != nil {
 		return
 	}
@@ -141,7 +141,16 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 
 	if kind == "Namespace" {
 		namespace = meta_ns_collection
-	} else {
+	}
+
+	collection := forgeResCollection(namespace, kind)
+	log.Printf("Storing %s %s: %s\n", collection, name, resourceTree)
+	err = scribble.Write(db, collection, name, resourceTree)
+	if err != nil {
+		return storedResources, err
+	}
+
+	if kind != "Namespace" {
 		// Ensure resources collection is referenced
 		recordResourcesCollection(namespace, kind)
 		// Ensure namespace exists, creating it
@@ -152,14 +161,8 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 		}
 		storedResources = append(storedResources, res...)
 	}
-
-	collection := forgeResCollection(namespace, kind)
-	log.Printf("Storing %s %s: %s\n", collection, name, resourceTree)
-	err = scribble.Write(db, collection, name, resourceTree)
-	if err != nil {
-		return storedResources, err
-	}
 	storedResources = append(storedResources, resourceTree)
+
 	return storedResources, err
 }
 

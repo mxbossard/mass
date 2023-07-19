@@ -17,7 +17,7 @@ import (
 	//_ "k8s.io/client-go/pkg/apis/extensions/install"
 
 	//"k8s.io/client-go/kubernetes/scheme"
-	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
+	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -119,7 +119,7 @@ func LoadPodWithDefaults1(input []byte) (pod k8sv1.Pod, err error) {
 				nil)
 		*/
 
-		decoder := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(resourceYAML)), 1000)
+		decoder := k8sYaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(resourceYAML)), 1000)
 		err = decoder.Decode(&pod)
 
 		if err != nil {
