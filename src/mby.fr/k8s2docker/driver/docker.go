@@ -13,7 +13,7 @@ import (
 	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/stringz"
 
-	k8sv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Executor struct {
@@ -24,7 +24,7 @@ type Executor struct {
 
 func (e Executor) Apply(namespace string, resource any) (err error) {
 	switch res := resource.(type) {
-	case k8sv1.Pod:
+	case corev1.Pod:
 		err = e.createPod(namespace, res)
 	default:
 		err = fmt.Errorf("Cannot Apply type: %T not supported !", res)
@@ -33,7 +33,11 @@ func (e Executor) Apply(namespace string, resource any) (err error) {
 
 }
 
-func (e Executor) ListPods(namespace string) (pods []k8sv1.Pod, err error) {
+func (e Executor) ListNamespaces() (namespaces []corev1.Namespace, err error) {
+	return e.translator.listNamespaces()
+}
+
+func (e Executor) ListPods(namespace string) (pods []corev1.Pod, err error) {
 	return e.translator.listPods(namespace)
 }
 
@@ -48,7 +52,7 @@ func (e Executor) Delete(namespace, kind, name string) (err error) {
 }
 
 /*
-func (e Executor) listPods(namespace string) (pods []k8sv1.Pod, err error) {
+func (e Executor) listPods(namespace string) (pods []corev1.Pod, err error) {
 	//TODO
 	return
 }
@@ -61,7 +65,7 @@ func (e Executor) deletePod(namespace, name string) (err error) {
 	return fmt.Errorf("deletePod not implemented yet !")
 }
 
-func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 	log.Printf("Creating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
 
 	podName := forgeResName(namespace, pod)
@@ -177,7 +181,7 @@ func (e Executor) createPod(namespace string, pod k8sv1.Pod) (err error) {
 	return
 }
 
-func (e Executor) updatePod(namespace string, pod k8sv1.Pod) (err error) {
+func (e Executor) updatePod(namespace string, pod corev1.Pod) (err error) {
 	log.Printf("Updating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
 
 	// TODO: how to use a kubelet ?
@@ -217,19 +221,19 @@ func (e Executor) updatePod(namespace string, pod k8sv1.Pod) (err error) {
 	return
 }
 
-func networkName(namespace string, pod k8sv1.Pod) string {
+func networkName(namespace string, pod corev1.Pod) string {
 	podName := forgeResName(namespace, pod)
-	networkName := fmt.Sprintf("%s_net", podName)
+	networkName := fmt.Sprintf("%s__net", podName)
 	return networkName
 }
 
-func podRootContainerName(namespace string, pod k8sv1.Pod) string {
+func podRootContainerName(namespace string, pod corev1.Pod) string {
 	podName := forgeResName(namespace, pod)
-	ctName := fmt.Sprintf("%s_root", podName)
+	ctName := fmt.Sprintf("%s__root", podName)
 	return ctName
 }
 
-func podContainerName(namespace string, pod k8sv1.Pod, container k8sv1.Container) string {
+func podContainerName(namespace string, pod corev1.Pod, container corev1.Container) string {
 	podName := forgeResName(namespace, pod)
 	ctName := forgeResName(podName, container)
 	return ctName
@@ -238,19 +242,19 @@ func podContainerName(namespace string, pod k8sv1.Pod, container k8sv1.Container
 func forgeResName(prefix string, resource any) (name string) {
 	var resName string
 	switch res := resource.(type) {
-	case k8sv1.Pod:
+	case corev1.Pod:
 		resName = res.ObjectMeta.Name
-	case k8sv1.Volume:
+	case corev1.Volume:
 		resName = res.Name
-	case k8sv1.VolumeMount:
+	case corev1.VolumeMount:
 		resName = res.Name
-	case k8sv1.Container:
+	case corev1.Container:
 		resName = res.Name
 	default:
 		log.Fatalf("Cannot forge a name for unknown type: %T !", resource)
 	}
 
-	name = fmt.Sprintf("%s_%s", prefix, resName)
+	name = fmt.Sprintf("%s__%s", prefix, resName)
 	return
 }
 
@@ -273,8 +277,44 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) listPods(namespace string) (pods []k8sv1.Pod, err error) {
-	nsFilter := "name=" + namespace + "_"
+func (t Translator) describeNamespace(name string) (namespace corev1.Namespace, err error) {
+	namespace.ObjectMeta.Name = name
+	return
+}
+
+func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) {
+	rootFilter := "name=.*__root$"
+	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", rootFilter).ErrorOnFailure(true)
+	_, err = exec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+	stdOut := strings.TrimSpace(exec.StdoutRecord())
+	podRootCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
+	namespaceNames := map[string]bool{}
+	for _, podRootCtName := range podRootCtNames {
+		splitted := strings.Split(podRootCtName, "__")
+		namespace := splitted[0]
+		namespaceNames[namespace] = true
+	}
+	for nsName, _ := range namespaceNames {
+		ns, err := t.describeNamespace(nsName)
+		if err != nil {
+			return nil, err
+		}
+		namespaces = append(namespaces, ns)
+	}
+
+	return
+}
+
+func (t Translator) describePod(name string) (pod corev1.Pod, err error) {
+	pod.ObjectMeta.Name = name
+	return
+}
+
+func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
+	nsFilter := "name=^" + namespace + "__.*__root$"
 	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", nsFilter).ErrorOnFailure(true)
 	_, err = exec.BlockRun()
 	if err != nil {
@@ -283,18 +323,25 @@ func (t Translator) listPods(namespace string) (pods []k8sv1.Pod, err error) {
 	//log.Printf("listPods: RC=%d, stdout=%s", rc, exec.StdoutRecord())
 	stdOut := strings.TrimSpace(exec.StdoutRecord())
 	podRootCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
+	podNames := []string{}
 	//log.Printf("list of pods: %v", podRootCtNames)
 	for _, podRootCtName := range podRootCtNames {
-		pod, err := t.getCommitedRootPod(podRootCtName)
+		//pod, err := t.getCommitedRootPod(podRootCtName)
+		splitted := strings.Split(podRootCtName, "__")
+		podName := splitted[1]
+		podNames = append(podNames, podName)
+	}
+	for _, podName := range podNames {
+		pod, err := t.describePod(podName)
 		if err != nil {
 			return nil, err
 		}
-		pods = append(pods, *pod)
+		pods = append(pods, pod)
 	}
 	return
 }
 
-func (t Translator) commitPod(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
+func (t Translator) commitPod(namespace string, pod corev1.Pod) (cmdz.Executer, error) {
 	b, err := json.Marshal(pod)
 	if err != nil {
 		return nil, err
@@ -305,7 +352,7 @@ func (t Translator) commitPod(namespace string, pod k8sv1.Pod) (cmdz.Executer, e
 	return exec, nil
 }
 
-func (t Translator) getCommitedRootPod(rootPodName string) (*k8sv1.Pod, error) {
+func (t Translator) getCommitedRootPod(rootPodName string) (*corev1.Pod, error) {
 	execArgs := []string{"exec", rootPodName, "/bin/sh", "-c", "cat /podConfig.txt"}
 	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure(true)
 	_, err := exec.BlockRun()
@@ -320,19 +367,19 @@ func (t Translator) getCommitedRootPod(rootPodName string) (*k8sv1.Pod, error) {
 	return &p, nil
 }
 
-func (t Translator) getCommitedPod(namespace string, pod k8sv1.Pod) (*k8sv1.Pod, error) {
+func (t Translator) getCommitedPod(namespace string, pod corev1.Pod) (*corev1.Pod, error) {
 	ctName := podRootContainerName(namespace, pod)
 	return t.getCommitedRootPod(ctName)
 }
 
-func (t Translator) commitPodPhase(namespace string, pod k8sv1.Pod, phase k8sv1.PodPhase) cmdz.Executer {
+func (t Translator) commitPodPhase(namespace string, pod corev1.Pod, phase corev1.PodPhase) cmdz.Executer {
 	ctName := podRootContainerName(namespace, pod)
 	execArgs := []string{"exec", ctName, "/bin/sh", "-c", fmt.Sprintf("echo %s > /podPhase.txt", phase)}
 	exec := cmdz.Cmd(t.binary, execArgs...)
 	return exec
 }
 
-func (t Translator) getCommitedPodPhase(namespace string, pod k8sv1.Pod) (*k8sv1.PodPhase, error) {
+func (t Translator) getCommitedPodPhase(namespace string, pod corev1.Pod) (*corev1.PodPhase, error) {
 	ctName := podRootContainerName(namespace, pod)
 	execArgs := []string{"exec", ctName, "/bin/sh", "-c", "cat /podPhase.txt"}
 	exec := cmdz.Cmd(t.binary, execArgs...).ErrorOnFailure(true)
@@ -340,15 +387,15 @@ func (t Translator) getCommitedPodPhase(namespace string, pod k8sv1.Pod) (*k8sv1
 	if err != nil {
 		return nil, err
 	}
-	p := k8sv1.PodPhase(exec.StdoutRecord())
+	p := corev1.PodPhase(exec.StdoutRecord())
 	return &p, nil
 }
 
-func (t Translator) containerState(namespace string, pod k8sv1.Pod, container k8sv1.Container) (p k8sv1.ContainerState, e error) {
+func (t Translator) containerState(namespace string, pod corev1.Pod, container corev1.Container) (p corev1.ContainerState, e error) {
 	return
 }
 
-func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error) {
+func (t Translator) podNetworkId(namespace string, pod corev1.Pod) (string, error) {
 	networkName := networkName(namespace, pod)
 	networkArgs := []string{"network", "ls", "-q", "-f", fmt.Sprintf("Name=%s", networkName)}
 	exec := cmdz.Cmd(t.binary, networkArgs...).ErrorOnFailure(true)
@@ -360,14 +407,14 @@ func (t Translator) podNetworkId(namespace string, pod k8sv1.Pod) (string, error
 	return id, nil
 }
 
-func (t Translator) createPodNetwork(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
+func (t Translator) createPodNetwork(namespace string, pod corev1.Pod) (cmdz.Executer, error) {
 	networkName := networkName(namespace, pod)
 	networkArgs := []string{"network", "create", networkName}
 	exec := cmdz.Cmd(t.binary, networkArgs...).ErrorOnFailure(true)
 	return exec, nil
 }
 
-func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string, error) {
+func (t Translator) podRootContainerId(namespace string, pod corev1.Pod) (string, error) {
 	ctName := podRootContainerName(namespace, pod)
 	exec := cmdz.Cmd(t.binary, "ps", "-q", "-f", fmt.Sprintf("Name=%s", ctName)).ErrorOnFailure(true)
 
@@ -379,7 +426,7 @@ func (t Translator) podRootContainerId(namespace string, pod k8sv1.Pod) (string,
 	return id, nil
 }
 
-func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmdz.Executer, error) {
+func (t Translator) createPodRootContainer(namespace string, pod corev1.Pod) (cmdz.Executer, error) {
 	ctName := podRootContainerName(namespace, pod)
 	cpusArgs := "--cpus=0.05"
 	memoryArgs := "--memory=64m"
@@ -401,7 +448,7 @@ func (t Translator) createPodRootContainer(namespace string, pod k8sv1.Pod) (cmd
 	return exec, nil
 }
 
-func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error) {
+func (t Translator) volumeId(namespace string, vol corev1.Volume) (string, error) {
 	volName := forgeResName(namespace, vol)
 	volumeArgs := []string{"volume", "ls", "-q", "-f", fmt.Sprintf("Name=%s", volName)}
 	exec := cmdz.Cmd(t.binary, volumeArgs...).ErrorOnFailure(true)
@@ -414,7 +461,7 @@ func (t Translator) volumeId(namespace string, vol k8sv1.Volume) (string, error)
 	return id, nil
 }
 
-func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
+func (t Translator) createVolume(namespace string, vol corev1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
 	} else if vol.VolumeSource.EmptyDir != nil {
@@ -424,9 +471,9 @@ func (t Translator) createVolume(namespace string, vol k8sv1.Volume) (cmdz.Execu
 	return nil, err
 }
 
-func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
+func (t Translator) createHostPathPodVolume(namespace string, vol corev1.Volume) (cmdz.Executer, error) {
 	hostPathType := *vol.VolumeSource.HostPath.Type
-	if hostPathType != k8sv1.HostPathUnset {
+	if hostPathType != corev1.HostPathUnset {
 		err := fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
 		return nil, err
 	}
@@ -439,7 +486,7 @@ func (t Translator) createHostPathPodVolume(namespace string, vol k8sv1.Volume) 
 	return exec, nil
 }
 
-func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) (cmdz.Executer, error) {
+func (t Translator) createEmptyDirPodVolume(namespace string, vol corev1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.EmptyDir == nil {
 		err := fmt.Errorf("Bad EmptyDirVolume !")
 		return nil, err
@@ -449,7 +496,7 @@ func (t Translator) createEmptyDirPodVolume(namespace string, vol k8sv1.Volume) 
 	return exec, nil
 }
 
-func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8sv1.Container) (string, error) {
+func (t Translator) podContainerId(namespace string, pod corev1.Pod, container corev1.Container) (string, error) {
 	ctName := podContainerName(namespace, pod, container)
 	psArgs := []string{"ps", "-q", "-f", fmt.Sprintf("Name=%s", ctName)}
 	exec := cmdz.Cmd(t.binary, psArgs...).ErrorOnFailure(true)
@@ -462,7 +509,7 @@ func (t Translator) podContainerId(namespace string, pod k8sv1.Pod, container k8
 	return id, nil
 }
 
-func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, container k8sv1.Container, init bool) (cmdz.Executer, error) {
+func (t Translator) createPodContainer(namespace string, pod corev1.Pod, container corev1.Container, init bool) (cmdz.Executer, error) {
 	ctName := podContainerName(namespace, pod, container)
 	image := container.Image
 	privileged := *container.SecurityContext.Privileged
@@ -488,7 +535,7 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 	var labelArgs []string
 
 	if init {
-		restartPolicy = k8sv1.RestartPolicyNever
+		restartPolicy = corev1.RestartPolicyNever
 		runArgs = append(runArgs, "--rm")
 	}
 
@@ -521,11 +568,11 @@ func (t Translator) createPodContainer(namespace string, pod k8sv1.Pod, containe
 
 	dockerPullPolicy := ""
 	switch pullPolicy {
-	case k8sv1.PullAlways:
+	case corev1.PullAlways:
 		dockerPullPolicy = "always"
-	case k8sv1.PullNever:
+	case corev1.PullNever:
 		dockerPullPolicy = "never"
-	case k8sv1.PullIfNotPresent:
+	case corev1.PullIfNotPresent:
 		dockerPullPolicy = "missing"
 	default:
 		err := fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)

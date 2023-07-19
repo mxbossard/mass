@@ -7,5 +7,6 @@ import (
 type K8sDriver interface {
 	Apply(string, any) (err error)
 	Delete(string, string, string) (err error)
+	ListNamespaces() ([]corev1.Namespace, error)
 	ListPods(string) ([]corev1.Pod, error)
 }

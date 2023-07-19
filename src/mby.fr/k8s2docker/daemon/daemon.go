@@ -68,14 +68,33 @@ func runProbeDaemon() {
 }
 
 func processResources() errorz.Aggregated {
-	namespaces, err := repo.ListNamespaces()
+	existingNamespaces, err := dockerDriver.ListNamespaces()
+	if err != nil {
+		return errorz.NewAggregated(err)
+	}
+	existingNamespaceNames := collections.Map[corev1.Namespace, string](existingNamespaces, func(ns corev1.Namespace) string {
+		return ns.ObjectMeta.Name
+	})
+	declaredNamespaceNames, err := repo.ListNamespaces()
 	if err != nil {
 		return errorz.NewAggregated(err)
 	}
 
+	/*
+	namespaceNames := collections.Deduplicate(&existingNamespaceNames, &declaredNamespaceNames)
+	log.Printf("Existing namespaces: %v", existingNamespaceNames)
+	log.Printf("Declared namespaces: %v", declaredNamespaceNames)
+	log.Printf("Deduplicated namespaces: %v", namespaceNames)
+	*/
+
 	errs := errorz.Aggregated{}
 
-	for _, ns := range namespaces {
+	deletedNamespaceNames := collections.KeepLeft(&existingNamespaceNames, &declaredNamespaceNames)
+	for _, ns := range deletedNamespaceNames {
+		log.Printf("Deleting namespace: %s ...", ns)
+	}
+	
+	for _, ns := range declaredNamespaceNames {
 		existingPods, err := dockerDriver.ListPods(ns)
 		if err != nil {
 			return errorz.NewAggregated(err)
