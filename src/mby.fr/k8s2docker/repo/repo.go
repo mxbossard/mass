@@ -110,13 +110,13 @@ func forgeResource(namespace, kind, name string) map[string]any {
 
 // Forge resource collection name
 func forgeResCollection(namespace, kind string) string {
+	if kind == "Namespace" {
+		namespace = meta_ns_collection
+	}
 	return fmt.Sprintf("%s___%s", namespace, kind)
 }
 
 func loadResource(namespace, kind, name string) (map[string]any, error) {
-	if kind == "Namespace" {
-		namespace = meta_ns_collection
-	}
 	collection := forgeResCollection(namespace, kind)
 	return scribble.Read[map[string]any](db, collection, name)
 }
@@ -139,10 +139,6 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 		namespace = jsonNamespace
 	}
 
-	if kind == "Namespace" {
-		namespace = meta_ns_collection
-	}
-
 	collection := forgeResCollection(namespace, kind)
 	log.Printf("Storing %s %s: %s\n", collection, name, resourceTree)
 	err = scribble.Write(db, collection, name, resourceTree)
@@ -150,24 +146,98 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 		return storedResources, err
 	}
 
+	// Ensure resources collection is referenced
+	recordResourcesCollection(namespace, kind)
+
 	if kind != "Namespace" {
-		// Ensure resources collection is referenced
-		recordResourcesCollection(namespace, kind)
-		// Ensure namespace exists, creating it
-		nsJson := forgeNamespace(namespace)
-		res, err := storeResource(meta_ns_collection, nsJson)
+		namespaceNames, err := ListNamespaceNames()
 		if err != nil {
 			return nil, err
 		}
-		storedResources = append(storedResources, res...)
+
+		if !collections.Contains(&namespaceNames, namespace) {
+			// Namespace does not exists yet create it for simplicity
+			nsJson := forgeNamespace(namespace)
+			res, err := storeResource(meta_ns_collection, nsJson)
+			if err != nil {
+				return nil, err
+			}
+			storedResources = append(storedResources, res...)
+		}
 	}
 	storedResources = append(storedResources, resourceTree)
 
 	return storedResources, err
 }
 
+func deleteMapResource(namespace string, res map[string]any) (err error) {
+	resKind, err := serializ.ResolveJsonMap[string](res, "/kind")
+	if err != nil {
+		return err
+	}
+	resName, err := serializ.ResolveJsonMap[string](res, "/metadata/name")
+	if err != nil {
+		return err
+	}
+	log.Printf("Deleting mapres: %s/%s/%s ...", namespace, resKind, resName)
+	collection := forgeResCollection(namespace, resKind)
+	err = db.Delete(collection, resName)
+	if err != nil {
+		return err
+	}
+	return
+}
+
+func deleteResource(namespace, kind, name string) (ressources []map[string]any, err error) {
+	if namespace == "" {
+		err = fmt.Errorf("A namespace must be supplied for Delete operation !")
+		return
+	}
+	log.Printf("Deleting res: %s/%s/%s ...", namespace, kind, name)
+	err = assertNamespaceExist(namespace)
+	if err != nil {
+		return
+	}
+
+	selectedResources, err := listResourcesAsMap(namespace, kind, name)
+	if err != nil {
+		return
+	}
+
+	log.Printf("selectedResources: %v", selectedResources)
+	for _, res := range selectedResources {
+		err = deleteMapResource(namespace, res)
+		if err != nil {
+			return
+		}
+		ressources = append(ressources, res)
+	}
+	if kind == "" {
+		// Deleting namespace
+		namespaceRes, err := loadResource("", "Namespace", namespace)
+		log.Printf("namespace: %v", namespaceRes)
+		if err != nil {
+			return nil, err
+		}
+		err = deleteMapResource("", namespaceRes)
+		if err != nil {
+			return nil, err
+		}
+		ressources = append(ressources, namespaceRes)
+	} else {
+		if len(selectedResources) == 0 {
+			err = fmt.Errorf("Cannot delete not existing resource of name: [%s] with kind: [%s] in namespace: [%s] !", name, kind, namespace)
+		}
+	}
+	return
+}
+
 // Record a resources collection for further listing
 func recordResourcesCollection(namespace, kind string) (err error) {
+	if kind == "Namespace" {
+		// Do not record meta collections
+		return
+	}
 	collectionsCollection := forgeResCollection(namespace, "collections")
 	resCollection := forgeResCollection(namespace, kind)
 	log.Printf("Recording resource collection in ns %s: %s ...\n", namespace, resCollection)
@@ -189,7 +259,7 @@ func listResourcesCollections(namespace string) (collections []string, err error
 	return
 }
 
-func ListNamespaces() (namespaces []string, err error) {
+func ListNamespaceNames() (namespaces []string, err error) {
 	// Browse all NS
 	allNs, err := listResourcesAsMap("", "", "")
 	if err != nil {
@@ -206,13 +276,24 @@ func ListNamespaces() (namespaces []string, err error) {
 	return
 }
 
+func assertNamespaceExist(name string) (err error) {
+	namespaceNames, err := ListNamespaceNames()
+	if err != nil {
+		return err
+	}
+	if !collections.Contains(&namespaceNames, name) {
+		err = fmt.Errorf("Namespace %s does not exists !", name)
+	}
+	return
+}
+
 // List namespace names corresponding to input.
 func developNamespaceNames(namespaceIn string) (namespaces []string, err error) {
 	if namespaceIn == "" {
 		return
 	} else if namespaceIn == "all" {
 		// Browse all NS
-		allNs, err := ListNamespaces()
+		allNs, err := ListNamespaceNames()
 		if err != nil {
 			return nil, err
 		}
@@ -223,6 +304,13 @@ func developNamespaceNames(namespaceIn string) (namespaces []string, err error) 
 	return
 }
 
+/*
+	List resources baked by map[string]any
+	if namespace == "" => List all NS
+	if kind == "" => List all resources in NS
+	if name == "" => List all resources of Kind in NS
+
+*/
 func listResourcesAsMap(namespace, kind, name string) ([]map[string]any, error) {
 	if namespace == "" {
 		// Liste all namespaces
@@ -346,7 +434,7 @@ func Post(namespace, kind, name, jsonIn string) (resources []map[string]any, err
 	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
 	if kind == "" || kind == "Namespace" {
 		// Special case, we need to verify if NS exists
-		allNs, err := ListNamespaces()
+		allNs, err := ListNamespaceNames()
 		if err != nil {
 			return nil, err
 		}
@@ -384,11 +472,13 @@ func Put(namespace, kind, name, jsonIn string) (resources []map[string]any, err 
 }
 
 // Update parts of resources
-func Patch(namespace, kind, name, jsonText string) (resources []map[string]any, err error) {
-	return nil, fmt.Errorf("Not implemented yet !")
+func Patch(namespace, kind, name, jsonIn string) (resources []map[string]any, err error) {
+	return nil, fmt.Errorf("repo.Patch() Not implemented yet !")
 }
 
 // Delete resources
-func Delete(namespace, kind, name, jsonText string) (resources []map[string]any, err error) {
-	return nil, fmt.Errorf("Not implemented yet !")
+func Delete(namespace, kind, name, jsonIn string) (resources []map[string]any, err error) {
+	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
+	deletedResources, err := deleteResource(namespace, kind, name)
+	return deletedResources, err
 }

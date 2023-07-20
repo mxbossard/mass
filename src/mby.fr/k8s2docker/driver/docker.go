@@ -277,9 +277,9 @@ type Translator struct {
 	binary string
 }
 
-func (t Translator) describeNamespace(name string) (namespace corev1.Namespace, err error) {
-	namespace.ObjectMeta.Name = name
-	return
+func (t Translator) describeNamespace(name string) (corev1.Namespace, error) {
+	ns := descriptor.BuildNamespace(name)
+	return ns, nil
 }
 
 func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) {
@@ -308,9 +308,9 @@ func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) 
 	return
 }
 
-func (t Translator) describePod(name string) (pod corev1.Pod, err error) {
-	pod.ObjectMeta.Name = name
-	return
+func (t Translator) describePod(namespace, name string) (corev1.Pod, error) {
+	pod := descriptor.BuildPod(namespace, name)
+	return pod, nil
 }
 
 func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
@@ -332,7 +332,7 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 		podNames = append(podNames, podName)
 	}
 	for _, podName := range podNames {
-		pod, err := t.describePod(podName)
+		pod, err := t.describePod(namespace, podName)
 		if err != nil {
 			return nil, err
 		}

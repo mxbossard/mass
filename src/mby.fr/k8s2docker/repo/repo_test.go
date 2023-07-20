@@ -213,23 +213,23 @@ func TestDevelopNamespaceNames(t *testing.T) {
 	assert.Contains(t, res, "ns2")
 }
 
-func TestListNamespaces(t *testing.T) {
+func TestListNamespaceNames(t *testing.T) {
 	initTestDb()
 	defer clearTestDb()
 
-	namespaces, err := ListNamespaces()
+	namespaces, err := ListNamespaceNames()
 	require.NoError(t, err)
 	assert.Empty(t, namespaces)
 
 	storeYamlResource(t, "", expectedNsYaml1)
-	namespaces, err = ListNamespaces()
+	namespaces, err = ListNamespaceNames()
 	require.NoError(t, err)
 	assert.NotEmpty(t, namespaces)
 	assert.Len(t, namespaces, 1)
 	assert.Contains(t, namespaces, "ns1")
 
 	storeYamlResource(t, "", expectedNsYaml2)
-	namespaces, err = ListNamespaces()
+	namespaces, err = ListNamespaceNames()
 	require.NoError(t, err)
 	assert.NotEmpty(t, namespaces)
 	assert.Len(t, namespaces, 2)
@@ -590,12 +590,14 @@ func TestPost_Namespace(t *testing.T) {
 	out, err = Post("ns1", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml2))
 
 	out, err = Get("", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml2))
 
@@ -606,12 +608,14 @@ func TestPost_Namespace(t *testing.T) {
 	out, err = Post("ns2", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml1))
 
 	out, err = Get("", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 }
@@ -636,11 +640,14 @@ func TestPost_Pod(t *testing.T) {
 	out, err = Post("ns1", "Pod", "pod2", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	out, err = Get("ns1", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	// Should return error because cannot overwrite nor update resource
@@ -651,12 +658,15 @@ func TestPost_Pod(t *testing.T) {
 	out, err = Post("ns1", "", "", yamlToJson(t, expectedPodYaml1))
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml1InNs1))
 
 	out, err = Get("ns1", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml1InNs1))
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	// Should error because no namespace supplied nether arg nor in yaml
 	out, err = Post("", "", "", yamlToJson(t, expectedPodYaml1))
@@ -666,12 +676,14 @@ func TestPost_Pod(t *testing.T) {
 	out, err = Post("", "", "", yamlToJson(t, expectedPodYaml3InNs2))
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml3InNs2))
 
 	out, err = Get("ns2", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml3InNs2))
 }
 
@@ -686,12 +698,14 @@ func TestPut_Namespace(t *testing.T) {
 	out, err = Put("ns1", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml2))
 
 	out, err = Get("", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml2))
 
@@ -699,18 +713,21 @@ func TestPut_Namespace(t *testing.T) {
 	out, err = Put("ns1", "", "", "")
 	require.NoError(t, err, "Overwriting should succeed !")
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml2))
 
 	out, err = Put("ns2", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 	assert.NotContains(t, out, mapYaml(t, expectedNsYaml1))
 
 	out, err = Get("", "", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 }
@@ -735,28 +752,35 @@ func TestPut_Pod(t *testing.T) {
 	out, err = Put("ns1", "Pod", "pod2", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	out, err = Get("ns1", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	// Overwrite ok with put
 	out, err = Put("ns1", "Pod", "pod2", "")
 	require.NoError(t, err, "Overwriting should succeed !")
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	out, err = Put("ns1", "", "", yamlToJson(t, expectedPodYaml1))
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml1InNs1))
 
 	out, err = Get("ns1", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml1InNs1))
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2InNs1))
 
 	// Should error because no namespace supplied nether arg nor in yaml
 	out, err = Put("", "", "", yamlToJson(t, expectedPodYaml1))
@@ -766,11 +790,189 @@ func TestPut_Pod(t *testing.T) {
 	out, err = Put("", "", "", yamlToJson(t, expectedPodYaml3InNs2))
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
 	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml3InNs2))
 
 	out, err = Get("ns2", "Pod", "", "")
 	require.NoError(t, err)
 	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
 	assert.Contains(t, out, mapYaml(t, expectedPodYaml3InNs2))
+}
+
+func TestDelete_EmptyNamespace(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var out []map[string]any
+	var err error
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	out, err = Delete("", "", "", "")
+	require.Error(t, err, "Deleting nonamed Namespace should fail !")
+	assert.Empty(t, out)
+
+	// Delete not existing NS should error
+	out, err = Delete("ns1", "", "", "")
+	require.Error(t, err, "Deleting not existing Namespace should fail !")
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "", expectedNsYaml1)
+	storeYamlResource(t, "", expectedNsYaml2)
+	storeYamlResource(t, "", expectedNsYaml3)
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml3))
+
+	out, err = Delete("ns1", "", "", "")
+	require.NoError(t, err, "")
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.NotContains(t, out, mapYaml(t, expectedNsYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml3))
+}
+
+func TestDelete_FilledNamespace(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var out []map[string]any
+	var err error
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
+	assert.NotContains(t, out, mapYaml(t, expectedNsYaml3))
+
+	out, err = Delete("ns1", "", "", "")
+	require.NoError(t, err, "")
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 3)
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2))
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.NotContains(t, out, mapYaml(t, expectedNsYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedNsYaml2))
+	assert.NotContains(t, out, mapYaml(t, expectedNsYaml3))
+}
+
+func TestDelete_Pod(t *testing.T) {
+	initTestDb()
+	defer clearTestDb()
+
+	var out []map[string]any
+	var err error
+
+	// Delete aa Pods resource should not fail
+	out, err = Delete("ns1", "Pod", "", "")
+	require.Error(t, err, "Deleting all Pods resource on non existing namespace should fail !")
+	assert.Empty(t, out)
+
+	// Delete not existing resource should fail
+	out, err = Delete("ns1", "Pod", "pod1", "")
+	require.Error(t, err, "Deleting not existing resource on non existing namespace should fail !")
+	assert.Empty(t, out)
+
+	out, err = Get("", "", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+	storeYamlResource(t, "ns1", expectedServiceYaml1)
+	storeYamlResource(t, "ns1", expectedServiceYaml2)
+	storeYamlResource(t, "ns2", expectedServiceYaml3)
+
+	out, err = Delete("ns2", "Pod", "pod1", "")
+	require.Error(t, err, "Deleting not existing resource should fail !")
+	assert.Empty(t, out)
+
+	out, err = Delete("ns2", "Pod", "pod3", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml3))
+
+	out, err = Get("ns2", "Pod", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	out, err = Delete("ns1", "Pod", "pod1", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml1))
+
+	out, err = Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2))
+
+	out, err = Delete("ns1", "Pod", "pod2", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2))
+
+	out, err = Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+
+	storeYamlResource(t, "ns1", expectedPodYaml1)
+	storeYamlResource(t, "ns1", expectedPodYaml2)
+	storeYamlResource(t, "ns2", expectedPodYaml3)
+
+	out, err = Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
+
+	out, err = Delete("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, out)
+	assert.Len(t, out, 2)
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml1))
+	assert.Contains(t, out, mapYaml(t, expectedPodYaml2))
+
+	out, err = Get("ns1", "Pod", "", "")
+	require.NoError(t, err)
+	assert.Empty(t, out)
+}
+
+func TestPatch_Namespace(t *testing.T) {
+	// TODO
+}
+
+func TestPatch_Pod(t *testing.T) {
+	// TODO
 }

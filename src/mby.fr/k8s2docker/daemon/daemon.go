@@ -75,16 +75,16 @@ func processResources() errorz.Aggregated {
 	existingNamespaceNames := collections.Map[corev1.Namespace, string](existingNamespaces, func(ns corev1.Namespace) string {
 		return ns.ObjectMeta.Name
 	})
-	declaredNamespaceNames, err := repo.ListNamespaces()
+	declaredNamespaceNames, err := repo.ListNamespaceNames()
 	if err != nil {
 		return errorz.NewAggregated(err)
 	}
 
 	/*
-	namespaceNames := collections.Deduplicate(&existingNamespaceNames, &declaredNamespaceNames)
-	log.Printf("Existing namespaces: %v", existingNamespaceNames)
-	log.Printf("Declared namespaces: %v", declaredNamespaceNames)
-	log.Printf("Deduplicated namespaces: %v", namespaceNames)
+		namespaceNames := collections.Deduplicate(&existingNamespaceNames, &declaredNamespaceNames)
+		log.Printf("Existing namespaces: %v", existingNamespaceNames)
+		log.Printf("Declared namespaces: %v", declaredNamespaceNames)
+		log.Printf("Deduplicated namespaces: %v", namespaceNames)
 	*/
 
 	errs := errorz.Aggregated{}
@@ -93,7 +93,7 @@ func processResources() errorz.Aggregated {
 	for _, ns := range deletedNamespaceNames {
 		log.Printf("Deleting namespace: %s ...", ns)
 	}
-	
+
 	for _, ns := range declaredNamespaceNames {
 		existingPods, err := dockerDriver.ListPods(ns)
 		if err != nil {
@@ -155,7 +155,7 @@ func applyPod(ns string, existingPods *[]corev1.Pod, declaredPod corev1.Pod) (er
 		})
 		if len(match) > 0 {
 			// Found a matching different spec (same name)
-			log.Printf("Pod %s already exists but was modified.", declaredPodName)
+			log.Printf("Pod %s already exists but was modified ([%v] => [%v]).", declaredPodName, match, declaredPod)
 			err = dockerDriver.Apply(ns, declaredPod)
 			if err != nil {
 				return

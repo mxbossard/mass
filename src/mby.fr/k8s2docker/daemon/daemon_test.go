@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -11,12 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDaemon(t *testing.T) {
+func TestDaemon_1(t *testing.T) {
+	log.Printf("----- TestDaemon_1 -----")
+	os.RemoveAll("./myTestDb")
 	repo.InitDb("./myTestDb")
-	defer os.RemoveAll("./myTestDb")
+	//defer os.RemoveAll("./myTestDb")
 
 	var err error
-	//_, err = repo.Put("ns1", "Pod", "pod1", "")
+	_, err = repo.Put("ns1", "Pod", "pod1", "")
+	require.NoError(t, err)
+
+	Start()
+	//defer Stop()
+
+	time.Sleep(300 * time.Millisecond)
+
+	BlockingStop()
+	assert.Fail(t, "daemon stopped")
+}
+
+func TestDaemon_2(t *testing.T) {
+	log.Printf("----- TestDaemon_2 -----")
+	repo.InitDb("./myTestDb")
+	//defer os.RemoveAll("./myTestDb")
+
+	var err error
+	_, err = repo.Delete("ns1", "Pod", "pod1", "")
 	require.NoError(t, err)
 
 	Start()
