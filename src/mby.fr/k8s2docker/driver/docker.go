@@ -61,8 +61,16 @@ func (e Executor) listPods(namespace string) (pods []corev1.Pod, err error) {
 func (e Executor) deletePod(namespace, name string) (err error) {
 	log.Printf("Deleting pod %s in ns %s ...", name, namespace)
 
-	//TODO
-	return fmt.Errorf("deletePod not implemented yet !")
+	execs, err := e.translator.deletePod(namespace, name)
+	if err != nil {
+		return err
+	}
+	_, err = execs.BlockRun()
+	if err != nil {
+		return err
+	}
+	//return fmt.Errorf("deletePod not implemented yet !")
+	return
 }
 
 func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
@@ -339,6 +347,22 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 		pods = append(pods, pod)
 	}
 	return
+}
+
+func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
+	podFilter := "name=^" + namespace + "__" + name + "__.*"
+	psExec := cmdz.Cmd(t.binary, "ps", "--format", "{{ .Names }}", "-f", podFilter).ErrorOnFailure(true)
+	_, err := psExec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+
+	stdOut := strings.TrimSpace(psExec.StdoutRecord())
+	podCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
+	rmArgs := []string{"rm", "-f"}
+	rmArgs = append(rmArgs, podCtNames...)
+	rmExec := cmdz.Cmd(t.binary, rmArgs...).ErrorOnFailure(true)
+	return rmExec, nil
 }
 
 func (t Translator) commitPod(namespace string, pod corev1.Pod) (cmdz.Executer, error) {

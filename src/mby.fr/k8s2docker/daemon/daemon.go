@@ -92,6 +92,7 @@ func processResources() errorz.Aggregated {
 	deletedNamespaceNames := collections.KeepLeft(&existingNamespaceNames, &declaredNamespaceNames)
 	for _, ns := range deletedNamespaceNames {
 		log.Printf("Deleting namespace: %s ...", ns)
+		// Nothing to do ?
 	}
 
 	for _, ns := range declaredNamespaceNames {
