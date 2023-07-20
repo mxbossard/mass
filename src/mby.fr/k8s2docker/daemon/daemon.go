@@ -19,15 +19,15 @@ var dockerDriver = driver.DockerExecutor()
 var stopped = true
 var resourceDaemonRunning, probeDaemonRunning bool
 
-func Start() {
+func Start(resourcePeriod, probePeriod time.Duration) {
 	if !stopped {
 		return
 	}
 	stopped = false
 	resourceDaemonRunning = true
 	probeDaemonRunning = false
-	go runResourcesDaemon()
-	go runProbeDaemon()
+	go runResourcesDaemon(resourcePeriod)
+	go runProbeDaemon(probePeriod)
 }
 
 func Stop() {
@@ -41,7 +41,7 @@ func BlockingStop() {
 	}
 }
 
-func runResourcesDaemon() {
+func runResourcesDaemon(period time.Duration) {
 	for !stopped {
 		log.Printf("### Start processing resources ...")
 		err := processResources()
@@ -49,14 +49,14 @@ func runResourcesDaemon() {
 			log.Printf("ResourcesDaemon ERROR: %s", err)
 		}
 		log.Printf("### Finished processing resources.")
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(period)
 	}
 	resourceDaemonRunning = false
 }
 
-func runProbeDaemon() {
+func runProbeDaemon(period time.Duration) {
 	for !stopped {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(period)
 		log.Printf("--- Start probing ...")
 		err := probeContainers()
 		if err != nil {

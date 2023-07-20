@@ -38,7 +38,10 @@ var (
 	JsonContentType      = "application/json"
 )
 
-func Start() (err error) {
+func Start(tcpAddr string) (err error) {
+	if tcpAddr == "" {
+		tcpAddr = ":8080"
+	}
 	server := &http.Server{
 		Addr:           ":8080",
 		Handler:        nil, // use DefaultServeMux by default
@@ -52,6 +55,7 @@ func Start() (err error) {
 	http.HandleFunc(serveCoreResourcesRootPath, coreResourcesHandler)
 	http.HandleFunc(serveCoreResourcesRootPath+"/", coreResourcesHandler)
 
+	log.Printf("HTTP server listening on: [%s] ...", tcpAddr)
 	err = server.ListenAndServe()
 	log.Printf("Server error: %s", err)
 	server = nil

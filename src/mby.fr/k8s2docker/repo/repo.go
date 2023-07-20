@@ -20,12 +20,7 @@ import (
 var (
 	db                 *scribble.Driver
 	meta_ns_collection = "__meta"
-	//dbDir = "mydb"
 )
-
-func init() {
-	//InitDb()
-}
 
 func InitDb(dbDirPath string) {
 	if db != nil {
@@ -34,7 +29,7 @@ func InitDb(dbDirPath string) {
 	var err error
 	db, err = scribble.New(dbDirPath, nil)
 	if err != nil {
-		log.Fatalf("Error initializing DB: %s", err)
+		log.Fatalf("Error initializing DB at path: [%s] ! Cause by: %s", dbDirPath, err)
 	}
 }
 

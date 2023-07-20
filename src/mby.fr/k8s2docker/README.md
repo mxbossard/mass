@@ -18,7 +18,7 @@ flowchart LR
         Cli
 
     
-        subgraph Go lib
+        subgraph Go[Go lib]
             Patcher
         end
 
@@ -32,9 +32,13 @@ flowchart LR
 
     Repo -.- Patcher
     Cli -->|HTTP| Server
+    Cli -->|spawn| Container
     Server <-->|read/write| Repo
+    Repo <-->|read/write| Db
     Daemon -->|read| Repo
     Daemon -->|sh| Docker
-    Repo <-->|read/write| Db
+    
+    style K8s2Docker fill:#fff
+    style Go fill:lightblue
   
 ```

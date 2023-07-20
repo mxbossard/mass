@@ -22,7 +22,7 @@ func TestDaemon_1(t *testing.T) {
 	_, err = repo.Put("ns1", "Pod", "pod1", "")
 	require.NoError(t, err)
 
-	Start()
+	Start(90*time.Millisecond, 180*time.Millisecond)
 	//defer Stop()
 
 	time.Sleep(300 * time.Millisecond)
@@ -40,7 +40,7 @@ func TestDaemon_2(t *testing.T) {
 	_, err = repo.Delete("ns1", "Pod", "pod1", "")
 	require.NoError(t, err)
 
-	Start()
+	Start(90*time.Millisecond, 180*time.Millisecond)
 	//defer Stop()
 
 	time.Sleep(300 * time.Millisecond)
