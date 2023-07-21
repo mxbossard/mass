@@ -16,6 +16,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	//ContainerName_NamespaceSeparator = "__"
+	//ContainerName_NameSeparator      = "__"
+	ContainerName_Separator   = "__"
+	ContainerName_PodRootFlag = "--root"
+)
+
 type Executor struct {
 	translator Translator
 	config     []string
@@ -231,20 +238,63 @@ func (e Executor) updatePod(namespace string, pod corev1.Pod) (err error) {
 
 func networkName(namespace string, pod corev1.Pod) string {
 	podName := forgeResName(namespace, pod)
-	networkName := fmt.Sprintf("%s__net", podName)
+	networkName := fmt.Sprintf("%s--net", podName)
 	return networkName
 }
 
-func podRootContainerName(namespace string, pod corev1.Pod) string {
-	podName := forgeResName(namespace, pod)
-	ctName := fmt.Sprintf("%s__root", podName)
+func podRootContainerName0(namespace string, podName string) string {
+	ctName := fmt.Sprintf("%s%s%s%s", namespace, ContainerName_Separator, podName, ContainerName_PodRootFlag)
 	return ctName
+}
+
+func podRootContainerName(namespace string, pod corev1.Pod) string {
+	return podRootContainerName0(namespace, pod.ObjectMeta.Name)
 }
 
 func podContainerName(namespace string, pod corev1.Pod, container corev1.Container) string {
 	podName := forgeResName(namespace, pod)
 	ctName := forgeResName(podName, container)
 	return ctName
+}
+
+func getNamespaceNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	return splitted[0]
+}
+
+func getPodNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	podName := splitted[1]
+	return strings.Split(podName, "--")[0]
+}
+
+// Filter for docker ps -f arg
+func podContainerNameFilter(namespace, podName, containerName string, isRoot bool) string {
+	sb := strings.Builder{}
+	sb.WriteString("name=^")
+	if namespace != "" {
+		sb.WriteString(namespace)
+	} else {
+		sb.WriteString(".+")
+	}
+	sb.WriteString(ContainerName_Separator)
+	if podName != "" {
+		sb.WriteString(podName)
+	} else {
+		sb.WriteString(".+")
+	}
+
+	if containerName != "" {
+		sb.WriteString(ContainerName_Separator)
+		sb.WriteString(containerName)
+	}
+
+	if isRoot {
+		sb.WriteString(ContainerName_PodRootFlag)
+	}
+
+	sb.WriteString("$")
+	return sb.String()
 }
 
 func forgeResName(prefix string, resource any) (name string) {
@@ -262,7 +312,7 @@ func forgeResName(prefix string, resource any) (name string) {
 		log.Fatalf("Cannot forge a name for unknown type: %T !", resource)
 	}
 
-	name = fmt.Sprintf("%s__%s", prefix, resName)
+	name = fmt.Sprintf("%s%s%s", prefix, ContainerName_Separator, resName)
 	return
 }
 
@@ -291,8 +341,8 @@ func (t Translator) describeNamespace(name string) (corev1.Namespace, error) {
 }
 
 func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) {
-	rootFilter := "name=.*__root$"
-	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", rootFilter).ErrorOnFailure(true)
+	allNsAllRootContainersFilter := podContainerNameFilter("", "", "", true)
+	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allNsAllRootContainersFilter).ErrorOnFailure(true)
 	_, err = exec.BlockRun()
 	if err != nil {
 		return nil, err
@@ -301,8 +351,7 @@ func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) 
 	podRootCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
 	namespaceNames := map[string]bool{}
 	for _, podRootCtName := range podRootCtNames {
-		splitted := strings.Split(podRootCtName, "__")
-		namespace := splitted[0]
+		namespace := getNamespaceNameFromContainerName(podRootCtName)
 		namespaceNames[namespace] = true
 	}
 	for nsName, _ := range namespaceNames {
@@ -322,8 +371,8 @@ func (t Translator) describePod(namespace, name string) (corev1.Pod, error) {
 }
 
 func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
-	nsFilter := "name=^" + namespace + "__.*__root$"
-	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", nsFilter).ErrorOnFailure(true)
+	allRootContainersFilter := podContainerNameFilter(namespace, "", "", true)
+	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allRootContainersFilter).ErrorOnFailure(true)
 	_, err = exec.BlockRun()
 	if err != nil {
 		return nil, err
@@ -334,9 +383,7 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 	podNames := []string{}
 	//log.Printf("list of pods: %v", podRootCtNames)
 	for _, podRootCtName := range podRootCtNames {
-		//pod, err := t.getCommitedRootPod(podRootCtName)
-		splitted := strings.Split(podRootCtName, "__")
-		podName := splitted[1]
+		podName := getPodNameFromContainerName(podRootCtName)
 		podNames = append(podNames, podName)
 	}
 	for _, podName := range podNames {
@@ -350,8 +397,8 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 }
 
 func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
-	podFilter := "name=^" + namespace + "__" + name + "__.*"
-	psExec := cmdz.Cmd(t.binary, "ps", "--format", "{{ .Names }}", "-f", podFilter).ErrorOnFailure(true)
+	allContainersFilter := podContainerNameFilter(namespace, name, "", true)
+	psExec := cmdz.Cmd(t.binary, "ps", "--format", "{{ .Names }}", "-f", allContainersFilter).ErrorOnFailure(true)
 	_, err := psExec.BlockRun()
 	if err != nil {
 		return nil, err
@@ -359,9 +406,17 @@ func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
 
 	stdOut := strings.TrimSpace(psExec.StdoutRecord())
 	podCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
-	rmArgs := []string{"rm", "-f"}
-	rmArgs = append(rmArgs, podCtNames...)
-	rmExec := cmdz.Cmd(t.binary, rmArgs...).ErrorOnFailure(true)
+	rootContainerName := podRootContainerName0(namespace, name)
+	podCtNames = append(podCtNames, rootContainerName)
+	var rmExec cmdz.Executer
+	if len(podCtNames) > 0 {
+		log.Printf("deletePod: Deleting containers: %v", podCtNames)
+		rmArgs := []string{"rm", "-f"}
+		rmArgs = append(rmArgs, podCtNames...)
+		rmExec = cmdz.Cmd(t.binary, rmArgs...).ErrorOnFailure(true)
+	} else {
+		rmExec = cmdz.Cmd("true")
+	}
 	return rmExec, nil
 }
 

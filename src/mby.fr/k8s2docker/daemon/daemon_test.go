@@ -21,6 +21,7 @@ func TestDaemon_1(t *testing.T) {
 	var err error
 	_, err = repo.Put("ns1", "Pod", "pod1", "")
 	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	Start(90*time.Millisecond, 180*time.Millisecond)
 	//defer Stop()
@@ -28,7 +29,7 @@ func TestDaemon_1(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	BlockingStop()
-	assert.Fail(t, "daemon stopped")
+	//assert.Fail(t, "daemon stopped")
 }
 
 func TestDaemon_2(t *testing.T) {
@@ -46,5 +47,5 @@ func TestDaemon_2(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	BlockingStop()
-	assert.Fail(t, "daemon stopped")
+	//assert.Fail(t, "daemon stopped")
 }

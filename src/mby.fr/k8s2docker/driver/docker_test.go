@@ -231,12 +231,12 @@ func TestCreatePodNetwork(t *testing.T) {
 
 	cmds1, err := translator.createPodNetwork(expectedNamespace1, pod1)
 	require.NoError(t, err, "should not error")
-	expectedCmd10 := fmt.Sprintf(`%s network create %s__%s__net`, expectedBinary0, expectedNamespace1, pod1.Name)
+	expectedCmd10 := fmt.Sprintf(`%s network create %s__%s--net`, expectedBinary0, expectedNamespace1, pod1.Name)
 	assert.Equal(t, expectedCmd10, cmds1.String())
 
 	cmds2, err := translator.createPodNetwork(expectedNamespace1, pod2)
 	require.NoError(t, err, "should not error")
-	expectedCmd20 := fmt.Sprintf(`%s network create %s__%s__net`, expectedBinary0, expectedNamespace1, pod2.Name)
+	expectedCmd20 := fmt.Sprintf(`%s network create %s__%s--net`, expectedBinary0, expectedNamespace1, pod2.Name)
 	assert.Equal(t, expectedCmd20, cmds2.String())
 }
 
@@ -245,12 +245,12 @@ func TestCreatePodRootContainer(t *testing.T) {
 
 	cmds1, err := translator.createPodRootContainer(expectedNamespace1, pod1)
 	require.NoError(t, err, "should not error")
-	expectedCmd11 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s__root --restart=always --network %[2]s__%[3]s__net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
+	expectedCmd11 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
 	assert.Equal(t, expectedCmd11, cmds1.String())
 
 	cmds2, err := translator.createPodRootContainer(expectedNamespace1, pod2)
 	require.NoError(t, err, "should not error")
-	expectedCmd21 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s__root --restart=always --network %[2]s__%[3]s__net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
+	expectedCmd21 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
 	assert.Equal(t, expectedCmd21, cmds2.String())
 }
 
