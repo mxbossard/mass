@@ -27,10 +27,6 @@ import (
 	//apiv1 "k8s.io/kubernetes/staging/src/k8s.io/kubernetes/pkg/apis/core/v1"
 )
 
-func ValidateResource(input []byte) (err error) {
-	return
-}
-
 func BuildTypeMeta(kind, apiVersion string) (typemeta metav1.TypeMeta) {
 	typemeta.Kind = kind
 	if apiVersion == "" {
@@ -59,7 +55,7 @@ func BuildPod(namespace, name string) (res k8sv1.Pod) {
 }
 
 func LoadPod(input []byte) (pod k8sv1.Pod, err error) {
-	err = ValidateResource(input)
+	err = ValidateSerializedK8sResource(input, "", "")
 	if err != nil {
 		return
 	}

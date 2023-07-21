@@ -536,7 +536,12 @@ func (t Translator) podContainerId(namespace string, pod corev1.Pod, container c
 func (t Translator) createPodContainer(namespace string, pod corev1.Pod, container corev1.Container, init bool) (cmdz.Executer, error) {
 	ctName := podContainerName(namespace, pod, container)
 	image := container.Image
-	privileged := *container.SecurityContext.Privileged
+	privileged := false
+	if container.SecurityContext != nil {
+		if container.SecurityContext.Privileged != nil {
+			privileged = *container.SecurityContext.Privileged
+		}
+	}
 	tty := container.TTY
 	workingDir := container.WorkingDir
 	restartPolicy := pod.Spec.RestartPolicy
