@@ -268,6 +268,12 @@ func getPodNameFromContainerName(name string) string {
 	return strings.Split(podName, "--")[0]
 }
 
+func getContainerNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	ctName := splitted[2]
+	return ctName
+}
+
 // Filter for docker ps -f arg
 func podContainerNameFilter(namespace, podName, containerName string, isRoot bool) string {
 	sb := strings.Builder{}
@@ -284,13 +290,15 @@ func podContainerNameFilter(namespace, podName, containerName string, isRoot boo
 		sb.WriteString(".+")
 	}
 
-	if containerName != "" {
-		sb.WriteString(ContainerName_Separator)
-		sb.WriteString(containerName)
-	}
-
 	if isRoot {
 		sb.WriteString(ContainerName_PodRootFlag)
+	} else {
+		sb.WriteString(ContainerName_Separator)
+		if containerName != "" {
+			sb.WriteString(containerName)
+		} else {
+			sb.WriteString(".*")
+		}
 	}
 
 	sb.WriteString("$")
@@ -337,6 +345,7 @@ type Translator struct {
 
 func (t Translator) describeNamespace(name string) (corev1.Namespace, error) {
 	ns := descriptor.BuildNamespace(name)
+	descriptor.CompleteK8sResourceDefaults(&ns)
 	return ns, nil
 }
 
@@ -367,11 +376,40 @@ func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) 
 
 func (t Translator) describePod(namespace, name string) (corev1.Pod, error) {
 	pod := descriptor.BuildPod(namespace, name)
+	containers, err := t.listPodContainers(namespace, name)
+	if err != nil {
+		return corev1.Pod{}, err
+	}
+	pod.Spec.Containers = containers
+	descriptor.CompleteK8sResourceDefaults(&pod)
 	return pod, nil
+}
+
+func (t Translator) listPodContainers(namespace, podName string) (containers []corev1.Container, err error) {
+	allContainersFilter := podContainerNameFilter(namespace, podName, "", false)
+	//log.Printf("docker ps filter: %s", allRootContainersFilter)
+	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }} {{ .Image }}", "-f", allContainersFilter).ErrorOnFailure(true)
+	_, err = exec.BlockRun()
+	if err != nil {
+		return nil, err
+	}
+	//log.Printf("listPods: RC=%d, stdout=%s", rc, exec.StdoutRecord())
+	stdOut := strings.TrimSpace(exec.StdoutRecord())
+	podCtInfos, _ := stringz.SplitByRegexp(stdOut, `\n`)
+	for _, ctInfos := range podCtInfos {
+		splitted := strings.Split(ctInfos, " ")
+		ctName := getContainerNameFromContainerName(splitted[0])
+		ctImage := splitted[1]
+		ct := corev1.Container{Name: ctName, Image: ctImage}
+		containers = append(containers, ct)
+	}
+	log.Printf("list %s/%s containers => %v", namespace, podName, containers)
+	return
 }
 
 func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 	allRootContainersFilter := podContainerNameFilter(namespace, "", "", true)
+	//log.Printf("docker ps filter: %s", allRootContainersFilter)
 	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allRootContainersFilter).ErrorOnFailure(true)
 	_, err = exec.BlockRun()
 	if err != nil {
@@ -393,11 +431,13 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 		}
 		pods = append(pods, pod)
 	}
+	log.Printf("list pods in ns: %s => %v", namespace, pods)
 	return
 }
 
 func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
-	allContainersFilter := podContainerNameFilter(namespace, name, "", true)
+	allContainersFilter := podContainerNameFilter(namespace, name, "", false)
+	log.Printf("allContainersFilter: %s", allContainersFilter)
 	psExec := cmdz.Cmd(t.binary, "ps", "--format", "{{ .Names }}", "-f", allContainersFilter).ErrorOnFailure(true)
 	_, err := psExec.BlockRun()
 	if err != nil {
@@ -683,6 +723,8 @@ func (t Translator) createPodContainer(namespace string, pod corev1.Pod, contain
 		runArgs = append(runArgs, "--entrypoint")
 		runArgs = append(runArgs, entrypoint[0])
 	}
+
+	runArgs = append(runArgs, "--detach")
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {

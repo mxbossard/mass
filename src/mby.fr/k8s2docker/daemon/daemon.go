@@ -3,6 +3,7 @@ package daemon
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -92,23 +93,37 @@ func processResources() errorz.Aggregated {
 	deletedNamespaceNames := collections.KeepLeft(&existingNamespaceNames, &declaredNamespaceNames)
 	for _, ns := range deletedNamespaceNames {
 		log.Printf("Deleting namespace: %s ...", ns)
-		// Nothing to do ?
+		// Need to delete all NS pods
+		existingPods, err := dockerDriver.ListPods(ns)
+		if err != nil {
+			errs.Add(err)
+			continue
+		}
+		for _, pod := range existingPods {
+			podName := pod.ObjectMeta.Name
+			err := dockerDriver.Delete(ns, "Pod", podName)
+			errs.Add(err)
+			continue
+		}
 	}
 
 	for _, ns := range declaredNamespaceNames {
 		existingPods, err := dockerDriver.ListPods(ns)
 		if err != nil {
-			return errorz.NewAggregated(err)
+			errs.Add(err)
+			continue
 		}
 		log.Printf("Existing pods in ns %s: %v", ns, existingPods)
 
 		declaredResources, err := repo.Get(ns, "Pod", "", "")
 		if err != nil {
-			return errorz.NewAggregated(err)
+			errs.Add(err)
+			continue
 		}
 		declaredPods, err := convertMapSliceToK8sSlice[corev1.Pod](declaredResources)
 		if err != nil {
-			return errorz.NewAggregated(err)
+			errs.Add(err)
+			continue
 		}
 
 		agerr := processPods(ns, &existingPods, &declaredPods)
@@ -147,7 +162,14 @@ func processPods(ns string, existingPods *[]corev1.Pod, declaredPods *[]corev1.P
 func applyPod(ns string, existingPods *[]corev1.Pod, declaredPod corev1.Pod) (err error) {
 	declaredPodName := declaredPod.ObjectMeta.Name
 	log.Printf("Processing pod: %s", declaredPodName)
-	if collections.ContainsAny[corev1.Pod](existingPods, declaredPod) {
+	untouched := false
+	for _, pod := range *existingPods {
+		if reflect.DeepEqual(pod, declaredPod) {
+			untouched = true
+			break
+		}
+	}
+	if untouched {
 		// Found identical spec already deployed
 		log.Printf("Pod %s already exists and is untouched.", declaredPodName)
 	} else {

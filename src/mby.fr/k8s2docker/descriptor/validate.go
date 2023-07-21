@@ -11,6 +11,7 @@ import (
 	//appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"mby.fr/utils/collections"
 	"mby.fr/utils/errorz"
@@ -43,9 +44,9 @@ func assertIn[T any](errors *errorz.Aggregated, element T, field, kind, name str
 	if !collections.ContainsAny[T](&possibilities, element) {
 		var err error
 		if name != "" {
-			err = fmt.Errorf("Invalid field %s value: %v not in expected list: %v in resource: %s{name=%s} !", field, element, possibilities, kind, name)
+			err = fmt.Errorf("Invalid field %s value: (%v) not in expected list: %v in resource: %s{name=%s} !", field, element, possibilities, kind, name)
 		} else {
-			err = fmt.Errorf("Invalid field %s value: %v not in expected list: %v in resource: of kind %s !", field, element, possibilities, kind)
+			err = fmt.Errorf("Invalid field %s value: (%v) not in expected list: %v in resource: of kind %s !", field, element, possibilities, kind)
 		}
 		errors.Add(err)
 	}
@@ -140,7 +141,37 @@ func ValidateSerializedK8sResource(input []byte, kind, name string) (err error) 
 	return
 }
 
-func ValidateMappedK8sResource(input map[string]any, kind, name string) (err error) {
+func ValidateMappedK8sResource(input map[string]any, kind, name string) (validated map[string]any, err error) {
+	buffer, err := yaml.Marshal(input)
+	if err != nil {
+		return
+	}
+
+	k8sRes, err := LoaK8sRes(buffer)
+	if err != nil {
+		return
+	}
+
+	var validatedRes any
+	if kind == "Namespace" {
+		res := k8sRes.(*corev1.Namespace)
+		validatedRes, err = ValidateK8sResource(*res, name)
+	} else if kind == "Pod" {
+		res := k8sRes.(*corev1.Pod)
+		validatedRes, err = ValidateK8sResource(*res, name)
+	}
+
+	if err != nil {
+		return
+	}
+
+	buffer, err = yaml.Marshal(validatedRes)
+	if err != nil {
+		return
+	}
+
+	err = yaml.Unmarshal(buffer, &validated)
+
 	return
 }
 

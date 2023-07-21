@@ -32,6 +32,7 @@ func Default_PodSpec_PreemptionPolicy() *corev1.PreemptionPolicy {
 }
 
 func CompleteContainerDefaults(res *corev1.Container) {
+	//log.Printf("Before CompleteContainerDefaults: %v", res)
 	if res.TerminationMessagePath == "" {
 		res.TerminationMessagePath = Default_Container_TerminationMessagePath
 	}
@@ -41,6 +42,7 @@ func CompleteContainerDefaults(res *corev1.Container) {
 	if res.ImagePullPolicy == "" {
 		res.ImagePullPolicy = Default_Container_ImagePullPolicy
 	}
+	//log.Printf("After CompleteContainerDefaults: %v", res)
 }
 
 func CompletePodSpecDefaults(res *corev1.PodSpec) {
@@ -63,12 +65,18 @@ func CompletePodSpecDefaults(res *corev1.PodSpec) {
 		res.PreemptionPolicy = Default_PodSpec_PreemptionPolicy()
 	}
 
+	containers := []corev1.Container{}
 	for _, ct := range res.InitContainers {
 		CompleteContainerDefaults(&ct)
+		containers = append(containers, ct)
 	}
+	res.InitContainers = containers
+	containers = []corev1.Container{}
 	for _, ct := range res.Containers {
 		CompleteContainerDefaults(&ct)
+		containers = append(containers, ct)
 	}
+	res.Containers = containers
 }
 
 func CompleteK8sResourceDefaults[T any](input *T) (err error) {

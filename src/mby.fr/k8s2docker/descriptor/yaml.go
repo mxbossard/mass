@@ -66,6 +66,17 @@ func LoadPod(input []byte) (pod k8sv1.Pod, err error) {
 	return
 }
 
+func LoaK8sRes(data []byte) (k8sRes any, err error) {
+	decoder := scheme.Codecs.UniversalDeserializer()
+	obj, gKV, err := decoder.Decode(data, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	_ = gKV
+	k8sRes = obj
+	return
+}
+
 func LoadPodWithDefaults(data []byte) (pod k8sv1.Pod, err error) {
 	//apiv1.SetDefaults_Pod(&pod)
 

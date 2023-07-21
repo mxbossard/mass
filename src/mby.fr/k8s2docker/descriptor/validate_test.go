@@ -106,6 +106,22 @@ func TestValidateK8sResource_Namespace(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestValidateMappedK8sResource_Namespace(t *testing.T) {
+	emptyNs := map[string]any{}
+	partialNs := map[string]any{"kind": "Namespace", "apiVersion": "v1"}
+	validNs := map[string]any{"kind": "Namespace", "apiVersion": "v1", "metadata": map[string]any{"name": "foo"}}
+
+	var err error
+	_, err = ValidateMappedK8sResource(emptyNs, "Namespace", "ns1")
+	assert.Error(t, err)
+
+	_, err = ValidateMappedK8sResource(partialNs, "Namespace", "ns2")
+	assert.Error(t, err)
+
+	_, err = ValidateMappedK8sResource(validNs, "Namespace", "ns3")
+	assert.NoError(t, err)
+}
+
 func TestValidateVolumeMount(t *testing.T) {
 	aggErrors := ValidateVolumeMount(volumeMount_empty, "spec.containers[0].volumeMounts[0]", "Pod", "p0")
 	require.NotNil(t, aggErrors)
@@ -201,5 +217,62 @@ func TestValidateK8sResource_Pod(t *testing.T) {
 
 	_, err = ValidateK8sResource(pod_valid, "pValid")
 	assert.NoError(t, err)
+}
 
+func TestValidateMappedK8sResource_Pod(t *testing.T) {
+	emptyPod_invalid := map[string]any{}
+	partialPod1_invalid := map[string]any{"kind": "Pod", "apiVersion": "v1"}
+	partialPod2_valid := map[string]any{"kind": "Pod", "apiVersion": "v1",
+		"metadata": map[string]any{"name": "foo"},
+	}
+	partialPod3_invalid := map[string]any{"kind": "Pod", "apiVersion": "v1",
+		"metadata": map[string]any{"name": "foo"},
+		"spec": map[string]any{
+			"containers": map[string]any{
+				"name": "foo",
+			},
+		},
+	}
+	partialPod4_valid := map[string]any{"kind": "Pod", "apiVersion": "v1",
+		"metadata": map[string]any{"name": "foo"},
+		"spec": map[string]any{
+			"containers": []map[string]any{
+				map[string]any{
+					"name":  "foo",
+					"image": "alpine",
+				},
+			},
+		},
+	}
+	fullPod1_valid := map[string]any{"kind": "Pod", "apiVersion": "v1",
+		"metadata": map[string]any{"name": "foo"},
+		"spec": map[string]any{
+			"containers": []map[string]any{
+				map[string]any{
+					"name":            "foo",
+					"image":           "alpine",
+					"imagePullPolicy": "Never",
+				},
+			},
+		},
+	}
+
+	var err error
+	_, err = ValidateMappedK8sResource(emptyPod_invalid, "Pod", "p0")
+	assert.Error(t, err)
+
+	_, err = ValidateMappedK8sResource(partialPod1_invalid, "Pod", "p1")
+	assert.Error(t, err)
+
+	_, err = ValidateMappedK8sResource(partialPod2_valid, "Pod", "p2")
+	assert.NoError(t, err)
+
+	_, err = ValidateMappedK8sResource(partialPod3_invalid, "Pod", "p3")
+	assert.Error(t, err)
+
+	_, err = ValidateMappedK8sResource(partialPod4_valid, "Pod", "p4")
+	require.NoError(t, err)
+
+	_, err = ValidateMappedK8sResource(fullPod1_valid, "Pod", "pFull")
+	assert.NoError(t, err)
 }

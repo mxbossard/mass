@@ -11,10 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 	//corev1 "k8s.io/api/core/v1"
 
+	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/collections"
 	"mby.fr/utils/serializ"
 
-	scribble "mby.fr/scribble"
+	"mby.fr/scribble"
 )
 
 var (
@@ -33,20 +34,55 @@ func InitDb(dbDirPath string) {
 	}
 }
 
+func validateJsonInput(resourceTree map[string]any, kind, name string) (string, error) {
+	validatedTree, err := descriptor.ValidateMappedK8sResource(resourceTree, kind, name)
+	if err != nil {
+		return "", err
+	}
+	//log.Printf("Validated tree: %v", validatedTree)
+
+	jsonBytes, err := json.Marshal(validatedTree)
+	if err != nil {
+		return "", err
+	}
+	jsonIn := string(jsonBytes)
+	return jsonIn, nil
+}
+
 func Interract(namespace, kind, name, jsonIn, method string) (jsonOut string, err error) {
 	if kind != "Pod" && kind != "Namespace" {
 		// Not supported resource kind
 		err = fmt.Errorf("Not supported kind: %s !", kind)
 	}
 
+	resourceTree, err := completeJsonInput(namespace, kind, name, jsonIn)
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("Validated input json: %v", jsonIn)
+	namespace, kind, name = consolidateMetadata(namespace, kind, name, jsonIn)
+
 	var resources []map[string]any
 	if method == "GET" {
 		resources, err = Get(namespace, kind, name, jsonIn)
 	} else if method == "POST" {
+		jsonIn, err = validateJsonInput(resourceTree, kind, name)
+		if err != nil {
+			return "", err
+		}
 		resources, err = Post(namespace, kind, name, jsonIn)
 	} else if method == "PUT" {
+		jsonIn, err = validateJsonInput(resourceTree, kind, name)
+		if err != nil {
+			return "", err
+		}
 		resources, err = Put(namespace, kind, name, jsonIn)
 	} else if method == "PATCH" {
+		jsonIn, err = validateJsonInput(resourceTree, kind, name)
+		if err != nil {
+			return "", err
+		}
 		resources, err = Patch(namespace, kind, name, jsonIn)
 	} else if method == "DELETE" {
 		resources, err = Delete(namespace, kind, name, jsonIn)
@@ -152,6 +188,7 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 
 		if !collections.Contains(&namespaceNames, namespace) {
 			// Namespace does not exists yet create it for simplicity
+			log.Printf("Namespace %s does not exists yet. (among: %v)\n", namespace, namespaceNames)
 			nsJson := forgeNamespace(namespace)
 			res, err := storeResource(meta_ns_collection, nsJson)
 			if err != nil {
