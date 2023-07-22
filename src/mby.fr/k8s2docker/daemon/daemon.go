@@ -3,13 +3,13 @@ package daemon
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"time"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 
+	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/k8s2docker/driver"
 	"mby.fr/k8s2docker/repo"
 	"mby.fr/utils/collections"
@@ -164,9 +164,11 @@ func applyPod(ns string, existingPods *[]corev1.Pod, declaredPod corev1.Pod) (er
 	log.Printf("Processing pod: %s", declaredPodName)
 	untouched := false
 	for _, pod := range *existingPods {
-		if reflect.DeepEqual(pod, declaredPod) {
+		if ok, err := descriptor.Identical(pod, declaredPod); ok {
 			untouched = true
 			break
+		} else if err != nil {
+			return err
 		}
 	}
 	if untouched {
@@ -178,7 +180,16 @@ func applyPod(ns string, existingPods *[]corev1.Pod, declaredPod corev1.Pod) (er
 		})
 		if len(match) > 0 {
 			// Found a matching different spec (same name)
-			log.Printf("Pod %s already exists but was modified ([%v] => [%v]).", declaredPodName, match, declaredPod)
+			var before, after map[string]any
+			before, err = convertK8sResToMap(match[0])
+			if err != nil {
+				return
+			}
+			after, err = convertK8sResToMap(declaredPod)
+			if err != nil {
+				return
+			}
+			log.Printf("Pod %s already exists but was modified (\n[%v] => \n[%v]).", declaredPodName, before, after)
 			err = dockerDriver.Apply(ns, declaredPod)
 			if err != nil {
 				return
@@ -196,6 +207,15 @@ func applyPod(ns string, existingPods *[]corev1.Pod, declaredPod corev1.Pod) (er
 }
 
 func probeContainers() (err error) {
+	return
+}
+
+func convertK8sResToMap[T any](res T) (resource map[string]any, err error) {
+	buffer, err := yaml.Marshal(res)
+	if err != nil {
+		return
+	}
+	err = k8sYaml.Unmarshal(buffer, &resource)
 	return
 }
 
