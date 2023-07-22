@@ -34,7 +34,7 @@ func TestDescribePod(t *testing.T) {
 	expectedFooCt := descriptor.BuildDefaultContainer("foo-ct", "foo-image")
 	expectedBarCt := descriptor.BuildDefaultContainer("bar-ct", "bar-image")
 	expectedP1Pod := descriptor.BuildDefaultPod("ns1", "p1")
-	expectedP1Pod.Spec.Containers = append(expectedP1Pod.Spec.Containers, expectedFooCt, expectedBarCt)
+	expectedP1Pod.Spec.Containers = append(expectedP1Pod.Spec.Containers, expectedBarCt, expectedFooCt)
 
 	translator := Translator{expectedBinary}
 	executor := Executor{translator: translator}
@@ -65,7 +65,7 @@ func TestListPods(t *testing.T) {
 	expectedBarCt2 := descriptor.BuildDefaultContainer("bar-ct", "bar-image2")
 	expectedBarCt3 := descriptor.BuildDefaultContainer("bar-ct", "bar-image3")
 	expectedP1Pod := descriptor.BuildDefaultPod("ns1", "p1")
-	expectedP1Pod.Spec.Containers = append(expectedP1Pod.Spec.Containers, expectedFooCt, expectedBarCt)
+	expectedP1Pod.Spec.Containers = append(expectedP1Pod.Spec.Containers, expectedBarCt, expectedFooCt)
 	expectedP2Pod := descriptor.BuildDefaultPod("ns1", "p2")
 	expectedP2Pod.Spec.Containers = append(expectedP2Pod.Spec.Containers, expectedBarCt2)
 	expectedP3Pod := descriptor.BuildDefaultPod("ns2", "p1")

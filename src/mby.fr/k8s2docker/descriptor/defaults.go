@@ -2,6 +2,7 @@ package descriptor
 
 import (
 	"fmt"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -65,17 +66,25 @@ func CompletePodSpecDefaults(res *corev1.PodSpec) {
 		res.PreemptionPolicy = Default_PodSpec_PreemptionPolicy()
 	}
 
+	// TODO: MUST sort containers !!!
 	containers := []corev1.Container{}
 	for _, ct := range res.InitContainers {
 		CompleteContainerDefaults(&ct)
 		containers = append(containers, ct)
 	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].Name < containers[j].Name
+	})
 	res.InitContainers = containers
+
 	containers = []corev1.Container{}
 	for _, ct := range res.Containers {
 		CompleteContainerDefaults(&ct)
 		containers = append(containers, ct)
 	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].Name < containers[j].Name
+	})
 	res.Containers = containers
 }
 
