@@ -9,7 +9,7 @@ import (
 
 	"mby.fr/utils/cmdz"
 	//"mby.fr/utils/promise"
-	"mby.fr/k8s2docker/compare"
+
 	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/stringz"
 
@@ -23,321 +23,11 @@ const (
 	ContainerName_PodRootFlag = "--root"
 )
 
-type Executor struct {
-	translator Translator
-	config     []string
-	forkCount  int
-}
-
-func (e Executor) Apply(namespace string, resource any) (err error) {
-	switch res := resource.(type) {
-	case corev1.Pod:
-		err = e.createPod(namespace, res)
-	default:
-		err = fmt.Errorf("Cannot Apply type: %T not supported !", res)
-	}
-	return
-
-}
-
-func (e Executor) ListNamespaces() (namespaces []corev1.Namespace, err error) {
-	return e.translator.listNamespaces()
-}
-
-func (e Executor) ListPods(namespace string) (pods []corev1.Pod, err error) {
-	return e.translator.listPods(namespace)
-}
-
-func (e Executor) Delete(namespace, kind, name string) (err error) {
-	switch kind {
-	case "Pod":
-		err = e.deletePod(namespace, name)
-	default:
-		err = fmt.Errorf("Cannot List kind: %s not supported yet !", kind)
-	}
-	return
-}
-
-/*
-func (e Executor) listPods(namespace string) (pods []corev1.Pod, err error) {
-	//TODO
-	return
-}
-*/
-
-func (e Executor) deletePod(namespace, name string) (err error) {
-	log.Printf("Deleting pod %s in ns %s ...", name, namespace)
-
-	execs, err := e.translator.deletePod(namespace, name)
-	if err != nil {
-		return err
-	}
-	_, err = execs.BlockRun()
-	if err != nil {
-		return err
-	}
-	//return fmt.Errorf("deletePod not implemented yet !")
-	return
-}
-
-func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
-	log.Printf("Creating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
-
-	podName := forgeResName(namespace, pod)
-
-	netId, err := e.translator.podNetworkId(namespace, pod)
-	if err != nil {
-		return err
-	}
-	if netId == "" {
-		exec, err := e.translator.createPodNetwork(namespace, pod)
-		if err != nil {
-			return err
-		}
-		_, err = exec.BlockRun()
-		if err != nil {
-			return fmt.Errorf("Unable to create Network for pod: %s. Caused by: %w", podName, err)
-		}
-	}
-
-	execs, err := e.translator.createPodRootContainer(namespace, pod)
-	if err != nil {
-		return err
-	}
-	_, err = execs.BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
-	}
-
-	volExec := cmdz.Parallel().ErrorOnFailure(true)
-	for _, volume := range pod.Spec.Volumes {
-		volId, err := e.translator.volumeId(namespace, volume)
-		if err != nil {
-			return err
-		}
-		if volId == "" {
-			exec, err := e.translator.createVolume(namespace, volume)
-			if err != nil {
-				return err
-			}
-			volExec.Add(exec)
-		}
-	}
-	_, err = volExec.BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to create a volume ! Caused by: %w", err)
-	}
-
-	ictExec := cmdz.Parallel().ErrorOnFailure(true)
-	for _, container := range pod.Spec.InitContainers {
-		ctId, err := e.translator.podContainerId(namespace, pod, container)
-		if err != nil {
-			return err
-		}
-		if ctId != "" {
-			ctName := podContainerName(namespace, pod, container)
-			err = fmt.Errorf("Init Container %s already exists !", ctName)
-			return err
-		} else {
-			exec, err := e.translator.createPodContainer(namespace, pod, container, true)
-			if err != nil {
-				return err
-			}
-			ictExec.Add(exec)
-		}
-	}
-	/*
-		if len(ictExecs) > 0 {
-			err = cmdz.BlockParallel(e.forkCount, ictExecs...)
-			if err != nil {
-				return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
-			}
-		}*/
-	_, err = ictExec.BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to create init containers ! Caused by: %w", err)
-	}
-
-	ctExec := cmdz.Parallel().ErrorOnFailure(true)
-	for _, container := range pod.Spec.Containers {
-		ctId, err := e.translator.podContainerId(namespace, pod, container)
-		if err != nil {
-			return err
-		}
-		if ctId == "" {
-			exec, err := e.translator.createPodContainer(namespace, pod, container, false)
-			if err != nil {
-				return err
-			}
-			ctExec.Add(exec)
-		}
-	}
-	/*
-		if len(ctExecs) > 0 {
-			err = cmdz.BlockParallel(e.forkCount, ctExecs...)
-			if err != nil {
-				return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
-			}
-		}*/
-	_, err = ctExec.BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
-	}
-
-	ctExec2, err := e.translator.commitPod(namespace, pod)
-	if err != nil {
-		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
-	}
-	_, err = ctExec2.FailOnError().BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
-	}
-
-	return
-}
-
-func (e Executor) updatePod(namespace string, pod corev1.Pod) (err error) {
-	log.Printf("Updating pod %s in ns %s ...", pod.ObjectMeta.Name, namespace)
-
-	// TODO: how to use a kubelet ?
-	// Kubelet should be responsible for create / update / delete
-
-	// TODO : check for pod existance. If it already exists and phase is ok check for "updateness"
-	// THEN update pod or delete/create pod
-
-	ctId, err := e.translator.podRootContainerId(namespace, pod)
-	if err != nil {
-		return err
-	}
-	if ctId == "" {
-		// Create pod
-	} else {
-		podPhase, err := e.translator.getCommitedPodPhase(namespace, pod)
-		if err != nil {
-			log.Printf("Swallowed error: %s", err)
-			// TODO recreate pod
-		}
-		// TODO what to do with podPhase ?
-		_ = podPhase
-
-		commitedPod, err := e.translator.getCommitedPod(namespace, pod)
-		if err != nil {
-			log.Printf("Swallowed error: %s", err)
-			// TODO recreate pod
-		}
-		if podPhase != nil && commitedPod != nil {
-			diff := compare.ComparePods(*commitedPod, pod)
-			if diff.IsUpdatable() {
-				// TODO update pod
-			}
-		}
-	}
-
-	return
-}
-
-func networkName(namespace string, pod corev1.Pod) string {
-	podName := forgeResName(namespace, pod)
-	networkName := fmt.Sprintf("%s--net", podName)
-	return networkName
-}
-
-func podRootContainerName0(namespace string, podName string) string {
-	ctName := fmt.Sprintf("%s%s%s%s", namespace, ContainerName_Separator, podName, ContainerName_PodRootFlag)
-	return ctName
-}
-
-func podRootContainerName(namespace string, pod corev1.Pod) string {
-	return podRootContainerName0(namespace, pod.ObjectMeta.Name)
-}
-
-func podContainerName(namespace string, pod corev1.Pod, container corev1.Container) string {
-	podName := forgeResName(namespace, pod)
-	ctName := forgeResName(podName, container)
-	return ctName
-}
-
-func getNamespaceNameFromContainerName(name string) string {
-	splitted := strings.Split(name, ContainerName_Separator)
-	return splitted[0]
-}
-
-func getPodNameFromContainerName(name string) string {
-	splitted := strings.Split(name, ContainerName_Separator)
-	podName := splitted[1]
-	return strings.Split(podName, "--")[0]
-}
-
-func getContainerNameFromContainerName(name string) string {
-	splitted := strings.Split(name, ContainerName_Separator)
-	ctName := splitted[2]
-	return ctName
-}
-
-// Filter for docker ps -f arg
-func podContainerNameFilter(namespace, podName, containerName string, isRoot bool) string {
-	sb := strings.Builder{}
-	sb.WriteString("name=^")
-	if namespace != "" {
-		sb.WriteString(namespace)
-	} else {
-		sb.WriteString(".+")
-	}
-	sb.WriteString(ContainerName_Separator)
-	if podName != "" {
-		sb.WriteString(podName)
-	} else {
-		sb.WriteString(".+")
-	}
-
-	if isRoot {
-		sb.WriteString(ContainerName_PodRootFlag)
-	} else {
-		sb.WriteString(ContainerName_Separator)
-		if containerName != "" {
-			sb.WriteString(containerName)
-		} else {
-			sb.WriteString(".*")
-		}
-	}
-
-	sb.WriteString("$")
-	return sb.String()
-}
-
-func forgeResName(prefix string, resource any) (name string) {
-	var resName string
-	switch res := resource.(type) {
-	case corev1.Pod:
-		resName = res.ObjectMeta.Name
-	case corev1.Volume:
-		resName = res.Name
-	case corev1.VolumeMount:
-		resName = res.Name
-	case corev1.Container:
-		resName = res.Name
-	default:
-		log.Fatalf("Cannot forge a name for unknown type: %T !", resource)
-	}
-
-	name = fmt.Sprintf("%s%s%s", prefix, ContainerName_Separator, resName)
-	return
-}
-
-func escapeCmdArg(arg string) string {
-	if !strings.Contains(arg, " ") {
-		return arg
-	}
-
-	// If spaces in arg
-	if !strings.Contains(arg, `"`) {
-		return `"` + arg + `"`
-	} else if !strings.Contains(arg, "'") {
-		return "'" + arg + "'"
-	}
-	escapedArg := strings.Replace(arg, `"`, `\"`, -1)
-	return `"` + escapedArg + `"`
-}
+// TODO: remonter tout ce qui concerne les pods dans executor ne garder que les concepts à la maille docker dans le translator :
+// - Containers et Namespaces
+// TODO comment gerer les init containers ?
+// TODO comment heberger les pod phase et container status ?
+// TODO retirer les commits ?
 
 type Translator struct {
 	binary string
@@ -374,18 +64,7 @@ func (t Translator) listNamespaces() (namespaces []corev1.Namespace, err error) 
 	return
 }
 
-func (t Translator) describePod(namespace, name string) (corev1.Pod, error) {
-	pod := descriptor.BuildPod(namespace, name)
-	containers, err := t.listPodContainers(namespace, name)
-	if err != nil {
-		return corev1.Pod{}, err
-	}
-	pod.Spec.Containers = containers
-	descriptor.CompleteK8sResourceDefaults(&pod)
-	return pod, nil
-}
-
-func (t Translator) listPodContainers(namespace, podName string) (containers []corev1.Container, err error) {
+func (t Translator) listPodContainers(namespace, podName string) (containers map[string]corev1.Container, err error) {
 	allContainersFilter := podContainerNameFilter(namespace, podName, "", false)
 	//log.Printf("docker ps filter: %s", allRootContainersFilter)
 	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }} {{ .Image }}", "-f", allContainersFilter).ErrorOnFailure(true)
@@ -396,17 +75,21 @@ func (t Translator) listPodContainers(namespace, podName string) (containers []c
 	//log.Printf("listPods: RC=%d, stdout=%s", rc, exec.StdoutRecord())
 	stdOut := strings.TrimSpace(exec.StdoutRecord())
 	podCtInfos, _ := stringz.SplitByRegexp(stdOut, `\n`)
+	containers = make(map[string]corev1.Container, len(podCtInfos))
 	for _, ctInfos := range podCtInfos {
 		splitted := strings.Split(ctInfos, " ")
-		ctName := getContainerNameFromContainerName(splitted[0])
+		ctName := splitted[0]
+		podCtName := getContainerNameFromContainerName(ctName)
 		ctImage := splitted[1]
-		ct := corev1.Container{Name: ctName, Image: ctImage}
-		containers = append(containers, ct)
+		ct := descriptor.BuildDefaultContainer(podCtName, ctImage)
+		containers[ctName] = ct
 	}
-	log.Printf("list %s/%s containers => %v", namespace, podName, containers)
+	//log.Printf("list %s/%s containers => %v", namespace, podName, containers)
 	return
 }
 
+// TODO: remove listPods not needed. listPodContainers is enough
+/*
 func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 	allRootContainersFilter := podContainerNameFilter(namespace, "", "", true)
 	//log.Printf("docker ps filter: %s", allRootContainersFilter)
@@ -434,6 +117,7 @@ func (t Translator) listPods(namespace string) (pods []corev1.Pod, err error) {
 	log.Printf("list pods in ns: %s => %v", namespace, pods)
 	return
 }
+*/
 
 func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
 	allContainersFilter := podContainerNameFilter(namespace, name, "", false)
@@ -795,8 +479,105 @@ func (t Translator) createPodContainer(namespace string, pod corev1.Pod, contain
 	return exec, nil
 }
 
-func DockerExecutor() K8sDriver {
-	translator := Translator{"docker"}
-	executor := Executor{translator: translator}
-	return executor
+func networkName(namespace string, pod corev1.Pod) string {
+	podName := forgeResName(namespace, pod)
+	networkName := fmt.Sprintf("%s--net", podName)
+	return networkName
+}
+
+func podRootContainerName0(namespace string, podName string) string {
+	ctName := fmt.Sprintf("%s%s%s%s", namespace, ContainerName_Separator, podName, ContainerName_PodRootFlag)
+	return ctName
+}
+
+func podRootContainerName(namespace string, pod corev1.Pod) string {
+	return podRootContainerName0(namespace, pod.ObjectMeta.Name)
+}
+
+func podContainerName(namespace string, pod corev1.Pod, container corev1.Container) string {
+	podName := forgeResName(namespace, pod)
+	ctName := forgeResName(podName, container)
+	return ctName
+}
+
+func getNamespaceNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	return splitted[0]
+}
+
+func getPodNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	podName := splitted[1]
+	return strings.Split(podName, "--")[0]
+}
+
+func getContainerNameFromContainerName(name string) string {
+	splitted := strings.Split(name, ContainerName_Separator)
+	ctName := splitted[2]
+	return ctName
+}
+
+// Filter for docker ps -f arg
+func podContainerNameFilter(namespace, podName, containerName string, isRoot bool) string {
+	sb := strings.Builder{}
+	sb.WriteString("name=^")
+	if namespace != "" {
+		sb.WriteString(namespace)
+	} else {
+		sb.WriteString(".+")
+	}
+	sb.WriteString(ContainerName_Separator)
+	if podName != "" {
+		sb.WriteString(podName)
+	} else {
+		sb.WriteString(".+")
+	}
+
+	if isRoot {
+		sb.WriteString(ContainerName_PodRootFlag)
+	} else {
+		sb.WriteString(ContainerName_Separator)
+		if containerName != "" {
+			sb.WriteString(containerName)
+		} else {
+			sb.WriteString(".*")
+		}
+	}
+
+	sb.WriteString("$")
+	return sb.String()
+}
+
+func forgeResName(prefix string, resource any) (name string) {
+	var resName string
+	switch res := resource.(type) {
+	case corev1.Pod:
+		resName = res.ObjectMeta.Name
+	case corev1.Volume:
+		resName = res.Name
+	case corev1.VolumeMount:
+		resName = res.Name
+	case corev1.Container:
+		resName = res.Name
+	default:
+		log.Fatalf("Cannot forge a name for unknown type: %T !", resource)
+	}
+
+	name = fmt.Sprintf("%s%s%s", prefix, ContainerName_Separator, resName)
+	return
+}
+
+func escapeCmdArg(arg string) string {
+	if !strings.Contains(arg, " ") {
+		return arg
+	}
+
+	// If spaces in arg
+	if !strings.Contains(arg, `"`) {
+		return `"` + arg + `"`
+	} else if !strings.Contains(arg, "'") {
+		return "'" + arg + "'"
+	}
+	escapedArg := strings.Replace(arg, `"`, `\"`, -1)
+	return `"` + escapedArg + `"`
 }

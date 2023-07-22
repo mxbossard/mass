@@ -7,6 +7,9 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"mby.fr/k8s2docker/descriptor"
+	"mby.fr/utils/cmdz"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -254,10 +257,22 @@ func TestCreatePodRootContainer(t *testing.T) {
 	assert.Equal(t, expectedCmd21, cmds2.String())
 }
 
-func TestApplyPod(t *testing.T) {
-	translator := Translator{expectedBinary}
-	executor := Executor{translator: translator}
-	err := executor.updatePod(expectedNamespace1, pod1)
+func TestListPodContainers(t *testing.T) {
+	defer cmdz.StopMock()
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (int, string, string) {
+		return 0, "ns__pod__foo-ct foo-image\nns__pod__bar-ct bar-image\n", ""
+	})
+
+	expectedFooCt := descriptor.BuildDefaultContainer("foo-ct", "foo-image")
+	expectedBarCt := descriptor.BuildDefaultContainer("bar-ct", "bar-image")
+
+	translator := Translator{expectedBinary0}
+	containers, err := translator.listPodContainers("foo", "bar")
 	require.NoError(t, err)
+	require.Len(t, containers, 2)
+	assert.Equal(t, expectedFooCt, containers["ns__pod__foo-ct"])
+	assert.Equal(t, expectedBarCt, containers["ns__pod__bar-ct"])
+	//assert.Contains(t, containers, expectedFooCt)
+	//assert.Contains(t, containers, expectedBarCt)
 
 }
