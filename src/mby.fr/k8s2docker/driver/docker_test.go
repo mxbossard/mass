@@ -210,19 +210,19 @@ func TestCreatePodContainer(t *testing.T) {
 	ct1 := pod1.Spec.InitContainers[0]
 	cmds1, err := translator.createPodContainer(expectedNamespace1, pod1, ct1, true)
 	require.NoError(t, err, "should not error")
-	expectedCmd1 := fmt.Sprintf(`%[1]s run --rm --name %[2]s__%s__%s --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=always -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 0.1`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name, ct1.Image)
+	expectedCmd1 := fmt.Sprintf(`%[1]s run --detach --rm --name %[2]s__%s__%s --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=always -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 0.1`, expectedBinary0, expectedNamespace1, pod1.Name, ct1.Name, ct1.Image)
 	assert.Equal(t, expectedCmd1, cmds1.String())
 
 	ct2 := pod1.Spec.InitContainers[1]
 	cmds2, err := translator.createPodContainer(expectedNamespace1, pod1, ct2, true)
 	require.NoError(t, err, "should not error")
-	expectedCmd2 := fmt.Sprintf(`%[1]s run --rm --name %[2]s__%s__%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=missing -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 10`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name, ct2.Image)
+	expectedCmd2 := fmt.Sprintf(`%[1]s run --detach --rm --name %[2]s__%s__%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=missing -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sleep -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s 10`, expectedBinary0, expectedNamespace1, pod1.Name, ct2.Name, ct2.Image)
 	assert.Equal(t, expectedCmd2, cmds2.String())
 
 	ct5 := pod3.Spec.InitContainers[1]
 	cmds3, err := translator.createPodContainer(expectedNamespace2, pod3, ct5, true)
 	require.NoError(t, err, "should not error")
-	expectedCmd3 := fmt.Sprintf(`%s run --rm --name %s__%s__%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=never -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sh -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s -c sleep 0.1`, expectedBinary0, expectedNamespace2, pod3.Name, ct5.Name, ct5.Image)
+	expectedCmd3 := fmt.Sprintf(`%s run --detach --rm --name %s__%s__%s --privileged --workdir=/tmp/%[4]s_workdir1 --restart=no --pull=never -v %[2]s__%[4]s-vol1:/foo/bar:ro -v %[2]s__%[4]s-vol2:/foo/baz:ro --entrypoint /bin/sh -e "%[4]senvKey1=%[4]senvVal1" -e "%[4]senvKey2=%[4]senvVal2" -e "%[4]senvKey3=%[4]senvVal3" -l %[3]s_labelKey1=%[3]s_labelVal2 %[5]s -c sleep 0.1`, expectedBinary0, expectedNamespace2, pod3.Name, ct5.Name, ct5.Image)
 	assert.Equal(t, expectedCmd3, cmds3.String())
 }
 
@@ -245,12 +245,12 @@ func TestCreatePodRootContainer(t *testing.T) {
 
 	cmds1, err := translator.createPodRootContainer(expectedNamespace1, pod1)
 	require.NoError(t, err, "should not error")
-	expectedCmd11 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
+	expectedCmd11 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
 	assert.Equal(t, expectedCmd11, cmds1.String())
 
 	cmds2, err := translator.createPodRootContainer(expectedNamespace1, pod2)
 	require.NoError(t, err, "should not error")
-	expectedCmd21 := fmt.Sprintf(`%s run -d --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
+	expectedCmd21 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
 	assert.Equal(t, expectedCmd21, cmds2.String())
 }
 

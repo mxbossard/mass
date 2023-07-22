@@ -553,7 +553,7 @@ func (t Translator) createPodRootContainer(namespace string, pod corev1.Pod) (cm
 	addHostRules := ""
 	pauseImage := "alpine:3.17.3"
 
-	runArgs := []string{"run", "-d", "--name", ctName, "--restart=always", "--network", networkName,
+	runArgs := []string{"run", "--detach", "--name", ctName, "--restart=always", "--network", networkName,
 		cpusArgs, memoryArgs} //"--memory-swappiness=0"
 
 	if addHostRules != "" {
@@ -658,6 +658,8 @@ func (t Translator) createPodContainer(namespace string, pod corev1.Pod, contain
 	var cmdArgs []string
 	var labelArgs []string
 
+	runArgs = append(runArgs, "--detach")
+
 	if init {
 		restartPolicy = corev1.RestartPolicyNever
 		runArgs = append(runArgs, "--rm")
@@ -723,8 +725,6 @@ func (t Translator) createPodContainer(namespace string, pod corev1.Pod, contain
 		runArgs = append(runArgs, "--entrypoint")
 		runArgs = append(runArgs, entrypoint[0])
 	}
-
-	runArgs = append(runArgs, "--detach")
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {
