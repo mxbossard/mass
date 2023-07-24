@@ -1,0 +1,8 @@
+go 1.18
+
+use (
+	./src/mby.fr/k8s2docker
+	./src/mby.fr/mass
+	./src/mby.fr/scribble
+	./src/mby.fr/utils
+)
