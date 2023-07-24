@@ -7,7 +7,7 @@ import (
 
 	"mby.fr/utils/cmdz"
 	//"mby.fr/utils/promise"
-	"mby.fr/k8s2docker/compare"
+
 	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/collections"
 
@@ -66,13 +66,6 @@ func (e Executor) Delete(namespace, kind, name string) (err error) {
 	}
 	return
 }
-
-/*
-func (e Executor) listPods(namespace string) (pods []corev1.Pod, err error) {
-	//TODO
-	return
-}
-*/
 
 func (e Executor) describePod(namespace, name string) (corev1.Pod, error) {
 	pod := descriptor.BuildDefaultPod(namespace, name)
@@ -205,15 +198,16 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
 	}
 
-	ctExec2, err := e.translator.commitPod(namespace, pod)
-	if err != nil {
-		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
-	}
-	_, err = ctExec2.FailOnError().BlockRun()
-	if err != nil {
-		return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
-	}
-
+	/*
+		ctExec2, err := e.translator.commitPod(namespace, pod)
+		if err != nil {
+			return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
+		}
+		_, err = ctExec2.FailOnError().BlockRun()
+		if err != nil {
+			return fmt.Errorf("Unable to commit pod config ! Caused by: %w", err)
+		}
+	*/
 	return
 }
 
@@ -241,17 +235,19 @@ func (e Executor) updatePod(namespace string, pod corev1.Pod) (err error) {
 		// TODO what to do with podPhase ?
 		_ = podPhase
 
-		commitedPod, err := e.translator.getCommitedPod(namespace, pod)
-		if err != nil {
-			log.Printf("Swallowed error: %s", err)
-			// TODO recreate pod
-		}
-		if podPhase != nil && commitedPod != nil {
-			diff := compare.ComparePods(*commitedPod, pod)
-			if diff.IsUpdatable() {
-				// TODO update pod
+		/*
+			commitedPod, err := e.translator.getCommitedPod(namespace, pod)
+			if err != nil {
+				log.Printf("Swallowed error: %s", err)
+				// TODO recreate pod
 			}
-		}
+			if podPhase != nil && commitedPod != nil {
+				diff := compare.ComparePods(*commitedPod, pod)
+				if diff.IsUpdatable() {
+					// TODO update pod
+				}
+			}
+		*/
 	}
 
 	return

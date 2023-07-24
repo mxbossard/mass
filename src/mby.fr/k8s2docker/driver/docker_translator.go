@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"encoding/json"
 	"strings"
 
 	"mby.fr/utils/cmdz"
@@ -144,6 +143,7 @@ func (t Translator) deletePod(namespace, name string) (cmdz.Executer, error) {
 	return rmExec, nil
 }
 
+/*
 func (t Translator) commitPod(namespace string, pod corev1.Pod) (cmdz.Executer, error) {
 	b, err := json.Marshal(pod)
 	if err != nil {
@@ -174,6 +174,7 @@ func (t Translator) getCommitedPod(namespace string, pod corev1.Pod) (*corev1.Po
 	ctName := podRootContainerName(namespace, pod)
 	return t.getCommitedRootPod(ctName)
 }
+*/
 
 func (t Translator) commitPodPhase(namespace string, pod corev1.Pod, phase corev1.PodPhase) cmdz.Executer {
 	ctName := podRootContainerName(namespace, pod)
