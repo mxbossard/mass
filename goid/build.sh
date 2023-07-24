@@ -1,6 +1,7 @@
 #! /bin/bash -e
 scriptDir=$( dirname $( readlink -f $0 ) )
-
 cd $scriptDir
 
-docker build -t goid-dev:latest .
+goVersion="$1"
+
+docker build --build-arg "GO_VERSION=$goVersion" -t goid-dev:$goVersion-latest .

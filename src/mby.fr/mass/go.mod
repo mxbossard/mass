@@ -1,6 +1,6 @@
 module mby.fr/mass
 
-go 1.18
+go 1.20
 
 replace mby.fr/utils => ../utils
 
