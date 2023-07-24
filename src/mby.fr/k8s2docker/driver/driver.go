@@ -15,29 +15,6 @@ type K8sDriver interface {
 	ListPods(string) ([]corev1.Pod, error)
 }
 
-type K8sDriver2 interface {
-	// Return a description of existing resource of name & kind in namespace 
-	// Return nil if not exists
-	Describe(namespace, kind, name string) (resource any, err error)
-	
-	// Return a list of existing resources of kind in namespace
-	List(namespace string) (resources []any, err error)
-	
-	// Delete existing resource of name & kind in namespace
-	Delete(namespace, name string) (resource any, err error)
-	
-	// Compare existing resource in namespace with supplied one
-	// Create it if does not exist
-	// Update it if does exist
-	Apply(namespace, kind string, resource any) (error)
-
-	// Compare all existing resources of kind in namespace with suplied ones 
-	// Create all not existing resources
-	// Update all existing resources
-	// Delete all not listed resources
-	ApplyAll(namespace, kind string, resources ...any) (error)
-}
-
 type K8sDriver3 interface {
 	ApplyNamespace(corev1.Namespace) (corev1.Namespace, error)
 	DeleteNamespace(corev1.Namespace) (corev1.Namespace, error)
