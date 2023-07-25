@@ -123,7 +123,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 	}
 
-	volExec := cmdz.Parallel().ErrorOnFailure(true)
+	volExec := cmdz.Parallel()
 	for _, volume := range pod.Spec.Volumes {
 		volId, err := e.translator.volumeId(namespace, volume)
 		if err != nil {
@@ -137,12 +137,12 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 			volExec.Add(exec)
 		}
 	}
-	_, err = volExec.BlockRun()
+	_, err = volExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
 		return fmt.Errorf("Unable to create a volume ! Caused by: %w", err)
 	}
 
-	ictExec := cmdz.Parallel().ErrorOnFailure(true)
+	ictExec := cmdz.Parallel()
 	for _, container := range pod.Spec.InitContainers {
 		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
@@ -167,12 +167,12 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 				return fmt.Errorf("Unable to run Init Containers for pod %s. Caused by: %w", podName, err)
 			}
 		}*/
-	_, err = ictExec.BlockRun()
+	_, err = ictExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
 		return fmt.Errorf("Unable to create init containers ! Caused by: %w", err)
 	}
 
-	ctExec := cmdz.Parallel().ErrorOnFailure(true)
+	ctExec := cmdz.Parallel()
 	for _, container := range pod.Spec.Containers {
 		ctId, err := e.translator.podContainerId(namespace, pod, container)
 		if err != nil {
@@ -193,7 +193,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 				return fmt.Errorf("Unable to run Containers for pod %s. Caused by: %w", podName, err)
 			}
 		}*/
-	_, err = ctExec.BlockRun()
+	_, err = ctExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
 		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
 	}
