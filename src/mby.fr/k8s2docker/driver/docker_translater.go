@@ -2,8 +2,11 @@ package driver
 
 import (
 	"fmt"
+	"strings"
 
+	"gopkg.in/yaml.v3"
 	"mby.fr/utils/cmdz"
+	"mby.fr/utils/collections"
 
 	//"mby.fr/utils/promise"
 
@@ -19,6 +22,15 @@ const (
 )
 */
 
+func forgePodContainerName(namespace, podName, ctName string) (name string) {
+	return namespace + ContainerName_Separator + podName + ContainerName_Separator + ctName
+}
+
+func forgePodRootContainerName(namespace string, podName string) string {
+	ctName := fmt.Sprintf("%s%s%s%s", namespace, ContainerName_Separator, podName, ContainerName_PodRootFlag)
+	return ctName
+}
+
 // TODO: remonter tout ce qui concerne les pods dans executor ne garder que les concepts à la maille docker dans le translator :
 // - Containers et Namespaces
 // TODO comment gerer les init containers ?
@@ -29,78 +41,85 @@ type DockerTranslater struct {
 	binary string
 }
 
-func (t DockerTranslater) CreateNamespace(ns corev1.Namespace) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreateNamespace() not implemented yet !")
+func (t DockerTranslater) CreateNamespace(ns corev1.Namespace) cmdz.Executer {
+	// Nothing to do
+	return cmdz.Cmd("true")
 }
 
-func (t DockerTranslater) UpdateNamespace(ns corev1.Namespace) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreateNamespace() not implemented yet !")
+func (t DockerTranslater) UpdateNamespace(ns corev1.Namespace) cmdz.Executer {
+	// Nothing to do
+	return cmdz.Cmd("true")
 }
 
-func (t DockerTranslater) DeleteNamsepace(ns string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.ApplyNamespace() not implemented yet !")
+func (t DockerTranslater) DeleteNamsepace(ns string) cmdz.Executer {
+	// Nothing to do
+	return cmdz.Cmd("true")
 }
 
-func (t DockerTranslater) ListNamespaceNames() (cmdz.Executer, error) {
+func (t DockerTranslater) ListNamespaceNames() cmdz.Formatter[[]string, error] {
 	allNsAllRootContainersFilter := podContainerNameFilter("", "", "", true)
-	exec := cmdz.Cmd(t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allNsAllRootContainersFilter).ErrorOnFailure(true)
-	return exec, nil
-	/*
-		_, err = exec.BlockRun()
-		if err != nil {
-			return nil, err
+	formatter := func(rc int, stdout, stderr []byte, inErr error) (res []string, err error) {
+		if inErr != nil {
+			return nil, inErr
 		}
-		stdOut := strings.TrimSpace(exec.StdoutRecord())
-		podRootCtNames, _ := stringz.SplitByRegexp(stdOut, `\s`)
-		namespaceNames := map[string]bool{}
-		for _, podRootCtName := range podRootCtNames {
-			namespace := getNamespaceNameFromContainerName(podRootCtName)
-			namespaceNames[namespace] = true
-		}
-		namespaces = collections.Keys(&namespaceNames)
-
-		return
-	*/
+		res = strings.Split(string(stdout), "\n")
+		res = collections.Map(res, func(in string) string {
+			return strings.Split(in, ContainerName_Separator)[0]
+		})
+		res = collections.Filter(res, func(in string) bool {
+			return in != ""
+		})
+		return res, nil
+	}
+	return cmdz.FormattedCmd[[]string, error](formatter, t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allNsAllRootContainersFilter).ErrorOnFailure(true)
 }
 
 func (t DockerTranslater) CreatePodRootContainer(namespace string, pod corev1.Pod) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreatePodRootContainer() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.CreatePodRootContainer() not implemented yet")
 }
 
 func (t DockerTranslater) DeletePodRootContainer(namespace, name string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.DeletePodContainer() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.DeletePodContainer() not implemented yet")
 }
 
 func (t DockerTranslater) CreateVolume(namespace, podName string, vol corev1.Volume) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreateVolume() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.CreateVolume() not implemented yet")
 }
 
 func (t DockerTranslater) DeleteVolume(namespace, podName, name string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.DeleteVolume() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.DeleteVolume() not implemented yet")
 }
 
 func (t DockerTranslater) InspectVolume(namespace, podName, name string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.InspectVolume() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.InspectVolume() not implemented yet")
 }
 
 func (t DockerTranslater) ListVolumeNames(namespace, podName string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.ListVolumeNames() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.ListVolumeNames() not implemented yet")
 }
 
 func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreatePodContainer() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.CreatePodContainer() not implemented yet")
 }
 
 func (t DockerTranslater) UpdatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.CreatePodContainer() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.CreatePodContainer() not implemented yet")
 }
 
 func (t DockerTranslater) DeletePodContainer(namespace, podName, name string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.DeletePodContainer() not implemented yet !")
+	return nil, fmt.Errorf("DockerTranslater.DeletePodContainer() not implemented yet")
 }
 
-func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) (cmdz.Executer, error) {
-	return nil, fmt.Errorf("DockerTranslater.DescribePodContainer() not implemented yet !")
+func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) cmdz.Formatter[map[string]any, error] {
+	ctName := forgePodContainerName(namespace, podName, name)
+	formatter := func(rc int, stdout, stderr []byte, inErr error) (res map[string]any, err error) {
+		if inErr != nil {
+			return nil, inErr
+		}
+		err = yaml.Unmarshal(stdout, &res)
+		return
+	}
+	return cmdz.FormattedCmd[map[string]any, error](formatter, t.binary, "inspect", ctName)
 }
 
 func (t DockerTranslater) ListPodContainerNames(namespace, podName string) (cmdz.Executer, error) {
@@ -202,14 +221,14 @@ func (t DockerTranslater) createVolume(namespace string, vol corev1.Volume) (cmd
 	} else if vol.VolumeSource.EmptyDir != nil {
 		return t.createEmptyDirPodVolume(namespace, vol)
 	}
-	err := fmt.Errorf("Not supported volume type for volume: %s !", vol.Name)
+	err := fmt.Errorf("not supported volume type for volume: %s", vol.Name)
 	return nil, err
 }
 
 func (t DockerTranslater) createHostPathPodVolume(namespace string, vol corev1.Volume) (cmdz.Executer, error) {
 	hostPathType := *vol.VolumeSource.HostPath.Type
 	if hostPathType != corev1.HostPathUnset {
-		err := fmt.Errorf("Not supported HostPathType: %s for volume: %s !", hostPathType, vol.Name)
+		err := fmt.Errorf("not supported HostPathType: %s for volume: %s", hostPathType, vol.Name)
 		return nil, err
 	}
 
@@ -223,7 +242,7 @@ func (t DockerTranslater) createHostPathPodVolume(namespace string, vol corev1.V
 
 func (t DockerTranslater) createEmptyDirPodVolume(namespace string, vol corev1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.EmptyDir == nil {
-		err := fmt.Errorf("Bad EmptyDirVolume !")
+		err := fmt.Errorf("bad EmptyDirVolume")
 		return nil, err
 	}
 	name := forgeResName(namespace, vol)
@@ -303,7 +322,7 @@ func (t DockerTranslater) createPodContainer(namespace string, pod corev1.Pod, c
 	case "OnFailure":
 		dockerRestartPolicy = "on-failure"
 	default:
-		err := fmt.Errorf("No supported restart policy: %s in container: %s !", restartPolicy, ctName)
+		err := fmt.Errorf("no supported restart policy: %s in container: %s", restartPolicy, ctName)
 		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--restart=%s", dockerRestartPolicy))
@@ -317,7 +336,7 @@ func (t DockerTranslater) createPodContainer(namespace string, pod corev1.Pod, c
 	case corev1.PullIfNotPresent:
 		dockerPullPolicy = "missing"
 	default:
-		err := fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)
+		err := fmt.Errorf("no supported pull policy: %s in container: %s", pullPolicy, ctName)
 		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--pull=%s", dockerPullPolicy))
@@ -344,15 +363,11 @@ func (t DockerTranslater) createPodContainer(namespace string, pod corev1.Pod, c
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {
-		for _, arg := range entrypoint[1:] {
-			cmdArgs = append(cmdArgs, arg)
-		}
+		cmdArgs = append(cmdArgs, entrypoint[1:]...)
 	}
 
 	if len(args) > 0 {
-		for _, arg := range args {
-			cmdArgs = append(cmdArgs, arg)
-		}
+		cmdArgs = append(cmdArgs, args...)
 	}
 
 	if cpuLimitInMilli > 0 {

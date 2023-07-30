@@ -29,22 +29,22 @@ type K8sDriver3 interface {
 
 // Driver Helper funcs
 
-// Return a description of existing resource of name & kind in namespace 
+// Return a description of existing resource of name & kind in namespace
 // Return nil if not exists
 func Describe[T any](driver K8sDriver3, namespace, kind, name string) (resource T, err error) {
-	err = fmt.Errorf("driver.Describe() does not exists yet !")
+	err = fmt.Errorf("driver.Describe() does not exists yet")
 	return
 }
 
 // Return a list of existing resources of kind in namespace
 func List[T any](namespace string) (resources []T, err error) {
-	err = fmt.Errorf("driver.List() does not exists yet !")
+	err = fmt.Errorf("driver.List() does not exists yet")
 	return
 }
 
 // Delete existing resource of name & kind in namespace
 func Delete[T any](namespace, name string) (resource T, err error) {
-	err = fmt.Errorf("driver.Delete() does not exists yet !")
+	err = fmt.Errorf("driver.Delete() does not exists yet")
 	return
 }
 
@@ -52,26 +52,24 @@ func Delete[T any](namespace, name string) (resource T, err error) {
 // Create it if does not exist
 // Update it if does exist
 func Apply[T any](namespace, kind string, in T) (out T, err error) {
-	err = fmt.Errorf("driver.Apply() does not exists yet !")
+	err = fmt.Errorf("driver.Apply() does not exists yet")
 	return
 }
 
-// Compare all existing resources of kind in namespace with suplied ones 
+// Compare all existing resources of kind in namespace with suplied ones
 // Create all not existing resources
 // Update all existing resources
 // Delete all not listed resources
 func ApplyAll[T any](namespace, kind string, in ...T) (out []T, err error) {
-	err = fmt.Errorf("driver.ApplyAll() does not exists yet !")
+	err = fmt.Errorf("driver.ApplyAll() does not exists yet")
 	return
 }
 
-
-//
 type Translater interface {
-	CreateNamespace(corev1.Namespace) (cmdz.Executer, error)
-	UpdateNamespace(corev1.Namespace) (cmdz.Executer, error)
-	DeleteNamsepace(namespace string) (cmdz.Executer, error)
-	ListNamespaceNames() (cmdz.Executer, error)
+	CreateNamespace(corev1.Namespace) cmdz.Executer
+	UpdateNamespace(corev1.Namespace) cmdz.Executer
+	DeleteNamsepace(namespace string) cmdz.Executer
+	ListNamespaceNames() cmdz.Formatter[[]string, error]
 	//DescribeNamespace(string) (corev1.Namespace, error)
 	//ListNamespaces() ([]corev1.Namespace, error)
 
@@ -94,7 +92,7 @@ type Translater interface {
 	CreatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error)
 	UpdatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error)
 	DeletePodContainer(namepsace, podName, name string) (cmdz.Executer, error)
-	InspectPodContainer(namepsace, podName, name string) (cmdz.Executer, error)
+	InspectPodContainer(namepsace, podName, name string) cmdz.Formatter[map[string]any, error]
 	ListPodContainerNames(namepsace, podName string) (cmdz.Executer, error)
 	//DescribePodContainer(string, string, string) (corev1.Container, error)
 	//ListPodContainers(string, string) ([]corev1.Container, error)

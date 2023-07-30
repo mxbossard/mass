@@ -25,7 +25,7 @@ func (e Executor) Apply(namespace string, resource any) (err error) {
 	case corev1.Pod:
 		err = e.createPod(namespace, res)
 	default:
-		err = fmt.Errorf("Cannot Apply type: %T not supported !", res)
+		err = fmt.Errorf("cannot Apply type: %T not supported", res)
 	}
 	return
 
@@ -62,7 +62,7 @@ func (e Executor) Delete(namespace, kind, name string) (err error) {
 	case "Pod":
 		err = e.deletePod(namespace, name)
 	default:
-		err = fmt.Errorf("Cannot List kind: %s not supported yet !", kind)
+		err = fmt.Errorf("cannot List kind: %s not supported yet", kind)
 	}
 	return
 }
@@ -110,7 +110,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		}
 		_, err = exec.BlockRun()
 		if err != nil {
-			return fmt.Errorf("Unable to create Network for pod: %s. Caused by: %w", podName, err)
+			return fmt.Errorf("unable to create Network for pod: %s. Caused by: %w", podName, err)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 	}
 	_, err = execs.BlockRun()
 	if err != nil {
-		return fmt.Errorf("Unable to create Root Container for pod: %s. Caused by: %w", podName, err)
+		return fmt.Errorf("unable to create Root Container for pod: %s. Caused by: %w", podName, err)
 	}
 
 	volExec := cmdz.Parallel()
@@ -139,7 +139,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 	}
 	_, err = volExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
-		return fmt.Errorf("Unable to create a volume ! Caused by: %w", err)
+		return fmt.Errorf("unable to create a volume ! Caused by: %w", err)
 	}
 
 	ictExec := cmdz.Parallel()
@@ -150,7 +150,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		}
 		if ctId != "" {
 			ctName := podContainerName(namespace, pod, container)
-			err = fmt.Errorf("Init Container %s already exists !", ctName)
+			err = fmt.Errorf("init Container %s already exists", ctName)
 			return err
 		} else {
 			exec, err := e.translator.createPodContainer(namespace, pod, container, true)
@@ -169,7 +169,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		}*/
 	_, err = ictExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
-		return fmt.Errorf("Unable to create init containers ! Caused by: %w", err)
+		return fmt.Errorf("unable to create init containers ! Caused by: %w", err)
 	}
 
 	ctExec := cmdz.Parallel()
@@ -195,7 +195,7 @@ func (e Executor) createPod(namespace string, pod corev1.Pod) (err error) {
 		}*/
 	_, err = ctExec.ErrorOnFailure(true).BlockRun()
 	if err != nil {
-		return fmt.Errorf("Unable to create containers ! Caused by: %w", err)
+		return fmt.Errorf("unable to create containers ! Caused by: %w", err)
 	}
 
 	/*
