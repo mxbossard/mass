@@ -177,9 +177,11 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 	ctName := podContainerName(namespace, pod, container)
 	image := container.Image
 	privileged := false
+	readOnlyRootFs := false
 	if container.SecurityContext != nil {
 		if container.SecurityContext.Privileged != nil {
 			privileged = *container.SecurityContext.Privileged
+			readOnlyRootFs = *container.SecurityContext.ReadOnlyRootFilesystem
 		}
 	}
 	tty := container.TTY
@@ -197,6 +199,10 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 	memoryLimitInMega, _ := container.Resources.Limits.Memory().AsInt64()
 	labels := pod.ObjectMeta.Labels
 
+	if init {
+		restartPolicy = corev1.RestartPolicyNever
+	}
+
 	var runArgs []string
 	var resourcesArgs []string
 	var envArgs []string
@@ -204,21 +210,21 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 	var labelArgs []string
 
 	runArgs = append(runArgs, "--detach")
+	runArgs = append(runArgs, "--rm")
 
-	if init {
-		restartPolicy = corev1.RestartPolicyNever
-		runArgs = append(runArgs, "--rm")
+	if privileged {
+		runArgs = append(runArgs, "--privileged")
+	}
+	if readOnlyRootFs {
+		runArgs = append(runArgs, "--read-only")
+	}
+	if tty {
+		runArgs = append(runArgs, "-t")
 	}
 
 	runArgs = append(runArgs, "--name")
 	runArgs = append(runArgs, ctName)
 
-	if privileged {
-		runArgs = append(runArgs, "--privileged")
-	}
-	if tty {
-		runArgs = append(runArgs, "-t")
-	}
 	if workingDir != "" {
 		runArgs = append(runArgs, fmt.Sprintf("--workdir=%s", workingDir))
 	}
