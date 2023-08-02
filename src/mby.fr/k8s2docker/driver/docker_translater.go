@@ -136,6 +136,11 @@ func (t DockerTranslater) DeletePod(namespace, name string) cmdz.Executer {
 	*/
 }
 
+func (t DockerTranslater) DescribePod(namepsace, podName string) cmdz.Formatter[corev1.Pod, error] {
+	// TODO
+	return nil
+}
+
 func (t DockerTranslater) CreateVolume(namespace, podName string, vol corev1.Volume) (cmdz.Executer, error) {
 	if vol.VolumeSource.HostPath != nil {
 		return t.createHostPathPodVolume(namespace, vol)
@@ -150,7 +155,7 @@ func (t DockerTranslater) DeleteVolume(namespace, podName, name string) cmdz.Exe
 	return cmdz.Sh(t.binary, "volume rm -f $(", t.binary, "volume ls -q -f", volumeFilter, ")")
 }
 
-func (t DockerTranslater) InspectVolume(namespace, podName, name string) cmdz.Formatter[[]corev1.Volume, error] {
+func (t DockerTranslater) DescribeVolume(namespace, podName, name string) cmdz.Formatter[[]corev1.Volume, error] {
 	volName := forgePodVolumeName(namespace, podName, name)
 	formatter := func(rc int, stdout, stderr []byte, inErr error) (res []corev1.Volume, err error) {
 		if inErr != nil {
@@ -371,7 +376,7 @@ func (t DockerTranslater) DeletePodContainer(namespace, podName, name string) cm
 	return cmdz.Cmd(t.binary, "rm", "-f", ctName)
 }
 
-func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) cmdz.Formatter[[]corev1.Container, error] {
+func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) cmdz.Formatter[[]corev1.Container, error] {
 	ctName := forgePodContainerName(namespace, podName, name)
 	formatter := func(rc int, stdout, stderr []byte, inErr error) (res []corev1.Container, err error) {
 		if inErr != nil {
@@ -415,6 +420,9 @@ func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) c
 			securityContext.Privileged = &privileged
 			securityContext.ReadOnlyRootFilesystem = &readOnlyRootFs
 			// FIXME: how to set securityContext.RunAsNonRoot ? a label ???
+			// To get from labels :
+			// - ImagePullPolicy
+			// - Probes
 
 			cmd := []any{}
 			if config["Cmd"] != nil {
@@ -457,7 +465,17 @@ func (t DockerTranslater) ListPodContainerNames(namespace, podName string) cmdz.
 		if inErr != nil {
 			return nil, inErr
 		}
-		err = yaml.Unmarshal(stdout, &res)
+		res = strings.Split(string(stdout), "\n")
+		res = collections.Map(res, func(in string) string {
+			s := strings.Split(in, ContainerName_Separator)
+			if len(s) == 3 {
+				return s[2]
+			}
+			return ""
+		})
+		res = collections.Filter(res, func(in string) bool {
+			return in != ""
+		})
 		return
 	}
 	return cmdz.FormattedCmd[[]string, error](formatter, t.binary, "ps", "-a", "--format", "{{ .Names }}", "-f", allContainersFilter).ErrorOnFailure(true)

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/cmdz"
 )
 
@@ -117,6 +118,12 @@ func TestDeletePod(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
+func TestDescribePod2(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	e1 := dt.DescribePod(expectedNamespace1, pod1Name)
+	require.NotNil(t, e1)
+	// TODO
+}
 func TestCreateVolume2(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	e1, err := dt.CreateVolume(expectedNamespace1, pod1Name, volume1)
@@ -140,9 +147,9 @@ func TestDeleteVolume(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
-func TestInspectVolume(t *testing.T) {
+func TestDescribeVolume(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	f := dt.InspectVolume(expectedNamespace1, pod1Name, volume1Name)
+	f := dt.DescribeVolume(expectedNamespace1, pod1Name, volume1Name)
 	require.NotNil(t, f)
 
 	// Empty response from docker
@@ -277,9 +284,9 @@ func TestDeletePodContainer(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
-func TestInspectPodContainer(t *testing.T) {
+func TestDescribePodContainer(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	f := dt.InspectPodContainer(expectedNamespace1, pod1Name, container1Name)
+	f := dt.DescribePodContainer(expectedNamespace1, pod1Name, container1Name)
 	require.NotNil(t, f)
 
 	// Empty response from docker
@@ -301,22 +308,29 @@ func TestInspectPodContainer(t *testing.T) {
 	assert.Equal(t, "quizzical_hodgkin", res[0].Name)
 	assert.Equal(t, "busybox", res[0].Image)
 	assert.Equal(t, "", res[0].WorkingDir)
-	//assert.Equal(t, "busybox", res[0].ImagePullPolicy)
-	assert.Equal(t, "", res[0].WorkingDir)
-	assert.Equal(t, []corev1.EnvVar{
+	assert.Equal(t, false, res[0].TTY)
+	assert.Equal(t, []string(nil), res[0].Command)
+	assert.Equal(t, []string{"ls", "/world"}, res[0].Args)
+	expectedEnv := []corev1.EnvVar{
 		{
 			Name:  "PATH",
 			Value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-		}}, res[0].Env)
+		},
+	}
+	assert.Equal(t, expectedEnv, res[0].Env)
+	// TODO add ports
+	expectedPorts := []corev1.ContainerPort{}
+	assert.Equal(t, expectedPorts, res[0].Ports)
 	expectedSecurityContext := corev1.SecurityContext{
 		Privileged:             boolPtr(false),
 		ReadOnlyRootFilesystem: boolPtr(false),
 		RunAsNonRoot:           boolPtr(false),
 	}
 	assert.Equal(t, &expectedSecurityContext, res[0].SecurityContext)
-	assert.Equal(t, false, res[0].TTY)
-	assert.Equal(t, []string(nil), res[0].Command)
-	assert.Equal(t, []string{"ls", "/world"}, res[0].Args)
+	expectedVolumeMounts := []corev1.VolumeMount{
+		descriptor.BuildVolumeMount("hello", "/world"),
+	}
+	assert.Equal(t, expectedVolumeMounts, res[0].VolumeMounts)
 
 	// Err response from docker
 	cmdz.StartSimpleMock(t, 1, "", "some error")
@@ -327,5 +341,43 @@ func TestInspectPodContainer(t *testing.T) {
 }
 
 func TestListPodContainerNames(t *testing.T) {
+	expectedNs1 := "ns1"
+	expectedPod1 := "pod1"
+	expectedCt1 := "ct1"
+	expectedCt2 := "ct2"
+	expectedCt3 := "ct3"
+	ct1Name := forgePodContainerName(expectedNs1, expectedPod1, expectedCt1)
+	ct2Name := forgePodContainerName(expectedNs1, expectedPod1, expectedCt2)
+	ct3Name := forgePodContainerName(expectedNs1, expectedPod1, expectedCt3)
 
+	dt := DockerTranslater{expectedBinary0}
+	f := dt.ListPodContainerNames(expectedNs1, expectedPod1)
+	require.NotNil(t, f)
+
+	// Empty response from docker
+	cmdz.StartSimpleMock(t, 0, "", "")
+	res, err := f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 0)
+
+	// OK response from docker
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
+		stdout = ct1Name + "\n" + ct2Name + "\n" + ct3Name + "\n"
+		return
+	})
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	assert.Len(t, res, 3)
+	assert.Contains(t, res, expectedCt1)
+	assert.Contains(t, res, expectedCt2)
+	assert.Contains(t, res, expectedCt3)
+
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	require.Nil(t, res)
 }
