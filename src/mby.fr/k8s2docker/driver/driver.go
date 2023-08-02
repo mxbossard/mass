@@ -86,7 +86,7 @@ type Translater interface {
 	//VolumeId(string, corev1.Volume) (cmdz.Executer, error)
 	CreateVolume(namespace, podName string, vol corev1.Volume) (cmdz.Executer, error)
 	DeleteVolume(namepsace, podName, name string) cmdz.Executer
-	InspectVolume(namepsace, podName, name string) cmdz.Formatter[map[string]any, error]
+	InspectVolume(namepsace, podName, name string) cmdz.Formatter[[]corev1.Volume, error]
 	ListVolumeNames(namespace, podName string) cmdz.Formatter[[]string, error]
 	//DescribeVolume(string, string) (corev1.Volume, error)
 	//ListVolumes(string) ([]corev1.Volume, error)
@@ -94,7 +94,7 @@ type Translater interface {
 	CreatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container, init bool) (cmdz.Executer, error)
 	UpdatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error)
 	DeletePodContainer(namepsace, podName, name string) cmdz.Executer
-	InspectPodContainer(namepsace, podName, name string) cmdz.Formatter[map[string]any, error]
+	InspectPodContainer(namepsace, podName, name string) cmdz.Formatter[[]corev1.Container, error]
 	ListPodContainerNames(namepsace, podName string) cmdz.Formatter[[]string, error]
 	//DescribePodContainer(string, string, string) (corev1.Container, error)
 	//ListPodContainers(string, string) ([]corev1.Container, error)

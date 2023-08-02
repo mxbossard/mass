@@ -541,7 +541,7 @@ func podContainerNameFilter(namespace, podName, containerName string, isRoot boo
 		if containerName != "" {
 			sb.WriteString(containerName)
 		} else {
-			sb.WriteString(".*")
+			sb.WriteString(".+")
 		}
 	}
 

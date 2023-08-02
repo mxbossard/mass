@@ -2,9 +2,11 @@ package driver
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/cmdz"
 	"mby.fr/utils/collections"
 
@@ -148,16 +150,24 @@ func (t DockerTranslater) DeleteVolume(namespace, podName, name string) cmdz.Exe
 	return cmdz.Sh(t.binary, "volume rm -f $(", t.binary, "volume ls -q -f", volumeFilter, ")")
 }
 
-func (t DockerTranslater) InspectVolume(namespace, podName, name string) cmdz.Formatter[map[string]any, error] {
+func (t DockerTranslater) InspectVolume(namespace, podName, name string) cmdz.Formatter[[]corev1.Volume, error] {
 	volName := forgePodVolumeName(namespace, podName, name)
-	formatter := func(rc int, stdout, stderr []byte, inErr error) (res map[string]any, err error) {
+	formatter := func(rc int, stdout, stderr []byte, inErr error) (res []corev1.Volume, err error) {
 		if inErr != nil {
 			return nil, inErr
 		}
-		err = yaml.Unmarshal(stdout, &res)
+		var jsonResults []map[string]any
+		err = yaml.Unmarshal(stdout, &jsonResults)
+		// FIXME: bind mount are not listed in volumes !!!
+		for _, jr := range jsonResults {
+			// FIXME: manage cast errors
+			name := jr["Name"].(string)
+			vol := descriptor.BuildDefaultEmptyDirVolume(name)
+			res = append(res, vol)
+		}
 		return
 	}
-	return cmdz.FormattedCmd[map[string]any, error](formatter, t.binary, "inspect", "volume", volName)
+	return cmdz.FormattedCmd[[]corev1.Volume, error](formatter, t.binary, "inspect", "volume", volName).ErrorOnFailure(true)
 }
 
 func (t DockerTranslater) ListVolumeNames(namespace, podName string) cmdz.Formatter[[]string, error] {
@@ -166,7 +176,17 @@ func (t DockerTranslater) ListVolumeNames(namespace, podName string) cmdz.Format
 		if inErr != nil {
 			return nil, inErr
 		}
-		err = yaml.Unmarshal(stdout, &res)
+		res = strings.Split(string(stdout), "\n")
+		res = collections.Map(res, func(in string) string {
+			s := strings.Split(in, ContainerName_Separator)
+			if len(s) == 3 {
+				return s[2]
+			}
+			return ""
+		})
+		res = collections.Filter(res, func(in string) bool {
+			return in != ""
+		})
 		return
 	}
 	return cmdz.FormattedCmd[[]string, error](formatter, t.binary, "volume", "ls", "--format", "{{ .Names }}", "-f", allContainersFilter).ErrorOnFailure(true)
@@ -238,7 +258,7 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 	case "OnFailure":
 		dockerRestartPolicy = "on-failure"
 	default:
-		err := fmt.Errorf("No supported restart policy: %s in container: %s !", restartPolicy, ctName)
+		err := fmt.Errorf("no supported restart policy: %s in container: %s", restartPolicy, ctName)
 		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--restart=%s", dockerRestartPolicy))
@@ -252,7 +272,7 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 	case corev1.PullIfNotPresent:
 		dockerPullPolicy = "missing"
 	default:
-		err := fmt.Errorf("No supported pull policy: %s in container: %s !", pullPolicy, ctName)
+		err := fmt.Errorf("no supported pull policy: %s in container: %s", pullPolicy, ctName)
 		return nil, err
 	}
 	runArgs = append(runArgs, fmt.Sprintf("--pull=%s", dockerPullPolicy))
@@ -279,15 +299,11 @@ func (t DockerTranslater) CreatePodContainer(namespace string, pod corev1.Pod, c
 
 	// Pass folowing entrypoint items as docker run command args
 	if len(entrypoint) > 1 {
-		for _, arg := range entrypoint[1:] {
-			cmdArgs = append(cmdArgs, arg)
-		}
+		cmdArgs = append(cmdArgs, entrypoint[1:]...)
 	}
 
 	if len(args) > 0 {
-		for _, arg := range args {
-			cmdArgs = append(cmdArgs, arg)
-		}
+		cmdArgs = append(cmdArgs, args...)
 	}
 
 	if cpuLimitInMilli > 0 {
@@ -355,16 +371,84 @@ func (t DockerTranslater) DeletePodContainer(namespace, podName, name string) cm
 	return cmdz.Cmd(t.binary, "rm", "-f", ctName)
 }
 
-func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) cmdz.Formatter[map[string]any, error] {
+func (t DockerTranslater) InspectPodContainer(namespace, podName, name string) cmdz.Formatter[[]corev1.Container, error] {
 	ctName := forgePodContainerName(namespace, podName, name)
-	formatter := func(rc int, stdout, stderr []byte, inErr error) (res map[string]any, err error) {
+	formatter := func(rc int, stdout, stderr []byte, inErr error) (res []corev1.Container, err error) {
 		if inErr != nil {
 			return nil, inErr
 		}
-		err = yaml.Unmarshal(stdout, &res)
+		var jsonResults []map[string]any
+		err = yaml.Unmarshal(stdout, &jsonResults)
+		for _, jr := range jsonResults {
+			// FIXME: manage errors
+			name := jr["Name"].(string)
+			name = strings.Split(name, "/")[1]
+
+			hostConfig := jr["HostConfig"].(map[string]any)
+			privileged := hostConfig["Privileged"].(bool)
+			readOnlyRootFs := hostConfig["Privileged"].(bool)
+
+			config := jr["Config"].(map[string]any)
+			image := config["Image"].(string)
+			workingDir := config["WorkingDir"].(string)
+			tty := config["Tty"].(bool)
+			user := config["User"].(string)
+			userSplit := strings.Split(user, ":")
+			var uid, gid *int64
+			if len(userSplit) > 1 {
+				*uid, err = strconv.ParseInt(userSplit[0], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				*gid, err = strconv.ParseInt(userSplit[1], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+			} else if len(user) > 0 {
+				*uid, err = strconv.ParseInt(user, 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				gid = nil
+			}
+			securityContext := descriptor.BuildDefaultSecurityContext(uid, gid)
+			securityContext.Privileged = &privileged
+			securityContext.ReadOnlyRootFilesystem = &readOnlyRootFs
+			// FIXME: how to set securityContext.RunAsNonRoot ? a label ???
+
+			cmd := []any{}
+			if config["Cmd"] != nil {
+				cmd = config["Cmd"].([]any)
+			}
+			entrypoint := []any{}
+			if config["Entrypoint"] != nil {
+				entrypoint = config["Entrypoint"].([]any)
+			}
+			env := []any{}
+			if config["Env"] != nil {
+				env = config["Env"].([]any)
+			}
+
+			ct := descriptor.BuildDefaultContainer(name, image)
+			ct.WorkingDir = workingDir
+			ct.SecurityContext = &securityContext
+			for _, e := range entrypoint {
+				ct.Command = append(ct.Command, e.(string))
+			}
+			for _, c := range cmd {
+				ct.Args = append(ct.Args, c.(string))
+			}
+			ct.TTY = tty
+			for _, kv := range env {
+				s := strings.Split(kv.(string), "=")
+				ct.Env = append(ct.Env, corev1.EnvVar{Name: s[0], Value: s[1]})
+			}
+
+			res = append(res, ct)
+		}
 		return
 	}
-	return cmdz.FormattedCmd[map[string]any, error](formatter, t.binary, "inspect", ctName)
+	return cmdz.FormattedCmd[[]corev1.Container, error](formatter, t.binary, "inspect", ctName).ErrorOnFailure(true)
 }
 
 func (t DockerTranslater) ListPodContainerNames(namespace, podName string) cmdz.Formatter[[]string, error] {
@@ -402,6 +486,10 @@ func (t DockerTranslater) createEmptyDirPodVolume(namespace string, vol corev1.V
 	name := forgeResName(namespace, vol)
 	exec := cmdz.Cmd(t.binary, "volume", "create", "--driver", "local", name)
 	return exec, nil
+}
+
+func boolPtr(in bool) *bool {
+	return &in
 }
 
 /*

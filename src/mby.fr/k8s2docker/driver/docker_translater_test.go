@@ -6,10 +6,39 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"mby.fr/utils/cmdz"
 )
 
 //"mby.fr/utils/promise"
+
+func TestPodContainerNameFilter(t *testing.T) {
+	var f string
+
+	f = podContainerNameFilter("", "", "", false)
+	assert.Equal(t, "name=^.+__.+__.+$", f)
+
+	f = podContainerNameFilter("", "", "", true)
+	assert.Equal(t, "name=^.+__.+--root$", f)
+
+	f = podContainerNameFilter("ns1", "", "", false)
+	assert.Equal(t, "name=^ns1__.+__.+$", f)
+
+	f = podContainerNameFilter("ns1", "", "", true)
+	assert.Equal(t, "name=^ns1__.+--root$", f)
+
+	f = podContainerNameFilter("ns1", "pod1", "", false)
+	assert.Equal(t, "name=^ns1__pod1__.+$", f)
+
+	f = podContainerNameFilter("ns1", "pod1", "", true)
+	assert.Equal(t, "name=^ns1__pod1--root$", f)
+
+	f = podContainerNameFilter("ns1", "pod1", "ct1", false)
+	assert.Equal(t, "name=^ns1__pod1__ct1$", f)
+
+	f = podContainerNameFilter("ns1", "pod1", "ct1", true)
+	assert.Equal(t, "name=^ns1__pod1--root$", f)
+}
 
 func TestListNamespaceNames(t *testing.T) {
 	expectedNs1 := "ns1"
@@ -30,14 +59,6 @@ func TestListNamespaceNames(t *testing.T) {
 	require.NoError(t, e)
 	assert.Len(t, r, 0)
 
-	// Error response from docker
-	cmdz.StartSimpleMock(t, 1, "", "")
-	r, e = f.Format()
-	cmdz.StopMock()
-
-	require.Error(t, e)
-	assert.Len(t, r, 0)
-
 	// OK response from docker
 	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
 		stdout = rootCt1 + "\n" + rootCt2 + "\n" + rootCt3
@@ -51,6 +72,14 @@ func TestListNamespaceNames(t *testing.T) {
 	assert.Contains(t, r, expectedNs1)
 	assert.Contains(t, r, expectedNs2)
 	assert.Contains(t, r, expectedNs3)
+
+	// Error response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	r, e = f.Format()
+	cmdz.StopMock()
+
+	require.Error(t, e)
+	assert.Len(t, r, 0)
 }
 
 func TestSetupPod(t *testing.T) {
@@ -81,8 +110,11 @@ func TestSetupPod(t *testing.T) {
 
 func TestDeletePod(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	e := dt.DeletePod(expectedNamespace1, pod1Name)
-	require.NotNil(t, e)
+	e1 := dt.DeletePod(expectedNamespace1, pod1Name)
+	require.NotNil(t, e1)
+	expectedFilter := "^" + expectedNamespace1 + "__" + pod1Name + "__.+$"
+	expectedCmd1 := fmt.Sprintf(`sh -c %[1]s rm -f $( %[1]s ps -q -f name=%[2]s )`, expectedBinary0, expectedFilter)
+	assert.Equal(t, expectedCmd1, e1.String())
 }
 
 func TestCreateVolume2(t *testing.T) {
@@ -101,20 +133,90 @@ func TestCreateVolume2(t *testing.T) {
 
 func TestDeleteVolume(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	e := dt.DeletePod(expectedNamespace1, pod1Name)
-	require.NotNil(t, e)
+	e1 := dt.DeleteVolume(expectedNamespace1, pod1Name, volume1Name)
+	require.NotNil(t, e1)
+	expectedFilter := "^" + expectedNamespace1 + "__" + pod1Name + "__" + volume1Name + "$"
+	expectedCmd1 := fmt.Sprintf(`sh -c %[1]s volume rm -f $( %[1]s volume ls -q -f name=%[2]s )`, expectedBinary0, expectedFilter)
+	assert.Equal(t, expectedCmd1, e1.String())
 }
 
 func TestInspectVolume(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	f := dt.InspectVolume(expectedNamespace1, pod1Name, volume1Name)
 	require.NotNil(t, f)
+
+	// Empty response from docker
+	cmdz.StartSimpleMock(t, 0, "[]", "")
+	res, err := f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 0)
+
+	// OK response from docker
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
+		stdout = `
+[
+	{
+		"CreatedAt": "2023-06-27T00:32:18+02:00",
+		"Driver": "local",
+		"Labels": null,
+		"Mountpoint": "/var/lib/docker/volumes/ns1_ct5-vol1/_data",
+		"Name": "ns1_ct5-vol1",
+		"Options": null,
+		"Scope": "local"
+	}
+]`
+		return
+	})
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Contains(t, res[0].Name, "ns1_ct5-vol1")
+
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	assert.Nil(t, res)
+
 }
 
 func TestListVolumeNames(t *testing.T) {
+	expectedNs1 := "ns1"
+	vol1Name := forgePodVolumeName(expectedNs1, "pod1", "vol1")
+	vol2Name := forgePodVolumeName(expectedNs1, "pod1", "vol2")
+
 	dt := DockerTranslater{expectedBinary0}
-	f := dt.ListVolumeNames(expectedNamespace1, pod1Name)
+	f := dt.ListVolumeNames(expectedNs1, "pod1")
 	require.NotNil(t, f)
+
+	// Empty response from docker
+	cmdz.StartSimpleMock(t, 0, "", "")
+	res, err := f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 0)
+
+	// OK response from docker
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
+		stdout = vol1Name + "\n" + vol2Name + "\n"
+		return
+	})
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Contains(t, res, "vol1")
+	assert.Contains(t, res, "vol2")
+
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	require.Nil(t, res)
 }
 
 func TestCreatePodContainer2_Init(t *testing.T) {
@@ -163,18 +265,65 @@ func TestUpdatePodContainer(t *testing.T) {
 	e, err := dt.UpdatePodContainer(expectedNamespace1, pod1, container1)
 	require.NoError(t, err)
 	require.NotNil(t, e)
+
+	// TODO
 }
 
 func TestDeletePodContainer(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	e := dt.DeletePodContainer(expectedNamespace1, pod1Name, container1Name)
-	require.NotNil(t, e)
+	e1 := dt.DeletePodContainer(expectedNamespace1, pod1Name, container1Name)
+	require.NotNil(t, e1)
+	expectedCmd1 := fmt.Sprintf(`%[1]s rm -f %[2]s__%[3]s__%[4]s`, expectedBinary0, expectedNamespace1, pod1Name, container1Name)
+	assert.Equal(t, expectedCmd1, e1.String())
 }
 
 func TestInspectPodContainer(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	e := dt.DeletePodContainer(expectedNamespace1, pod1Name, container1Name)
-	require.NotNil(t, e)
+	f := dt.InspectPodContainer(expectedNamespace1, pod1Name, container1Name)
+	require.NotNil(t, f)
+
+	// Empty response from docker
+	cmdz.StartSimpleMock(t, 0, "[]", "")
+	res, err := f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 0)
+
+	// OK response from docker
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
+		stdout = container1_docker_inspect
+		return
+	})
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, "quizzical_hodgkin", res[0].Name)
+	assert.Equal(t, "busybox", res[0].Image)
+	assert.Equal(t, "", res[0].WorkingDir)
+	//assert.Equal(t, "busybox", res[0].ImagePullPolicy)
+	assert.Equal(t, "", res[0].WorkingDir)
+	assert.Equal(t, []corev1.EnvVar{
+		{
+			Name:  "PATH",
+			Value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		}}, res[0].Env)
+	expectedSecurityContext := corev1.SecurityContext{
+		Privileged:             boolPtr(false),
+		ReadOnlyRootFilesystem: boolPtr(false),
+		RunAsNonRoot:           boolPtr(false),
+	}
+	assert.Equal(t, &expectedSecurityContext, res[0].SecurityContext)
+	assert.Equal(t, false, res[0].TTY)
+	assert.Equal(t, []string(nil), res[0].Command)
+	assert.Equal(t, []string{"ls", "/world"}, res[0].Args)
+
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	require.Nil(t, res)
 }
 
 func TestListPodContainerNames(t *testing.T) {
