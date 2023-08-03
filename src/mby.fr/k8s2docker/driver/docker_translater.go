@@ -13,6 +13,7 @@ import (
 	//"mby.fr/utils/promise"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 /*
@@ -401,28 +402,35 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 			userSplit := strings.Split(user, ":")
 			var uid, gid *int64
 			if len(userSplit) > 1 {
-				*uid, err = strconv.ParseInt(userSplit[0], 10, 64)
+				u, err := strconv.ParseInt(userSplit[0], 10, 64)
 				if err != nil {
 					return nil, err
 				}
-				*gid, err = strconv.ParseInt(userSplit[1], 10, 64)
+				uid = &u
+				g, err := strconv.ParseInt(userSplit[1], 10, 64)
 				if err != nil {
 					return nil, err
 				}
+				gid = &g
 			} else if len(user) > 0 {
-				*uid, err = strconv.ParseInt(user, 10, 64)
+				u, err := strconv.ParseInt(user, 10, 64)
 				if err != nil {
 					return nil, err
 				}
+				uid = &u
 				gid = nil
 			}
+
 			securityContext := descriptor.BuildDefaultSecurityContext(uid, gid)
 			securityContext.Privileged = &privileged
 			securityContext.ReadOnlyRootFilesystem = &readOnlyRootFs
 			// FIXME: how to set securityContext.RunAsNonRoot ? a label ???
 			// To get from labels :
+			// - RunAsNonRoot
 			// - ImagePullPolicy
 			// - Probes
+			// - resources & limits
+			// - port names
 
 			cmd := []any{}
 			if config["Cmd"] != nil {
@@ -435,6 +443,60 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 			env := []any{}
 			if config["Env"] != nil {
 				env = config["Env"].([]any)
+			}
+
+			var volumeMounts []corev1.VolumeMount
+			if jr["Mounts"] != nil {
+				mounts := jr["Mounts"].([]any)
+				for _, mount := range mounts {
+					m := mount.(map[string]any)
+					name := ""
+					if m["Name"] != nil {
+						name = m["Name"].(string)
+					}
+					path := m["Destination"].(string)
+					readOnly := m["RW"].(bool) == false
+					volMount := corev1.VolumeMount{Name: name, MountPath: path, ReadOnly: readOnly}
+					volumeMounts = append(volumeMounts, volMount)
+				}
+			}
+
+			var containerPorts []corev1.ContainerPort
+			if hostConfig["PortBindings"] != nil {
+				portBindings := hostConfig["PortBindings"].(map[string]any)
+				for key, value := range portBindings {
+					bindings := value.([]any)
+					split := strings.Split(key, "/")
+					containerPort := split[0]
+					containerPortNum, _ := strconv.ParseInt(containerPort, 10, 32)
+					var protocol corev1.Protocol
+					switch split[1] {
+					case "tcp":
+						protocol = corev1.ProtocolTCP
+					case "udp":
+						protocol = corev1.ProtocolUDP
+					default:
+						err = fmt.Errorf("Not supported protocol: %s", split[1])
+					}
+
+					for _, binding := range bindings {
+						b := binding.(map[string]any)
+						hostPort := b["HostPort"].(string)
+						hostPortNum, _ := strconv.ParseInt(hostPort, 10, 32)
+						hostIp := b["HostIp"].(string)
+						ctPort := corev1.ContainerPort{Name: key, Protocol: protocol, ContainerPort: int32(containerPortNum), HostPort: int32(hostPortNum), HostIP: hostIp}
+						containerPorts = append(containerPorts, ctPort)
+					}
+				}
+			}
+
+			nanoCpus := hostConfig["NanoCpus"].(int)
+			memory := hostConfig["Memory"].(int)
+			resources := corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    *resource.NewScaledQuantity(int64(nanoCpus), resource.Nano),
+					corev1.ResourceMemory: *resource.NewQuantity(int64(memory), resource.BinarySI),
+				},
 			}
 
 			ct := descriptor.BuildDefaultContainer(name, image)
@@ -451,6 +513,10 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 				s := strings.Split(kv.(string), "=")
 				ct.Env = append(ct.Env, corev1.EnvVar{Name: s[0], Value: s[1]})
 			}
+			ct.VolumeMounts = append(ct.VolumeMounts, volumeMounts...)
+			ct.Ports = append(ct.Ports, containerPorts...)
+
+			ct.Resources = resources
 
 			res = append(res, ct)
 		}
@@ -507,6 +573,10 @@ func (t DockerTranslater) createEmptyDirPodVolume(namespace string, vol corev1.V
 }
 
 func boolPtr(in bool) *bool {
+	return &in
+}
+
+func int64Ptr(in int64) *int64 {
 	return &in
 }
 

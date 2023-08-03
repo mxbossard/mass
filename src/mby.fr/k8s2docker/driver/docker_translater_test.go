@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/cmdz"
 )
@@ -284,7 +285,7 @@ func TestDeletePodContainer(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
-func TestDescribePodContainer(t *testing.T) {
+func TestDescribePodContainer_0(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	f := dt.DescribePodContainer(expectedNamespace1, pod1Name, container1Name)
 	require.NotNil(t, f)
@@ -296,12 +297,25 @@ func TestDescribePodContainer(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 0)
 
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	require.Nil(t, res)
+}
+
+func TestDescribePodContainer_container1(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	f := dt.DescribePodContainer(expectedNamespace1, pod1Name, container1Name)
+	require.NotNil(t, f)
+
 	// OK response from docker
 	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
 		stdout = container1_docker_inspect
 		return
 	})
-	res, err = f.Format()
+	res, err := f.Format()
 	cmdz.StopMock()
 	require.NoError(t, err)
 	require.Len(t, res, 1)
@@ -318,8 +332,7 @@ func TestDescribePodContainer(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expectedEnv, res[0].Env)
-	// TODO add ports
-	expectedPorts := []corev1.ContainerPort{}
+	expectedPorts := []corev1.ContainerPort(nil)
 	assert.Equal(t, expectedPorts, res[0].Ports)
 	expectedSecurityContext := corev1.SecurityContext{
 		Privileged:             boolPtr(false),
@@ -331,13 +344,58 @@ func TestDescribePodContainer(t *testing.T) {
 		descriptor.BuildVolumeMount("hello", "/world"),
 	}
 	assert.Equal(t, expectedVolumeMounts, res[0].VolumeMounts)
+}
 
-	// Err response from docker
-	cmdz.StartSimpleMock(t, 1, "", "some error")
-	res, err = f.Format()
+func TestDescribePodContainer_container2(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	f := dt.DescribePodContainer(expectedNamespace1, pod1Name, container1Name)
+	require.NotNil(t, f)
+
+	// OK response from docker
+	cmdz.StartStringMock(t, func(c cmdz.Vcmd) (rc int, stdout, stderr string) {
+		stdout = container2_docker_inspect
+		return
+	})
+	res, err := f.Format()
 	cmdz.StopMock()
-	require.Error(t, err)
-	require.Nil(t, res)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, "wonderful_faraday", res[0].Name)
+	assert.Equal(t, "nginx", res[0].Image)
+	assert.Equal(t, "/tmp", res[0].WorkingDir)
+	assert.Equal(t, false, res[0].TTY)
+	assert.Equal(t, []string{"/docker-entrypoint.sh"}, res[0].Command)
+	assert.Equal(t, []string{"nginx", "-g", "daemon off;"}, res[0].Args)
+	expectedEnv := []corev1.EnvVar{
+		{Name: "PATH", Value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"},
+		{Name: "NGINX_VERSION", Value: "1.25.1"},
+		{Name: "NJS_VERSION", Value: "0.7.12"},
+		{Name: "PKG_RELEASE", Value: "1~bookworm"},
+	}
+	assert.Equal(t, expectedEnv, res[0].Env)
+	// TODO must put port names in labels ?
+	expectedPorts := []corev1.ContainerPort{
+		{Name: "???", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
+		{Name: "!!!", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
+	}
+	assert.Equal(t, expectedPorts, res[0].Ports)
+	expectedSecurityContext := corev1.SecurityContext{
+		Privileged:             boolPtr(false),
+		ReadOnlyRootFilesystem: boolPtr(false),
+		RunAsNonRoot:           boolPtr(false),
+		RunAsUser:              int64Ptr(10),
+		RunAsGroup:             int64Ptr(12),
+	}
+	assert.Equal(t, &expectedSecurityContext, res[0].SecurityContext)
+	expectedVolumeMounts := []corev1.VolumeMount{
+		descriptor.BuildVolumeMount("???", "/tmp/foo"),
+		descriptor.BuildVolumeMount("bar", "/tmp/bar"),
+	}
+	assert.Equal(t, expectedVolumeMounts, res[0].VolumeMounts)
+	expectedCpuLimit := resource.MustParse("0.2")
+	expectedMemoryLimit := resource.MustParse("64Mi")
+	assert.Equal(t, expectedCpuLimit.AsApproximateFloat64(), res[0].Resources.Limits.Cpu().AsApproximateFloat64())
+	assert.Equal(t, expectedMemoryLimit.AsDec(), res[0].Resources.Limits.Memory().AsDec())
 }
 
 func TestListPodContainerNames(t *testing.T) {
