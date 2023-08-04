@@ -14,6 +14,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	//k8syaml "sigs.k8s.io/yaml"
+	"encoding/json"
 )
 
 /*
@@ -24,6 +27,12 @@ const (
 	ContainerName_PodRootFlag = "--root"
 )
 */
+
+const (
+	MetadataLabelKeyPrefix = "k8s2docker.mby.fr"
+	ContainerMetadataKey   = "descriptor.container"
+	PodMetadataKey         = "descriptor.pod"
+)
 
 func forgePodVolumeName(namespace, podName, volName string) (name string) {
 	return namespace + ContainerName_Separator + podName + ContainerName_Separator + volName
@@ -386,15 +395,23 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 		var jsonResults []map[string]any
 		err = yaml.Unmarshal(stdout, &jsonResults)
 		for _, jr := range jsonResults {
-			// FIXME: manage errors
+			// FIXME: manage errors of casts and path with eplorer lib
+
+			config := jr["Config"].(map[string]any)
+			hostConfig := jr["HostConfig"].(map[string]any)
+
+			labels := config["Labels"].(map[string]any)
+			originalContainer, err := loadLabelMetadata[corev1.Container](labels, ContainerMetadataKey)
+			if err != nil {
+				return nil, err
+			}
+
 			name := jr["Name"].(string)
 			name = strings.Split(name, "/")[1]
 
-			hostConfig := jr["HostConfig"].(map[string]any)
 			privileged := hostConfig["Privileged"].(bool)
 			readOnlyRootFs := hostConfig["Privileged"].(bool)
 
-			config := jr["Config"].(map[string]any)
 			image := config["Image"].(string)
 			workingDir := config["WorkingDir"].(string)
 			tty := config["Tty"].(bool)
@@ -421,14 +438,9 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 				gid = nil
 			}
 
-			securityContext := descriptor.BuildDefaultSecurityContext(uid, gid)
-			securityContext.Privileged = &privileged
-			securityContext.ReadOnlyRootFilesystem = &readOnlyRootFs
 			// FIXME: how to set securityContext.RunAsNonRoot ? a label ???
 			// To get from labels :
-			// - RunAsNonRoot
 			// - ImagePullPolicy
-			// - Probes
 			// - resources & limits
 			// - port names
 
@@ -445,21 +457,23 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 				env = config["Env"].([]any)
 			}
 
-			var volumeMounts []corev1.VolumeMount
-			if jr["Mounts"] != nil {
-				mounts := jr["Mounts"].([]any)
-				for _, mount := range mounts {
-					m := mount.(map[string]any)
-					name := ""
-					if m["Name"] != nil {
-						name = m["Name"].(string)
-					}
-					path := m["Destination"].(string)
-					readOnly := m["RW"].(bool) == false
-					volMount := corev1.VolumeMount{Name: name, MountPath: path, ReadOnly: readOnly}
-					volumeMounts = append(volumeMounts, volMount)
-				}
+			var securityContext corev1.SecurityContext
+			originalSecurityContext := originalContainer.SecurityContext
+			if originalSecurityContext != nil {
+				securityContext = descriptor.BuildDefaultSecurityContext(uid, gid)
+				securityContext.Privileged = &privileged
+				securityContext.ReadOnlyRootFilesystem = &readOnlyRootFs
+				// Read RunAsNonRoot from originalContainer
+				securityContext.RunAsNonRoot = originalSecurityContext.RunAsNonRoot
 			}
+
+			// Read probes config from originalContainer
+			originalStartupProbe := originalContainer.StartupProbe
+			originalLivenessProbe := originalContainer.LivenessProbe
+			originalReadinessProbe := originalContainer.ReadinessProbe
+
+			// Read ports config from originalContainer
+			originalPorts := originalContainer.Ports
 
 			var containerPorts []corev1.ContainerPort
 			if hostConfig["PortBindings"] != nil {
@@ -476,7 +490,24 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 					case "udp":
 						protocol = corev1.ProtocolUDP
 					default:
-						err = fmt.Errorf("Not supported protocol: %s", split[1])
+						err = fmt.Errorf("not supported protocol: %s", split[1])
+						return nil, err
+					}
+
+					matchingOriginalPorts := collections.Filter[corev1.ContainerPort](originalPorts, func(cp corev1.ContainerPort) bool {
+						return cp.ContainerPort == int32(containerPortNum)
+					})
+					portName := "nonamed"
+					if len(matchingOriginalPorts) == 0 {
+						// New port absent from original config !
+						portName = key
+
+					} else if len(matchingOriginalPorts) > 1 {
+						// Multiple ports with same container port !
+						err = fmt.Errorf("problem with original ports config ! Duplicate container port config found for port: %d", containerPortNum)
+						return nil, err
+					} else {
+						portName = matchingOriginalPorts[0].Name
 					}
 
 					for _, binding := range bindings {
@@ -484,9 +515,43 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 						hostPort := b["HostPort"].(string)
 						hostPortNum, _ := strconv.ParseInt(hostPort, 10, 32)
 						hostIp := b["HostIp"].(string)
-						ctPort := corev1.ContainerPort{Name: key, Protocol: protocol, ContainerPort: int32(containerPortNum), HostPort: int32(hostPortNum), HostIP: hostIp}
+						ctPort := corev1.ContainerPort{Name: portName, Protocol: protocol, ContainerPort: int32(containerPortNum), HostPort: int32(hostPortNum), HostIP: hostIp}
 						containerPorts = append(containerPorts, ctPort)
 					}
+				}
+			}
+
+			// Read volumeMounts config from originalContainer
+			originalVolumeMounts := originalContainer.VolumeMounts
+
+			var volumeMounts []corev1.VolumeMount
+			if jr["Mounts"] != nil {
+				mounts := jr["Mounts"].([]any)
+				for _, mount := range mounts {
+					m := mount.(map[string]any)
+					path := m["Destination"].(string)
+					readOnly := !m["RW"].(bool)
+					name := "nonamed"
+					if m["Name"] != nil {
+						name = m["Name"].(string)
+					} else {
+						matchingMounts := collections.Filter[corev1.VolumeMount](originalVolumeMounts, func(vm corev1.VolumeMount) bool {
+							return vm.MountPath == path
+						})
+						if len(matchingMounts) == 0 {
+							// New mount absent from original config !
+							name = path
+						} else if len(matchingMounts) > 1 {
+							// Multiple mounts with same container port !
+							err = fmt.Errorf("problem with original volumeMounts config ! Duplicate volumeMount config found for mount path: %s", path)
+							return nil, err
+						} else {
+							name = matchingMounts[0].Name
+						}
+					}
+
+					volMount := corev1.VolumeMount{Name: name, MountPath: path, ReadOnly: readOnly}
+					volumeMounts = append(volumeMounts, volMount)
 				}
 			}
 
@@ -514,6 +579,9 @@ func (t DockerTranslater) DescribePodContainer(namespace, podName, name string) 
 				ct.Env = append(ct.Env, corev1.EnvVar{Name: s[0], Value: s[1]})
 			}
 			ct.VolumeMounts = append(ct.VolumeMounts, volumeMounts...)
+			ct.StartupProbe = originalStartupProbe
+			ct.LivenessProbe = originalLivenessProbe
+			ct.ReadinessProbe = originalReadinessProbe
 			ct.Ports = append(ct.Ports, containerPorts...)
 
 			ct.Resources = resources
@@ -570,6 +638,50 @@ func (t DockerTranslater) createEmptyDirPodVolume(namespace string, vol corev1.V
 	name := forgeResName(namespace, vol)
 	exec := cmdz.Cmd(t.binary, "volume", "create", "--driver", "local", name)
 	return exec, nil
+}
+
+func forgeLabelDataArgs(key, value string) []string {
+	return []string{"--label", fmt.Sprintf("%s=%s", key, value)}
+}
+
+func forgeLabelMetadataKey(key string) string {
+	return fmt.Sprintf("%s.%s", MetadataLabelKeyPrefix, key)
+}
+
+func forgeLabelMetadataArgs(key string, value any) ([]string, error) {
+	key = forgeLabelMetadataKey(key)
+	labelValue, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return forgeLabelDataArgs(key, string(labelValue)), nil
+}
+
+func appendLabelMetadataArgs(labels map[string]any, key string, value any) error {
+	key = forgeLabelMetadataKey(key)
+	labelValue, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	labels[key] = string(labelValue)
+	return nil
+}
+
+func loadLabelMetadata[T any](labels map[string]any, key string) (value T, err error) {
+	key = forgeLabelMetadataKey(key)
+	labelVal, ok := labels[key]
+	if !ok {
+		err = fmt.Errorf("no metada label correspond to key: %s", key)
+		return value, err
+	}
+	labelStr, ok := labelVal.(string)
+	if !ok {
+		err = fmt.Errorf("bad type for label value with key: %s", key)
+		return value, err
+	}
+
+	err = json.Unmarshal([]byte(labelStr), &value)
+	return
 }
 
 func boolPtr(in bool) *bool {

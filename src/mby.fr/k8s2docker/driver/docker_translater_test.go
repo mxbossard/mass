@@ -14,6 +14,39 @@ import (
 
 //"mby.fr/utils/promise"
 
+func TestForgeLabelMetadataArgs(t *testing.T) {
+	expectedPorts := []corev1.ContainerPort{
+		{Name: "https", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
+		{Name: "http", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
+	}
+	expectedLabelKey := "ports"
+	expectedLabelExpr := MetadataLabelKeyPrefix + "." + expectedLabelKey + "=[{\"name\":\"https\",\"hostPort\":8443,\"containerPort\":443,\"protocol\":\"TCP\"},{\"name\":\"http\",\"hostPort\":8000,\"containerPort\":80,\"protocol\":\"TCP\"}]"
+	args, err := forgeLabelMetadataArgs("ports", expectedPorts)
+	require.NoError(t, err)
+	require.Len(t, args, 2)
+	assert.Equal(t, "--label", args[0])
+	assert.Equal(t, expectedLabelExpr, args[1])
+}
+
+func TestLoadLabelMetadata(t *testing.T) {
+	expectedMetadataLabelKey := "ports"
+	labelKey := forgeLabelMetadataKey(expectedMetadataLabelKey)
+	labelVal := "[{\"name\":\"https\",\"hostPort\":8443,\"containerPort\":443,\"protocol\":\"TCP\"},{\"name\":\"http\",\"hostPort\":8000,\"containerPort\":80,\"protocol\":\"TCP\"}]"
+	labelsMap := map[string]any{
+		"foo":    "pif",
+		"bar":    "paf",
+		labelKey: labelVal,
+	}
+	expectedPorts := []corev1.ContainerPort{
+		{Name: "https", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
+		{Name: "http", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
+	}
+	ports, err := loadLabelMetadata[[]corev1.ContainerPort](labelsMap, expectedMetadataLabelKey)
+	require.NoError(t, err)
+	require.NotNil(t, ports)
+	assert.Equal(t, expectedPorts, ports)
+}
+
 func TestPodContainerNameFilter(t *testing.T) {
 	var f string
 
@@ -375,8 +408,8 @@ func TestDescribePodContainer_container2(t *testing.T) {
 	assert.Equal(t, expectedEnv, res[0].Env)
 	// TODO must put port names in labels ?
 	expectedPorts := []corev1.ContainerPort{
-		{Name: "???", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
-		{Name: "!!!", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
+		{Name: "https", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
+		{Name: "http", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
 	}
 	assert.Equal(t, expectedPorts, res[0].Ports)
 	expectedSecurityContext := corev1.SecurityContext{
@@ -388,7 +421,7 @@ func TestDescribePodContainer_container2(t *testing.T) {
 	}
 	assert.Equal(t, &expectedSecurityContext, res[0].SecurityContext)
 	expectedVolumeMounts := []corev1.VolumeMount{
-		descriptor.BuildVolumeMount("???", "/tmp/foo"),
+		descriptor.BuildVolumeMount("foo", "/tmp/foo"),
 		descriptor.BuildVolumeMount("bar", "/tmp/bar"),
 	}
 	assert.Equal(t, expectedVolumeMounts, res[0].VolumeMounts)

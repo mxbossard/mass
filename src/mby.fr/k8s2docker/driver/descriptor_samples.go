@@ -171,7 +171,11 @@ var container1_docker_inspect = `
 			"WorkingDir": "",
 			"Entrypoint": null,
 			"OnBuild": null,
-			"Labels": {}
+			"Labels": {
+				"k8s2docker.mby.fr.descriptor.container": "{
+					\"securityContext\":{\"runAsNonRoot\": false},\"ports\":[]
+				}"
+			}
 		},
 		"NetworkSettings": {
 			"Bridge": "",
@@ -214,6 +218,7 @@ var container1_docker_inspect = `
 `
 
 // docker run --add-host foo:127.0.0.1 -p 8000:80 -p 8443:443 -v $PWD:/tmp/foo -v bar:/tmp/bar --cpus=0.2 --memory=64m
+//
 //	-h foohostname --user 10:12 --ip 10.0.0.2 --restart always --workdir /tmp nginx
 var container2_docker_inspect = `
 [
@@ -423,6 +428,17 @@ var container2_docker_inspect = `
             ],
             "OnBuild": null,
             "Labels": {
+				"k8s2docker.mby.fr.descriptor.container": "{
+					\"securityContext\":{\"runAsNonRoot\": false},
+					\"ports\":[
+						{\"name\":\"https\",\"hostPort\":8443,\"containerPort\":443,\"protocol\":\"TCP\"},
+						{\"name\":\"http\",\"hostPort\":8000,\"containerPort\":80,\"protocol\":\"TCP\"}
+					],
+					\"volumeMounts\":[
+						{\"name\":\"foo\",\"mountPath\":\"/tmp/foo\"},
+						{\"name\":\"bar\",\"mountPath\":\"/tmp/bar\"}
+					]
+				}",
                 "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
             },
             "StopSignal": "SIGQUIT"
