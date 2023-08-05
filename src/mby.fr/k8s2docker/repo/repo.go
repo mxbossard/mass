@@ -13,7 +13,7 @@ import (
 
 	"mby.fr/k8s2docker/descriptor"
 	"mby.fr/utils/collections"
-	"mby.fr/utils/serializ"
+	"mby.fr/utils/structz"
 
 	"mby.fr/scribble"
 )
@@ -154,18 +154,19 @@ func loadResource(namespace, kind, name string) (map[string]any, error) {
 
 func storeResource(namespace string, resourceTree map[string]any) ([]map[string]any, error) {
 	var storedResources []map[string]any
-	// Read kind from tree
-	kind, err := serializ.ResolveJsonMap[string](resourceTree, "/kind")
+	explorer := structz.JsonMapExplorer(resourceTree)
+	// Read kind from tree1
+	kind, err := structz.Resolve[string](explorer, "/kind")
 	if err != nil {
 		return nil, err
 	}
 	// Read name from tree
-	name, err := serializ.ResolveJsonMap[string](resourceTree, "/metadata/name")
+	name, err := structz.Resolve[string](explorer, "/metadata/name")
 	if err != nil {
 		return nil, err
 	}
 	// swallow error namespace is optionnal in tree
-	jsonNamespace, _ := serializ.ResolveJsonMap[string](resourceTree, "/metadata/namespace")
+	jsonNamespace, _ := structz.Resolve[string](explorer, "/metadata/namespace")
 	if jsonNamespace != "" {
 		namespace = jsonNamespace
 	}
@@ -203,11 +204,12 @@ func storeResource(namespace string, resourceTree map[string]any) ([]map[string]
 }
 
 func deleteMapResource(namespace string, res map[string]any) (err error) {
-	resKind, err := serializ.ResolveJsonMap[string](res, "/kind")
+	explorer := structz.JsonMapExplorer(res)
+	resKind, err := structz.Resolve[string](explorer, "/kind")
 	if err != nil {
 		return err
 	}
-	resName, err := serializ.ResolveJsonMap[string](res, "/metadata/name")
+	resName, err := structz.Resolve[string](explorer, "/metadata/name")
 	if err != nil {
 		return err
 	}
@@ -298,7 +300,8 @@ func ListNamespaceNames() (namespaces []string, err error) {
 		return nil, err
 	}
 	for _, ns := range allNs {
-		name, err := serializ.ResolveJsonMap[string](ns, "/metadata/name")
+		explorer := structz.JsonMapExplorer(ns)
+		name, err := structz.Resolve[string](explorer, "/metadata/name")
 		if err != nil {
 			//err = fmt.Errorf("Bad NS format: %s !", ns)
 			return nil, err
@@ -337,11 +340,10 @@ func developNamespaceNames(namespaceIn string) (namespaces []string, err error) 
 }
 
 /*
-	List resources baked by map[string]any
-	if namespace == "" => List all NS
-	if kind == "" => List all resources in NS
-	if name == "" => List all resources of Kind in NS
-
+List resources baked by map[string]any
+if namespace == "" => List all NS
+if kind == "" => List all resources in NS
+if name == "" => List all resources of Kind in NS
 */
 func listResourcesAsMap(namespace, kind, name string) ([]map[string]any, error) {
 	if namespace == "" {
@@ -403,12 +405,13 @@ func listResourcesAsMap(namespace, kind, name string) ([]map[string]any, error) 
 func consolidateMetadata(namespace, kind, name, jsonIn string) (string, string, string) {
 	var k, n, ns string
 	if jsonIn != "" {
+		explorer := structz.JsonStringExplorer(jsonIn)
 		// Read namespace from jsonIn (swallow error because optional)
-		ns, _ = serializ.ResolveJsonString[string](jsonIn, "/metadata/namespace")
+		ns, _ = structz.Resolve[string](explorer, "/metadata/namespace")
 		// Read kind from jsonIn (swallow error because optional)
-		k, _ = serializ.ResolveJsonString[string](jsonIn, "/kind")
+		k, _ = structz.Resolve[string](explorer, "/kind")
 		// Read name from jsonIn (swallow error because optional)
-		n, _ = serializ.ResolveJsonString[string](jsonIn, "/metadata/name")
+		n, _ = structz.Resolve[string](explorer, "/metadata/name")
 	}
 	if ns == "" {
 		ns = namespace
@@ -440,11 +443,11 @@ func completeJsonInput(namespace, kind, name, jsonIn string) (map[string]any, er
 		}
 	}
 	var err error
-	resourceTree, err = serializ.PatcherMap(resourceTree).
+	resourceTree, err = structz.PatcherMap(resourceTree).
 		Default("/kind", kind).
 		Default("/metadata/name", name).
 		Default("/metadata/namespace", namespace).
-		Test("/kind", "Namespace").SwallowError().Then(serializ.OpRemove("/metadata/namespace")).
+		Test("/kind", "Namespace").SwallowError().Then(structz.OpRemove("/metadata/namespace")).
 		ResolveMap()
 	if err != nil {
 		log.Printf("Found error: %s", err)
