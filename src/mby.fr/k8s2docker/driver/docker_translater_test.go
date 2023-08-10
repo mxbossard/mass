@@ -117,47 +117,6 @@ func TestListNamespaceNames(t *testing.T) {
 	assert.Len(t, r, 0)
 }
 
-func TestSetupPod(t *testing.T) {
-	dt := DockerTranslater{expectedBinary0}
-
-	/*
-		cmds1, err := translator.createPodRootContainer(expectedNamespace1, pod1)
-		require.NoError(t, err, "should not error")
-		expectedCmd11 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
-		assert.Equal(t, expectedCmd11, cmds1.String())
-
-		cmds2, err := translator.createPodRootContainer(expectedNamespace1, pod2)
-		require.NoError(t, err, "should not error")
-		expectedCmd21 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
-		assert.Equal(t, expectedCmd21, cmds2.String())
-	*/
-
-	e1 := dt.SetupPod(expectedNamespace1, pod1)
-	require.NotNil(t, e1)
-	expectedCmd11 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
-	assert.Equal(t, expectedCmd11, e1.String())
-
-	e2 := dt.SetupPod(expectedNamespace1, pod2)
-	require.NotNil(t, e2)
-	expectedCmd21 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
-	assert.Equal(t, expectedCmd21, e2.String())
-}
-
-func TestDeletePod(t *testing.T) {
-	dt := DockerTranslater{expectedBinary0}
-	e1 := dt.DeletePod(expectedNamespace1, pod1Name)
-	require.NotNil(t, e1)
-	expectedFilter := "^" + expectedNamespace1 + "__" + pod1Name + "__.+$"
-	expectedCmd1 := fmt.Sprintf(`sh -c %[1]s rm -f $( %[1]s ps -q -f name=%[2]s )`, expectedBinary0, expectedFilter)
-	assert.Equal(t, expectedCmd1, e1.String())
-}
-
-func TestDescribePod2(t *testing.T) {
-	dt := DockerTranslater{expectedBinary0}
-	e1 := dt.DescribePod(expectedNamespace1, pod1Name)
-	require.NotNil(t, e1)
-	// TODO
-}
 func TestCreateVolume2(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	e1, err := dt.CreateVolume(expectedNamespace1, pod1Name, volume1)
@@ -258,6 +217,76 @@ func TestListVolumeNames(t *testing.T) {
 	cmdz.StopMock()
 	require.Error(t, err)
 	require.Nil(t, res)
+}
+
+func TestSetupPod(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+
+	/*
+		cmds1, err := translator.createPodRootContainer(expectedNamespace1, pod1)
+		require.NoError(t, err, "should not error")
+		expectedCmd11 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
+		assert.Equal(t, expectedCmd11, cmds1.String())
+
+		cmds2, err := translator.createPodRootContainer(expectedNamespace1, pod2)
+		require.NoError(t, err, "should not error")
+		expectedCmd21 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
+		assert.Equal(t, expectedCmd21, cmds2.String())
+	*/
+
+	e1 := dt.SetupPod(expectedNamespace1, pod1)
+	require.NotNil(t, e1)
+	expectedCmd11 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod1.Name)
+	assert.Equal(t, expectedCmd11, e1.String())
+
+	e2 := dt.SetupPod(expectedNamespace1, pod2)
+	require.NotNil(t, e2)
+	expectedCmd21 := fmt.Sprintf(`%s run --detach --name %[2]s__%[3]s--root --restart=always --network %[2]s__%[3]s--net --cpus=0.05 --memory=64m alpine:3.17.3 /bin/sleep inf`, expectedBinary0, expectedNamespace1, pod2.Name)
+	assert.Equal(t, expectedCmd21, e2.String())
+}
+
+func TestDeletePod(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	e1 := dt.DeletePod(expectedNamespace1, pod1Name)
+	require.NotNil(t, e1)
+	expectedFilter := "^" + expectedNamespace1 + "__" + pod1Name + "__.+$"
+	expectedCmd1 := fmt.Sprintf(`sh -c %[1]s rm -f $( %[1]s ps -q -f name=%[2]s )`, expectedBinary0, expectedFilter)
+	assert.Equal(t, expectedCmd1, e1.String())
+}
+
+func TestDescribePod_0(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	f1 := dt.DescribePod(expectedNamespace1, pod1Name)
+	require.NotNil(t, f1)
+
+	// Empty response from docker
+	cmdz.StartSimpleMock(t, 0, "[]", "")
+	res, err := f1.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.Nil(t, res, 0)
+
+	// Err response from docker
+	cmdz.StartSimpleMock(t, 1, "", "some error")
+	res, err = f1.Format()
+	cmdz.StopMock()
+	require.Error(t, err)
+	require.Nil(t, res)
+
+}
+
+func TestDescribePod_pod1(t *testing.T) {
+	dt := DockerTranslater{expectedBinary0}
+	f1 := dt.DescribePod(expectedNamespace1, pod1Name)
+	require.NotNil(t, f1)
+
+	// OK response from docker
+	cmdz.StartSimpleMock(t, 0, "[]", "")
+	res, err := f1.Format()
+	cmdz.StopMock()
+	require.NoError(t, err)
+	require.NotNil(t, res, 0)
+
 }
 
 func TestCreatePodContainer2_Init(t *testing.T) {

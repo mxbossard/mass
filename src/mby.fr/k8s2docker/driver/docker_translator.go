@@ -518,37 +518,6 @@ func getContainerNameFromContainerName(name string) string {
 	return ctName
 }
 
-// Filter for docker ps -f arg
-func podContainerNameFilter(namespace, podName, containerName string, isRoot bool) string {
-	sb := strings.Builder{}
-	sb.WriteString("name=^")
-	if namespace != "" {
-		sb.WriteString(namespace)
-	} else {
-		sb.WriteString(".+")
-	}
-	sb.WriteString(ContainerName_Separator)
-	if podName != "" {
-		sb.WriteString(podName)
-	} else {
-		sb.WriteString(".+")
-	}
-
-	if isRoot {
-		sb.WriteString(ContainerName_PodRootFlag)
-	} else {
-		sb.WriteString(ContainerName_Separator)
-		if containerName != "" {
-			sb.WriteString(containerName)
-		} else {
-			sb.WriteString(".+")
-		}
-	}
-
-	sb.WriteString("$")
-	return sb.String()
-}
-
 func forgeResName(prefix string, resource any) (name string) {
 	var resName string
 	switch res := resource.(type) {

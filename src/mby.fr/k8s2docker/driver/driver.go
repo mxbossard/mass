@@ -69,9 +69,17 @@ type Translater interface {
 	CreateNamespace(corev1.Namespace) cmdz.Executer
 	UpdateNamespace(corev1.Namespace) cmdz.Executer
 	DeleteNamsepace(namespace string) cmdz.Executer
-	ListNamespaceNames() cmdz.Formatter[[]string, error]
+	ListNamespaceNames() cmdz.Formatter[[]string]
 	//DescribeNamespace(string) (corev1.Namespace, error)
 	//ListNamespaces() ([]corev1.Namespace, error)
+
+	//VolumeId(string, corev1.Volume) (cmdz.Executer, error)
+	CreateVolume(namespace, podName string, vol corev1.Volume) (cmdz.Executer, error)
+	DeleteVolume(namepsace, podName, name string) cmdz.Executer
+	DescribeVolume(namepsace, podName, name string) cmdz.Formatter[[]corev1.Volume]
+	ListVolumeNames(namespace, podName string) cmdz.Formatter[[]string]
+	//DescribeVolume(string, string) (corev1.Volume, error)
+	//ListVolumes(string) ([]corev1.Volume, error)
 
 	// Merge Network into Root Container
 	//CreatePodNetwork(string, string) (cmdz.Executer, error)
@@ -82,21 +90,13 @@ type Translater interface {
 	//PodContainerId(string, corev1.Pod, corev1.Container) (cmdz.Executer, error)
 	SetupPod(namespace string, pod corev1.Pod) cmdz.Executer
 	DeletePod(namespace, name string) cmdz.Executer
-	DescribePod(namepsace, podName string) cmdz.Formatter[corev1.Pod, error]
-
-	//VolumeId(string, corev1.Volume) (cmdz.Executer, error)
-	CreateVolume(namespace, podName string, vol corev1.Volume) (cmdz.Executer, error)
-	DeleteVolume(namepsace, podName, name string) cmdz.Executer
-	DescribeVolume(namepsace, podName, name string) cmdz.Formatter[[]corev1.Volume, error]
-	ListVolumeNames(namespace, podName string) cmdz.Formatter[[]string, error]
-	//DescribeVolume(string, string) (corev1.Volume, error)
-	//ListVolumes(string) ([]corev1.Volume, error)
+	DescribePod(namepsace, podName string) cmdz.Formatter[*corev1.Pod]
 
 	CreatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container, init bool) (cmdz.Executer, error)
 	UpdatePodContainer(namespace string, pod corev1.Pod, ct corev1.Container) (cmdz.Executer, error)
 	DeletePodContainer(namepsace, podName, name string) cmdz.Executer
-	DescribePodContainer(namepsace, podName, name string) cmdz.Formatter[[]corev1.Container, error]
-	ListPodContainerNames(namepsace, podName string) cmdz.Formatter[[]string, error]
+	DescribePodContainer(namepsace, podName, name string) cmdz.Formatter[[]corev1.Container]
+	ListPodContainerNames(namepsace, podName string) cmdz.Formatter[[]string]
 	//DescribePodContainer(string, string, string) (corev1.Container, error)
 	//ListPodContainers(string, string) ([]corev1.Container, error)
 
