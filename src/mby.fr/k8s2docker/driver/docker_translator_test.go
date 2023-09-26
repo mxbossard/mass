@@ -193,7 +193,7 @@ func TestForgeResName(t *testing.T) {
 	assert.Equal(t, expectedPod1Name, podName, "Bad Pod name !")
 }
 
-func TestCreateVolume(t *testing.T) {
+func TestCreateVolume0(t *testing.T) {
 	translator := Translator{expectedBinary0}
 
 	cmds1, err := translator.createVolume(expectedNamespace1, volume1)
@@ -207,7 +207,7 @@ func TestCreateVolume(t *testing.T) {
 	assert.Equal(t, expectedCmd2, cmds2.String())
 }
 
-func TestCreatePodContainer(t *testing.T) {
+func TestCreatePodContainer0(t *testing.T) {
 	translator := Translator{expectedBinary0}
 
 	ct1 := pod1.Spec.InitContainers[0]

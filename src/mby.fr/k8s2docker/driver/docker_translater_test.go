@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"mby.fr/k8s2docker/descriptor"
@@ -14,7 +15,7 @@ import (
 
 //"mby.fr/utils/promise"
 
-func TestForgeLabelMetadataArgs(t *testing.T) {
+func Test_forgeLabelMetadataArgs(t *testing.T) {
 	expectedPorts := []corev1.ContainerPort{
 		{Name: "https", HostPort: 8443, ContainerPort: 443, Protocol: corev1.ProtocolTCP},
 		{Name: "http", HostPort: 8000, ContainerPort: 80, Protocol: corev1.ProtocolTCP},
@@ -28,7 +29,7 @@ func TestForgeLabelMetadataArgs(t *testing.T) {
 	assert.Equal(t, expectedLabelExpr, args[1])
 }
 
-func TestLoadLabelMetadata(t *testing.T) {
+func Test_loadLabelMetadata(t *testing.T) {
 	expectedMetadataLabelKey := "ports"
 	labelKey := forgeLabelMetadataKey(expectedMetadataLabelKey)
 	labelVal := "[{\"name\":\"https\",\"hostPort\":8443,\"containerPort\":443,\"protocol\":\"TCP\"},{\"name\":\"http\",\"hostPort\":8000,\"containerPort\":80,\"protocol\":\"TCP\"}]"
@@ -47,7 +48,7 @@ func TestLoadLabelMetadata(t *testing.T) {
 	assert.Equal(t, expectedPorts, ports)
 }
 
-func TestPodContainerNameFilter(t *testing.T) {
+func Test_podContainerNameFilter(t *testing.T) {
 	var f string
 
 	f = podContainerNameFilter("", "", "", false)
@@ -73,6 +74,18 @@ func TestPodContainerNameFilter(t *testing.T) {
 
 	f = podContainerNameFilter("ns1", "pod1", "ct1", true)
 	assert.Equal(t, "name=^ns1__pod1--root$", f)
+}
+
+func TestCreateNamespace(t *testing.T) {
+	// TODO
+}
+
+func TestUpdateNamespace(t *testing.T) {
+	// TODO
+}
+
+func TestDeleteNamespace(t *testing.T) {
+	// TODO
 }
 
 func TestListNamespaceNames(t *testing.T) {
@@ -117,7 +130,7 @@ func TestListNamespaceNames(t *testing.T) {
 	assert.Len(t, r, 0)
 }
 
-func TestCreateVolume2(t *testing.T) {
+func TestCreateVolume(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	e1, err := dt.CreateVolume(expectedNamespace1, pod1Name, volume1)
 	require.NoError(t, err)
@@ -254,7 +267,30 @@ func TestDeletePod(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
-func TestDescribePod_0(t *testing.T) {
+func Test_buildPodContainer_empty(t *testing.T) {
+	var jsonResults []map[string]any
+	err := yaml.Unmarshal([]byte("[]"), &jsonResults)
+	assert.NoError(t, err)
+	assert.Empty(t, jsonResults)
+	// TODO
+}
+
+func Test_buildPodContainer_container1(t *testing.T) {
+	var jsonResults []map[string]any
+	err := yaml.Unmarshal([]byte(container1_docker_inspect), &jsonResults)
+	assert.NoError(t, err)
+	assert.NotNil(t, jsonResults)
+	assert.NotEmpty(t, jsonResults)
+	assert.Len(t, jsonResults, 1)
+
+	ct, err := buildPodContainer(jsonResults[0])
+	assert.NoError(t, err)
+	assert.NotNil(t, ct)
+	assert.Equal(t, "quizzical_hodgkin", ct.Name)
+	// TODO
+}
+
+func TestDescribePod_empty(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	f1 := dt.DescribePod(expectedNamespace1, pod1Name)
 	require.NotNil(t, f1)
@@ -275,21 +311,42 @@ func TestDescribePod_0(t *testing.T) {
 
 }
 
-func TestDescribePod_pod1(t *testing.T) {
+func TestDescribePod_pod2(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
-	f1 := dt.DescribePod(expectedNamespace1, pod1Name)
+	f1 := dt.DescribePod(expectedNamespace1, pod2Name)
 	require.NotNil(t, f1)
 
 	// OK response from docker
-	cmdz.StartSimpleMock(t, 0, "[]", "")
+	cmdz.StartSimpleMock(t, 0, pod2_docker_inspect, "")
 	res, err := f1.Format()
 	cmdz.StopMock()
 	require.NoError(t, err)
-	require.NotNil(t, res, 0)
+	require.NotNil(t, res)
+	assert.Equal(t, pod2Name, res.Name)
+	assert.Equal(t, expectedNamespace1, res.Namespace)
+
+	require.NotNil(t, res.ObjectMeta)
+	expectedLabels := map[string]string(nil)
+	assert.Equal(t, expectedLabels, res.ObjectMeta.Labels)
+
+	require.NotNil(t, res.Spec)
+	expectedRestartPolicy := corev1.RestartPolicyAlways
+	assert.Equal(t, expectedRestartPolicy, res.Spec.RestartPolicy)
+
+	/*
+		expectedPodSecurityContext := corev1.PodSecurityContext{
+			Privileged:             boolPtr(false),
+			ReadOnlyRootFilesystem: boolPtr(false),
+			RunAsNonRoot:           boolPtr(false),
+			RunAsUser:              nil,
+			RunAsGroup:             nil,
+		}
+		assert.Equal(t, expectedSecurityContext, res.Spec.SecurityContext)
+	*/
 
 }
 
-func TestCreatePodContainer2_Init(t *testing.T) {
+func TestCreatePodContainer_initContainer(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 
 	ct1 := pod1.Spec.InitContainers[0]
@@ -312,7 +369,7 @@ func TestCreatePodContainer2_Init(t *testing.T) {
 	assert.Equal(t, expectedCmd3, e3.String())
 }
 
-func TestCreatePodContainer2(t *testing.T) {
+func TestCreatePodContainer(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 
 	ct3 := pod1.Spec.Containers[0]
@@ -347,7 +404,7 @@ func TestDeletePodContainer(t *testing.T) {
 	assert.Equal(t, expectedCmd1, e1.String())
 }
 
-func TestDescribePodContainer_0(t *testing.T) {
+func TestDescribePodContainer_empty(t *testing.T) {
 	dt := DockerTranslater{expectedBinary0}
 	f := dt.DescribePodContainer(expectedNamespace1, pod1Name, container1Name)
 	require.NotNil(t, f)
