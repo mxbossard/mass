@@ -1,18 +1,16 @@
 package resources
 
-import (
-	//"path/filepath"
-
-	"mby.fr/utils/filez"
-)
+//"path/filepath"
 
 type Project struct {
 	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
 	testable        `yaml:"testable,inline"`
 
-	images     []*Image `yaml:"-"` // Ignore this field for yaml marshalling
-	DeployFile string   `yaml:"deployFile"`
+	DeploymentDeps []string `yaml:"dependencies.deployments"`
+
+	images      []*Image      `yaml:"-"` // Ignore this field for yaml marshalling
+	deployments []*Deployment `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (p Project) init() (err error) {
@@ -25,27 +23,7 @@ func (p Project) init() (err error) {
 		return
 	}
 
-	// Init Deploy file
-	deployfileContent := ""
-	//deployfileContent := "FROM alpine\n"
-	_, err = filez.SoftInitFile(p.AbsDeployFile(), deployfileContent)
-
 	return
-}
-
-/*
-func (p Project) AbsoluteName() (name string, err error) {
-	ss, err := settings.GetSettingsService()
-	if err != nil {
-		return "", err
-	}
-	name = ss.Settings().Name + "-" + p.FullName()
-	return
-}
-*/
-
-func (p Project) AbsDeployFile() string {
-	return absResourcePath(p.Dir(), p.DeployFile)
 }
 
 func (p *Project) Images() ([]*Image, error) {
@@ -65,12 +43,11 @@ func (p *Project) Images() ([]*Image, error) {
 }
 
 func buildProject(projectDir string) (p Project, err error) {
-	deployfile := DefaultDeployFile
 	b, err := buildDirectoryBase(ProjectKind, projectDir, resourceName(projectDir))
 	if err != nil {
 		return
 	}
-	p = Project{directoryBase: b, DeployFile: deployfile}
+	p = Project{directoryBase: b}
 
 	p.configurableDir = buildConfigurableDir(b)
 	t, err := buildTestable(p)

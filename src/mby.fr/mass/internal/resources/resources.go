@@ -40,8 +40,8 @@ func Init[T Resourcer](name string, parentResOrDir any) (r T, err error) {
 
 func resourceName(path string) string {
 	base := filepath.Base(path)
-	base = strings.TrimPrefix(base, "img-")
-	base = strings.TrimPrefix(base, "dep-")
+	base = strings.TrimPrefix(base, imageDirPrefix)
+	base = strings.TrimPrefix(base, deploymentDirPrefix)
 	return base
 }
 

@@ -162,7 +162,7 @@ func TestWriteThenRead(t *testing.T) {
 	expectedProjectName := "monProjet"
 	expectedImageFullName := fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName)
 	expectedProjectDir := filepath.Join(path, expectedProjectName)
-	expectedImageDir := filepath.Join(expectedProjectDir, "img-"+expectedImageName)
+	expectedImageDir := filepath.Join(expectedProjectDir, imageDirPrefix+expectedImageName)
 	p, err := Build[Project](expectedProjectName, path)
 	require.NoError(t, err, "should not error")
 	i, err := Build[Image](expectedImageName, p)

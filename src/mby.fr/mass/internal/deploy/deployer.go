@@ -22,22 +22,57 @@ var NotDeployableResource error = fmt.Errorf("Not deployable resource")
 type Deployer interface {
 	Pull() error
 	Deploy() error
-	Undeploy(rmVolumes bool) error
+	Undeploy() error
 }
 
 func New(r resources.Resourcer) (Deployer, error) {
 	switch res := r.(type) {
 	case *resources.Project:
 		return New(*res)
-	case *resources.Image:
+	case *resources.Deployment:
 		return New(*res)
 	case resources.Project:
-		return DockerComposeProjectsDeployer{"docker", []string{}, []resources.Project{res}}, nil
-	case resources.Image:
-		return DockerImagesDeployer{"docker", []string{}, []resources.Image{res}}, nil
+		return DeploymentDeployer{"docker", []*resources.Deployment{}}, nil
+	case resources.Deployment:
+		return DeploymentDeployer{"docker", []*resources.Deployment{&res}}, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", NotDeployableResource, r.QualifiedName())
 	}
+}
+
+type DeploymentDeployer struct {
+	pullerBinary string
+	deployments  []*resources.Deployment
+}
+
+func (d DeploymentDeployer) Pull() (err error) {
+	for _, dep := range d.deployments {
+		for _, imageExpr := range dep.ImageDeps {
+			image, err2 := resources.ResolveUniqResourceExpression[resources.Image](imageExpr)
+			if err2 != nil {
+				return err2
+			}
+			err = pullImage(d.pullerBinary, image)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (d DeploymentDeployer) Deploy() (err error) {
+	for _, dep := range d.deployments {
+		fmt.Printf("TODO: run cmd: [%s] ...", dep.UpCmd)
+	}
+	return
+}
+
+func (d DeploymentDeployer) Undeploy() (err error) {
+	for _, dep := range d.deployments {
+		fmt.Printf("TODO: run: [%s] ...", dep.DownCmd)
+	}
+	return
 }
 
 type DockerImagesDeployer struct {

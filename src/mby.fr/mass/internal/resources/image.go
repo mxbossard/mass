@@ -8,6 +8,8 @@ import (
 	"mby.fr/utils/filez"
 )
 
+var imageDirPrefix = "img-"
+
 type Image struct {
 	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
@@ -98,7 +100,7 @@ func (i Image) Project() (project Project, err error) {
 }
 
 func buildImage(project Project, imageName string) (r Image, err error) {
-	imageDir := filepath.Join(project.Dir(), "img-"+imageName)
+	imageDir := filepath.Join(project.Dir(), imageDirPrefix+imageName)
 	version := DefaultInitialVersion
 	buildfile := DefaultBuildFile
 	sourceDir := DefaultSourceDir

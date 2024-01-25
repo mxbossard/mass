@@ -95,6 +95,29 @@ func ResolveExpression(expressions string, expectedKinds ...Kind) (resources []R
 	return
 }
 
+func ResolveUniqResourceExpression[T Resourcer](expression string) (resource T, err error) {
+	kind := KindFromResource(resource)
+	resources, aggErr := ResolveExpression(expression, kind)
+	if aggErr.GotError() {
+		err = aggErr.Return()
+		return
+	}
+
+	if len(resources) > 1 {
+		err = fmt.Errorf("Expression %s is resolved in more than 1 reource !", expression)
+	} else if len(resources) == 0 {
+		err = ResourceNotFound{Expression: expression, Kinds: NewKindSet(kind)}
+	} else {
+		var ok bool
+		resource, ok = resources[0].(T)
+		if !ok {
+			err = fmt.Errorf("Unable to wrap resolved %v resource into supplied kind: %v", resource, kind)
+		}
+	}
+
+	return
+}
+
 // Split exprssion into a list of kinds and a list of expressions
 func splitExpressions(expressions string) (strippedExpressions []string, kinds []Kind, err error) {
 	if expressions == "" || expressions == "." {
@@ -370,7 +393,6 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 		return
 	}
 
-	//fmt.Printf("Scanned resources: %s, %s, %s => %s\n", fromDir, name, kind, resources)
 	// Filter found resources
 	// Keep only resources matching specified kind
 	// For Image, keep by Name() in general, plus keep by ImageName() if in context of a Project
@@ -378,10 +400,8 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 		if kind == AllKind || kind == res.Kind() {
 			switch v := res.(type) {
 			case Image:
-				//fmt.Printf("Filtering: %s, %s > %v\n", kind, name, v.FullName() == name)
 				if v.FullName() == name {
 					// Image general case
-					//r = res
 					return res, nil
 				}
 
@@ -398,13 +418,11 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 
 			default:
 				if v.FullName() == name {
-					r = res
-					return
+					return res, nil
 				}
 			}
 		}
 	}
-	//fmt.Printf("Not filtered: %s, %s\n", kind, name)
 	err = ResourceNotFound{Expression: name, Kinds: NewKindSet(kind)}
 	return
 }
