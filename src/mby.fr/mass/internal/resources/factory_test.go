@@ -87,7 +87,7 @@ func TestBuildImage(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
 
-	expectedResPath := path + "/" + expectedProjectName + "/img-" + expectedImageName
+	expectedResPath := path + "/" + expectedProjectName + "/" + imageDirPrefix + expectedImageName
 	assertBaseContent(t, expectedResPath, r)
 	assertTestableContent(t, expectedResPath, r)
 

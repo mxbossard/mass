@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	//"fmt"
@@ -24,22 +25,27 @@ var (
 	BumpMajor    bool
 )
 
-func printErrors(errors errorz.Aggregated) {
+func printErrors(errors errorz.Aggregated, fatal bool) {
 	if errors.GotError() {
 		display := display.Service()
 		display.Display(errors)
+		if fatal {
+			os.Exit(1)
+		}
 	}
 }
 
 func ResolveExpression(args []string, kinds ...resources.Kind) []resources.Resourcer {
 	resourceExpr := strings.Join(args, " ")
 	res, errors := resources.ResolveExpression(resourceExpr, kinds...)
-	printErrors(errors)
+	printErrors(errors, true)
+	manageFatalError(errors)
 	return res
 }
 
 func DisplayResourcesConfig(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Config starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -47,17 +53,18 @@ func DisplayResourcesConfig(args []string) {
 		config, err := resources.MergedConfig(r)
 		if err != nil {
 			d.Error(fmt.Sprintf("Error merging config: %s !", err))
+			manageFatalError(err)
 		}
 		header := fmt.Sprintf("--- Config of %s\n", r.QualifiedName())
 		footer := "---\n"
 		d.Display(header, *config, footer)
 	}
-	d.Flush()
 	d.Info("Config finished")
 }
 
 func DisplayResourcesVersion(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Version starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
@@ -72,7 +79,6 @@ func DisplayResourcesVersion(args []string) {
 		d.Display(msg)
 
 	}
-	d.Flush()
 	d.Info("Version finished")
 }
 
@@ -82,6 +88,7 @@ func forgeVersionBumpMessage(fromVer, toVer string) string {
 
 func BumpResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Bump starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
@@ -91,7 +98,8 @@ func BumpResources(args []string) {
 		if ok {
 			toVer, fromVer, err := vb.Bump(BumpMinor, BumpMajor)
 			if err != nil {
-				d.Warn(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
+				d.Error(fmt.Sprintf("Error bumping resource %s: %s\n", r.QualifiedName(), err))
+				manageFatalError(err)
 			} else {
 				msg := forgeVersionBumpMessage(fromVer, toVer)
 				msg = fmt.Sprintf("Bumped resource %s: %s\n", r.QualifiedName(), msg)
@@ -100,12 +108,12 @@ func BumpResources(args []string) {
 		}
 	}
 
-	d.Flush()
 	d.Info("Bump finished")
 }
 
 func PromoteResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Promote starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
@@ -115,7 +123,8 @@ func PromoteResources(args []string) {
 		if ok {
 			toVer, fromVer, err := vb.Promote()
 			if err != nil {
-				d.Warn(fmt.Sprintf("Error promoting resource %s: %s\n", r.QualifiedName(), err))
+				d.Error(fmt.Sprintf("Error promoting resource %s: %s\n", r.QualifiedName(), err))
+				manageFatalError(err)
 			} else {
 				msg := forgeVersionBumpMessage(fromVer, toVer)
 				msg = fmt.Sprintf("Promoted resource %s: %s\n", r.QualifiedName(), msg)
@@ -124,12 +133,12 @@ func PromoteResources(args []string) {
 		}
 	}
 
-	d.Flush()
 	d.Info("Promote finished")
 }
 
 func ReleaseResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Release starting ...")
 
 	res := ResolveExpression(args, resources.ImageKind)
@@ -139,7 +148,8 @@ func ReleaseResources(args []string) {
 		if ok {
 			toVer, fromVer, err := vb.Release()
 			if err != nil {
-				d.Warn(fmt.Sprintf("Error releasing resource %s: %s\n", r.QualifiedName(), err))
+				d.Error(fmt.Sprintf("Error releasing resource %s: %s\n", r.QualifiedName(), err))
+				manageFatalError(err)
 			} else {
 				msg := forgeVersionBumpMessage(fromVer, toVer)
 				msg = fmt.Sprintf("Released resource %s: %s\n", r.QualifiedName(), msg)
@@ -148,7 +158,6 @@ func ReleaseResources(args []string) {
 		}
 	}
 
-	d.Flush()
 	d.Info("Release finished")
 }
 
@@ -164,6 +173,7 @@ func buildResource(res resources.Resourcer) error {
 
 func BuildResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Build starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -173,10 +183,10 @@ func BuildResources(args []string) {
 	}
 	_, err := concurrent.RunWaiting(builder, res...)
 	if err != nil {
-		d.Fatal(fmt.Sprintf("Encountered error during build phase: %s", err))
+		d.Error(fmt.Sprintf("Encountered error during build phase: %s", err))
+		manageFatalError(err)
 	}
 
-	d.Flush()
 	d.Info("Build finished")
 }
 
@@ -193,6 +203,7 @@ func pullResource(res resources.Resourcer) error {
 
 func PullResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Pull starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -202,10 +213,10 @@ func PullResources(args []string) {
 	}
 	_, err := concurrent.RunWaiting(puller, res...)
 	if err != nil {
-		d.Fatal(fmt.Sprintf("Encountered error during pull phase: %s", err))
+		d.Error(fmt.Sprintf("Encountered error during pull phase: %s", err))
+		manageFatalError(err)
 	}
 
-	d.Flush()
 	d.Info("Pull finished")
 }
 
@@ -228,6 +239,7 @@ func UpResources(args []string) {
 	}
 
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Up starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -237,10 +249,10 @@ func UpResources(args []string) {
 	}
 	_, err := concurrent.RunWaiting(upper, res...)
 	if err != nil {
-		d.Fatal(fmt.Sprintf("Encountered error during up phase: %s", err))
+		d.Error(fmt.Sprintf("Encountered error during up phase: %s", err))
+		manageFatalError(err)
 	}
 
-	d.Flush()
 	d.Info("Up finished")
 }
 
@@ -250,12 +262,13 @@ func downResource(res resources.Resourcer) error {
 		return err
 	}
 
-	err = deployer.Undeploy(RmVolumes)
+	err = deployer.Undeploy()
 	return err
 }
 
 func DownResources(args []string) {
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Down starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -265,10 +278,10 @@ func DownResources(args []string) {
 	}
 	_, err := concurrent.RunWaiting(downer, res...)
 	if err != nil {
-		d.Fatal(fmt.Sprintf("Encountered error during down phase: %s", err))
+		d.Error(fmt.Sprintf("Encountered error during down phase: %s", err))
+		manageFatalError(err)
 	}
 
-	d.Flush()
 	d.Info("Down finished")
 }
 
@@ -276,6 +289,7 @@ func TestResources(args []string) {
 	UpResources(args)
 
 	d := display.Service()
+	defer d.Flush()
 	d.Info("Test starting ...")
 
 	res := ResolveExpression(args, resources.AllKind)
@@ -290,9 +304,18 @@ func TestResources(args []string) {
 	}
 	_, err := concurrent.RunWaiting(tester, res...)
 	if err != nil {
-		d.Fatal(fmt.Sprintf("Encountered error during test phase: %s", err))
+		d.Error(fmt.Sprintf("Encountered error during test phase: %s", err))
+		manageFatalError(err)
 	}
 
-	d.Flush()
 	d.Info("Test finished")
+}
+
+func manageFatalError(err error) {
+	if resources.IsBadResourceType(err) {
+		os.Exit(40)
+	} else if resources.IsResourceNotFound(err) {
+		os.Exit(44)
+	}
+	//os.Exit(1)
 }

@@ -6,21 +6,25 @@ import (
 	"strings"
 )
 
+var deploymentDirPrefix = "dep-"
+
 type Deployment struct {
 	directoryBase   `yaml:"base,inline"`
 	configurableDir `yaml:"-"` // Ignore this field for yaml marshalling
 	testable        `yaml:"testable,inline"`
 	versionable     `yaml:"versionable,inline"`
 
-	SourceDirectory string   `yaml:"sourceDirectory"`
-	UpCmd           string   `yaml:"upCmd"`
-	DownCmd         string   `yaml:"downCmd"`
-	StartupCmd      string   `yaml:"startupCmd"`
-	LivenessCmd     string   `yaml:"livenessCmd"`
-	ReadinesCmd     string   `yaml:"readinessCmd"`
-	DeploymentDeps  []string `yaml:"dependencies.deployments"`
-	ImageDeps       []string `yaml:"dependencies.images"`
-	project         Project  `yaml:"-"` // Ignore this field for yaml marshalling
+	DeploymentDeps []string `yaml:"dependencies.deployments"`
+	ImageDeps      []string `yaml:"dependencies.images"`
+
+	SourceDirectory string `yaml:"sourceDirectory"`
+	UpCmd           string `yaml:"upCmd"`
+	DownCmd         string `yaml:"downCmd"`
+	StartupCmd      string `yaml:"startupCmd"`
+	LivenessCmd     string `yaml:"livenessCmd"`
+	ReadinesCmd     string `yaml:"readinessCmd"`
+
+	project Project `yaml:"-"` // Ignore this field for yaml marshalling
 }
 
 func (d Deployment) init() (err error) {
