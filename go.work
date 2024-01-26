@@ -1,6 +1,7 @@
 go 1.18
 
 use (
+	./src/mby.fr/cmdtest
 	./src/mby.fr/mass
 	./src/mby.fr/utils
 )
