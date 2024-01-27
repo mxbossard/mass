@@ -23,14 +23,14 @@ const (
 )
 
 var kindAlias = map[Kind][]string{
-	EnvKind:        []string{"e", EnvKind.String(), EnvKind.String() + "s"},
-	ProjectKind:    []string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind:      []string{"i", ImageKind.String(), ImageKind.String() + "s"},
-	DeploymentKind: []string{"d", DeploymentKind.String(), DeploymentKind.String() + "s"},
-	PodKind:        []string{"po", PodKind.String(), PodKind.String() + "s"},
-	EndpointKind:   []string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
-	ServiceKind:    []string{"s", ServiceKind.String(), ServiceKind.String() + "s"},
-	AllKind:        []string{AllKind.String()},
+	EnvKind:        {"e", EnvKind.String(), EnvKind.String() + "s"},
+	ProjectKind:    {"p", ProjectKind.String(), ProjectKind.String() + "s"},
+	ImageKind:      {"i", ImageKind.String(), ImageKind.String() + "s"},
+	DeploymentKind: {"d", DeploymentKind.String(), DeploymentKind.String() + "s"},
+	PodKind:        {"po", PodKind.String(), PodKind.String() + "s"},
+	EndpointKind:   {"end", EndpointKind.String(), EndpointKind.String() + "s"},
+	ServiceKind:    {"s", ServiceKind.String(), ServiceKind.String() + "s"},
+	AllKind:        {AllKind.String()},
 }
 
 func TypeFromKind(kind Kind) (t reflect.Type) {
@@ -95,7 +95,7 @@ func (k Kind) MarshalYAML() (interface{}, error) {
 	var s string
 	switch k {
 	case AllKind:
-		return "", fmt.Errorf("AllKind not marshallable !")
+		return "", fmt.Errorf("AllKind not marshallable")
 	default:
 		s = k.String()
 	}
@@ -116,7 +116,7 @@ func (k *Kind) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	return fmt.Errorf("Unable to unmarshal kind: %s", s)
+	return fmt.Errorf("unable to unmarshal kind: %s", s)
 }
 
 type KindSet map[Kind]Kind

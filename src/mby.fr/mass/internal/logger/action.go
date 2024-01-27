@@ -65,12 +65,12 @@ func NewAction(outs output.Outputs, action, subject string, filterLevel int) Act
 	actionPrefix := forgeActionPrefix(action, subject)
 
 	// Decorate outputs
-	outColorFormatter := inout.AnsiFormatter{getOutAnsiColor()}
-	errColorFormatter := inout.AnsiFormatter{getErrAnsiColor()}
+	outColorFormatter := inout.AnsiFormatter{AnsiFormat: getOutAnsiColor()}
+	errColorFormatter := inout.AnsiFormatter{AnsiFormat: getErrAnsiColor()}
 	outPrefixedFormatter := inout.PrefixFormatter{Prefix: "out>", RightPad: 5}
 	errPrefixedFormatter := inout.PrefixFormatter{Prefix: "err>", RightPad: 5}
 
-	loggerPrefixedFormatter := inout.LineFormatter{func(line string) string {
+	loggerPrefixedFormatter := inout.LineFormatter{Olf: func(line string) string {
 		prefix := fmt.Sprintf("%s |", format.PadRight(actionPrefix, actionPadding))
 		return prefix + line
 	}}
