@@ -1,67 +1,37 @@
-package display
+package printz
 
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"mby.fr/mass/internal/config"
-	"mby.fr/mass/internal/templates"
 	"mby.fr/utils/ansi"
 	"mby.fr/utils/errorz"
 )
 
-// Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
 // Printer responsible for printing messages in outputs (example: print with colors, without colors, ...)
 
 type Flusher interface {
 	Flush() error
 }
 
-type Outputs interface {
-	Flusher
-	Out() io.Writer
-	Err() io.Writer
-}
-
-type BasicOutputs struct {
-	out, err io.Writer
-}
-
-func (o BasicOutputs) Flush() error {
-	outs := []io.Writer{o.out, o.err}
-	for _, out := range outs {
-		f, ok := out.(Flusher)
-		if ok {
-			err := f.Flush()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (o BasicOutputs) Out() io.Writer {
-	return o.out
-}
-
-func (o BasicOutputs) Err() io.Writer {
-	return o.err
-}
-
 type Printer interface {
 	Outputs() Outputs
 	Flush() error
-	Out(...interface{}) error
-	Err(...interface{}) error
+	RecoverableOut(...interface{}) error
+	Out(...interface{})
+	Outf(string, ...interface{})
+	ColoredOutf(ansi.Color, string, ...interface{})
+	RecoverableErr(...interface{}) error
+	Err(...interface{})
+	Errf(string, ...interface{})
+	ColoredErrf(ansi.Color, string, ...interface{})
 	//Print(...interface{}) error
 	LastPrint() time.Time
 }
@@ -82,7 +52,7 @@ func (o BasicPrinter) Flush() error {
 	return o.outputs.Flush()
 }
 
-func (p *BasicPrinter) Out(objects ...interface{}) (err error) {
+func (p *BasicPrinter) RecoverableOut(objects ...interface{}) (err error) {
 	p.Lock()
 	defer p.Unlock()
 	p.lastPrint = time.Now()
@@ -91,13 +61,47 @@ func (p *BasicPrinter) Out(objects ...interface{}) (err error) {
 	return
 }
 
-func (p *BasicPrinter) Err(objects ...interface{}) (err error) {
+func (p *BasicPrinter) Out(objects ...interface{}) {
+	err := p.RecoverableOut(objects...)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (p *BasicPrinter) Outf(s string, params ...interface{}) {
+	s = fmt.Sprintf(s, params...)
+	p.Out(s)
+}
+
+func (p *BasicPrinter) ColoredOutf(color ansi.Color, s string, params ...interface{}) {
+	s = ansi.Sprintf(color, s, params...)
+	p.Out(s)
+}
+
+func (p *BasicPrinter) RecoverableErr(objects ...interface{}) (err error) {
 	p.Lock()
 	defer p.Unlock()
 	p.lastPrint = time.Now()
 	//_, err = fmt.Fprint(p.outputs.Err(), objects...)
 	err = printTo(p.outputs.Err(), objects...)
 	return
+}
+
+func (p *BasicPrinter) Err(objects ...interface{}) {
+	err := p.RecoverableErr(objects...)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (p *BasicPrinter) Errf(s string, params ...interface{}) {
+	s = fmt.Sprintf(s, params...)
+	p.Err(s)
+}
+
+func (p *BasicPrinter) ColoredErrf(color ansi.Color, s string, params ...interface{}) {
+	s = ansi.Sprintf(color, s, params...)
+	p.Err(s)
 }
 
 func (p BasicPrinter) LastPrint() time.Time {
@@ -113,6 +117,7 @@ func stringify(obj interface{}) (str string, err error) {
 	case float64:
 		str = strconv.FormatFloat(o, 'E', 3, 32)
 
+	/*
 	case ansiFormatted:
 		if o.content == "" {
 			return "", nil
@@ -139,13 +144,9 @@ func stringify(obj interface{}) (str string, err error) {
 				str += strings.Repeat(" ", spaceCount)
 			}
 		}
+	*/
 	case error:
 		str = fmt.Sprintf("Error: %s !\n", obj)
-	case config.Config:
-		renderer := templates.New("")
-		builder := strings.Builder{}
-		err = renderer.Render("display/basic/config.tpl", &builder, o)
-		str = builder.String()
 	default:
 		err = fmt.Errorf("Unable to Print object of type: %T", obj)
 		return
@@ -199,23 +200,6 @@ func printTo(w io.Writer, objects ...interface{}) (err error) {
 	return
 }
 
-func NewStandardOutputs() Outputs {
-	return BasicOutputs{os.Stdout, os.Stderr}
-}
-
-func NewBufferedOutputs(outputs Outputs) Outputs {
-	buffOut := bufio.NewWriter(outputs.Out())
-	buffErr := bufio.NewWriter(outputs.Err())
-	buffered := BasicOutputs{buffOut, buffErr}
-	return buffered
-}
-
-//var mainPrinter *BasicPrinter
-//var lastMainPrint time.Time
-//var flushablePrinters []*BasicPrinter
-
-//var globalMutex sync.Mutex
-
 func flush(printer *BasicPrinter) {
 	printer.Lock()
 	defer printer.Unlock()
@@ -229,7 +213,9 @@ func flush(printer *BasicPrinter) {
 	}
 }
 
-func NewPrinter(outputs Outputs) Printer {
+//var flushablePrinters []*BasicPrinter
+
+func New(outputs Outputs) Printer {
 	buffered := NewBufferedOutputs(outputs)
 	var m sync.Mutex
 	var t time.Time
@@ -248,10 +234,17 @@ func NewPrinter(outputs Outputs) Printer {
 	return &printer
 }
 
+func NewStandard() Printer {
+	outputs := NewStandardOutputs()
+	return New(outputs)
+}
+
 // ANSI formatting for content
+/*
 type ansiFormatted struct {
 	format            string
 	content           interface{}
 	tab               bool
 	leftPad, rightPad int
 }
+*/

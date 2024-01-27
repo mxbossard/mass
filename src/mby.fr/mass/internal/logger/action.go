@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	outAnsiColors []string = []string{ansi.Reset, ansi.HiGreen, ansi.HiBlue, ansi.HiCyan, ansi.HiWhite, ansi.Green, ansi.Blue, ansi.Cyan, ansi.White}
-	errAnsiColors []string = []string{ansi.HiRed, ansi.HiYellow, ansi.HiPurple, ansi.Red, ansi.Yellow, ansi.Purple}
+	outAnsiColors []ansi.Color = []ansi.Color{ansi.Reset, ansi.HiGreen, ansi.HiBlue, ansi.HiCyan, ansi.HiWhite, ansi.Green, ansi.Blue, ansi.Cyan, ansi.White}
+	errAnsiColors []ansi.Color = []ansi.Color{ansi.HiRed, ansi.HiYellow, ansi.HiPurple, ansi.Red, ansi.Yellow, ansi.Purple}
 )
 
 type ActionLogger struct {
@@ -98,7 +98,7 @@ var outAnsiColorMutex = sync.Mutex{}
 var errAnsiColorCounter = 0
 var errAnsiColorMutex = sync.Mutex{}
 
-func getOutAnsiColor() string {
+func getOutAnsiColor() ansi.Color {
 	outAnsiColorMutex.Lock()
 	defer outAnsiColorMutex.Unlock()
 	ansiColor := outAnsiColors[outAnsiColorCounter%len(outAnsiColors)]
@@ -106,7 +106,7 @@ func getOutAnsiColor() string {
 	return ansiColor
 }
 
-func getErrAnsiColor() string {
+func getErrAnsiColor() ansi.Color {
 	errAnsiColorMutex.Lock()
 	defer errAnsiColorMutex.Unlock()
 	ansiColor := errAnsiColors[errAnsiColorCounter%len(errAnsiColors)]
