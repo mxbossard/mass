@@ -31,50 +31,65 @@ die() {
 cd "$workspace"
 
 >&2 echo "## Test whithout @init"
-! $cmd "test without init" true @success || false
+! $cmd "without init" true @success || false
 
 >&2 echo "## Test @report without init"
 ! $cmd @report || false
 
+>&2 $cmd @init
 >&2 echo "## Test suite @init"
 eval $( $cmd @init )
 
+>&2 echo "## Test without name"
+! $cmd "" true @success || false
+$cmd true @success
+$cmd sleep 0.2
+
+>&2 echo "## Test not exising assertion"
+! $cmd "@test=not exising assertion" true @foo || false
+
+>&2 echo "## Test without assertion"
+$cmd "@test=without assertion" true
+
 >&2 echo "## Test suite @success"
-$cmd "test succes ok" true @success
-! $cmd "test success ko" false @success || false
+$cmd "@test=succes ok" true @success
+! $cmd "@test=success ko" false @success || false
 
 >&2 echo "## Test suite @fail"
-$cmd "test fail ok" false @fail
-! $cmd "test fail ko" true @fail || false
+$cmd "@test=fail ok" false @fail
+! $cmd "@test=fail ko" true @fail || false
 
->&2 echo "## Test suite @rc="
-$cmd "test rc=0 ok" true @rc=0
-! $cmd "test rc=0 ko" false @rc=0 || false
+>&2 echo "## Test suite @exit="
+$cmd "@test=rc=0 ok" true @exit=0
+! $cmd "@test=rc=0 ko" false @exit=0 || false
 
-$cmd "test rc=1 ok" false @rc=1
-! $cmd "test rc=1 ko" true @rc=1 || false
+$cmd "@test=rc=1 ok" false @exit=1
+! $cmd "@test=rc=1 ko" true @exit=1 || false
+
+>&2 echo "## Test sleep"
+$cmd sleep 0.3
 
 >&2 echo "## Test suite @stdout="
-$cmd "test empty stdout ok" true @stdout=
-! $cmd "test empty stdout ko" echo "bar" @stdout= || false
+$cmd "@test=empty stdout ok" true @stdout=
+! $cmd "@test=empty stdout ko" echo "bar" @stdout= || false
 
-$cmd "test stdout= ok" echo foo "bar baz" @stdout="foobar baz"
-! $cmd "test stdout= ko" echo foo "bar baz" @stdout="foobarbaz" || false
+$cmd "@test=stdout= ok" echo foo "bar baz" @stdout="foo bar baz\n"
+! $cmd "@test=stdout= ko" echo foo "bar baz" @stdout="foo barbaz" || false
 
 >&2 echo "## Test suite @stdout~"
-$cmd "test stdout~ ok" echo foo "bar baz" @stdout~"bar"
-! $cmd "test stdout~ ko" echo foo "bar baz" @stdout~"pif" || false
+$cmd "@test=stdout~ ok" echo foo "bar baz" @stdout~"bar"
+! $cmd "@test=stdout~ ko" echo foo "bar baz" @stdout~"pif" || false
 
 >&2 echo "## Test suite @stderr="
-$cmd "test empty stderr" true @stderr=
-! $cmd "test empty stderr" notExist @stderr= || false
+$cmd "@test=empty stderr" true @stderr=
+! $cmd "@test=empty stderr" notExist @stderr= || false
 
-$cmd "test stderr= ok" notExist @stderr="notExist"
-! $cmd "test stderr= ko" notExist @stderr="notExist" || false
+$cmd "@test=stderr= ok" notExist @stderr="notExist"
+! $cmd "@test=stderr= ko" notExist @stderr="notExist" || false
 
 >&2 echo "## Test suite @stderr~"
-$cmd "test stderr~ ok" notExist @stderr~"notExist"
-! $cmd "test stderr~ ko" notExist @stderr~"foo" || false
+$cmd "@test=stderr~ ok" notExist @stderr~"notExist"
+! $cmd "@test=stderr~ ko" notExist @stderr~"foo" || false
 
 
 >&2 echo "## Test @report"
