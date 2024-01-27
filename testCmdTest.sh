@@ -31,18 +31,22 @@ die() {
 cd "$workspace"
 
 >&2 echo "## Test whithout @init"
-! $cmd "without init" true @success || false
+! $cmd "@test=without @init" true @success || false
 
->&2 echo "## Test @report without init"
+>&2 echo "## Test @report without @init"
 ! $cmd @report || false
 
 >&2 $cmd @init
 >&2 echo "## Test suite @init"
-eval $( $cmd @init )
+#eval $( $cmd @init @ignore )
+eval $( $cmd @init @stopOnFailure=false)
+eval $( $cmd @init="another" )
+eval $( $cmd @init="another one" )
 
 >&2 echo "## Test without name"
-! $cmd "" true @success || false
 $cmd true @success
+$cmd "" true @success @ignore=false || true
+! $cmd "" true @success @ignore=false || false
 $cmd sleep 0.2
 
 >&2 echo "## Test not exising assertion"
@@ -84,12 +88,12 @@ $cmd "@test=stdout~ ok" echo foo "bar baz" @stdout~"bar"
 $cmd "@test=empty stderr" true @stderr=
 ! $cmd "@test=empty stderr" notExist @stderr= || false
 
-$cmd "@test=stderr= ok" notExist @stderr="notExist"
-! $cmd "@test=stderr= ko" notExist @stderr="notExist" || false
+$cmd "@test=stderr= ok" ls /notExist @stderr="ls: cannot access '/notExist': No such file or directory\n"
+! $cmd "@test=stderr= ko" ls /notExist @stderr="foo" || false
 
 >&2 echo "## Test suite @stderr~"
-$cmd "@test=stderr~ ok" notExist @stderr~"notExist"
-! $cmd "@test=stderr~ ko" notExist @stderr~"foo" || false
+$cmd "@test=stderr~ ok" ls /notExist @stderr~"otExi"
+! $cmd "@test=stderr~ ko" ls /notExist @stderr~"foo" || false
 
 
 >&2 echo "## Test @report"
@@ -98,3 +102,7 @@ $cmd @report
 # Should not report a second time
 ! $cmd @report || false
 
+$cmd @report="another"
+$cmd @report="another one"
+
+echo SUCCESS
