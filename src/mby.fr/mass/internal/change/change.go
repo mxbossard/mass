@@ -14,8 +14,8 @@ import (
 const defaultImageCacheDir = "imageSignatures"
 const defaultDeployCacheDir = "deploySignatures"
 
-var imageCacheDir cache.Cache
-var deployCacheDir cache.Cache
+var imageCacheDir cache.Cache[string]
+var deployCacheDir cache.Cache[string]
 
 func Init() (err error) {
 	if imageCacheDir != nil && deployCacheDir != nil {
@@ -30,11 +30,11 @@ func Init() (err error) {
 	imageSignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultImageCacheDir)
 	deploySignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultDeployCacheDir)
 
-	imageCacheDir, err = cache.NewPersistentCache(imageSignaturesCacheDir)
+	imageCacheDir, err = cache.NewPersistentCache[string](imageSignaturesCacheDir)
 	if err != nil {
 		return
 	}
-	deployCacheDir, err = cache.NewPersistentCache(deploySignaturesCacheDir)
+	deployCacheDir, err = cache.NewPersistentCache[string](deploySignaturesCacheDir)
 	if err != nil {
 		return
 	}
@@ -93,7 +93,7 @@ func imageCacheKey(res resources.Image) (signature string) {
 
 func loadImageSignature(res resources.Image) (signature string, err error) {
 	key := imageCacheKey(res)
-	value, ok, e := imageCacheDir.LoadString(key)
+	value, ok, e := imageCacheDir.Load(key)
 	if e != nil {
 		return signature, e
 	}
@@ -109,7 +109,7 @@ func StoreImageSignature(res resources.Image) (err error) {
 		return e
 	}
 	key := imageCacheKey(res)
-	err = imageCacheDir.StoreString(key, signature)
+	err = imageCacheDir.Store(key, signature)
 	return
 }
 
@@ -133,6 +133,9 @@ func calcDeploySignature(res resources.Image) (signature string, err error) {
 	// TODO add volumes in signature
 	filesToSign := []string{}
 	filesSignature, err := trust.SignFsContents(filesToSign...)
+	if err != nil {
+		return "", err
+	}
 
 	configs, err := resources.MergedConfig(res)
 	if err != nil {
@@ -149,7 +152,7 @@ func deployCacheKey(res resources.Image) (signature string) {
 
 func loadDeploySignature(res resources.Image) (signature string, err error) {
 	key := deployCacheKey(res)
-	value, ok, e := deployCacheDir.LoadString(key)
+	value, ok, e := deployCacheDir.Load(key)
 	if e != nil {
 		return signature, e
 	}
@@ -165,7 +168,7 @@ func StoreDeploySignature(res resources.Image) (err error) {
 		return e
 	}
 	key := deployCacheKey(res)
-	err = deployCacheDir.StoreString(key, signature)
+	err = deployCacheDir.Store(key, signature)
 	return
 }
 
