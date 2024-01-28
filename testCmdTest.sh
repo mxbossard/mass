@@ -4,7 +4,7 @@ scriptDir=$( dirname $( readlink -f $0 ) )
 
 workspaceDir="/tmp/cmdtWorkspace"
 
-echo "##### Building cmdtest binary ..."
+>&2 echo "##### Building cmdtest binary ..."
 export GOBIN="$scriptDir/bin"
 cd $scriptDir/src/mby.fr/cmdtest
 go install
@@ -112,8 +112,8 @@ $cmd @report
 ! $cmd @report || false
 
 >&2 echo "## Interlaced tests"
-eval $( $cmd @init="another" )
-eval $( $cmd @init="another one" )
+eval $( $cmd @init="another" @keepStdout )
+eval $( $cmd @init="another one" @keepOutputs )
 
 $cmd echo not ignored @test="another/"
 $cmd echo ignored @ignore @test="another/"
@@ -127,4 +127,4 @@ $cmd @report="another"
 >&2 echo should have 1 success
 $cmd @report="another one"
 
-echo SUCCESS
+>&2 echo SUCCESS
