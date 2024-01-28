@@ -40,8 +40,6 @@ cd "$workspace"
 >&2 echo "## Test suite @init"
 #eval $( $cmd @init @ignore )
 eval $( $cmd @init @stopOnFailure=false)
-eval $( $cmd @init="another" )
-eval $( $cmd @init="another one" )
 
 >&2 echo "## Test without name"
 $cmd true @success
@@ -88,12 +86,23 @@ $cmd "@test=stdout~ ok" echo foo "bar baz" @stdout~"bar"
 $cmd "@test=empty stderr" true @stderr=
 ! $cmd "@test=empty stderr" notExist @stderr= || false
 
-$cmd "@test=stderr= ok" ls /notExist @stderr="ls: cannot access '/notExist': No such file or directory\n"
-! $cmd "@test=stderr= ko" ls /notExist @stderr="foo" || false
+$cmd "@test=stderr= ok" sh foo @stderr="sh: 0: Can't open foo\n"
+! $cmd "@test=stderr= ko" sh foo @stderr="foo" || false
 
 >&2 echo "## Test suite @stderr~"
 $cmd "@test=stderr~ ok" ls /notExist @stderr~"otExi"
 ! $cmd "@test=stderr~ ko" ls /notExist @stderr~"foo" || false
+
+>&2 echo "## Test stdin"
+echo foo | $cmd "@test=stdin" cat @stdout="foo\n"
+
+>&2 echo "## Test exported var"
+export foo=bar
+$cmd "@test=exported var" sh -c "export" @stdout~"foo='bar'\n"
+
+#>&2 echo "## Test alias"
+#alias foo=echo
+#$cmd "@test=alias" sh -c "foo bar" @stdout~"bar\n"
 
 
 >&2 echo "## Test @report"
@@ -102,7 +111,20 @@ $cmd @report
 # Should not report a second time
 ! $cmd @report || false
 
+>&2 echo "## Interlaced tests"
+eval $( $cmd @init="another" )
+eval $( $cmd @init="another one" )
+
+$cmd echo not ignored @test="another/"
+$cmd echo ignored @ignore @test="another/"
+
+$cmd echo another test @test="another one/"
+$cmd echo interlaced test @test="another/"
+
+>&2 echo should have 2 success and 1 ignored
 $cmd @report="another"
+
+>&2 echo should have 1 success
 $cmd @report="another one"
 
 echo SUCCESS
