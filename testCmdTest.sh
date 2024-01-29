@@ -30,15 +30,19 @@ die() {
 
 cd "$workspace"
 
->&2 echo "## Test whithout @init"
-! $cmd "@test=without @init" true @success || false
+>&2 echo "## Test @report without test"
+$cmd @report || true # may fail or succeed depending on presence of previous testing
+$cmd @report || true
 
->&2 echo "## Test @report without @init"
-! $cmd @report || false
+>&2 echo "## Test whithout @init"
+$cmd "@test=without @init ok" true @success
+$cmd "@test=without @init ko" false @fail
+$cmd @report
 
 >&2 $cmd @init
 >&2 echo "## Test suite @init"
 #eval $( $cmd @init @ignore )
+eval $( $cmd @init @stopOnFailure=false)
 eval $( $cmd @init @stopOnFailure=false)
 
 >&2 echo "## Test without name"
