@@ -30,14 +30,20 @@ die() {
 
 cd "$workspace"
 
+>&2 echo "## Test usage"
+! $cmd || false
+
 >&2 echo "## Test @report without test"
-$cmd @report || true # may fail or succeed depending on presence of previous testing
-$cmd @report || true
+! $cmd @report || false
+! $cmd @report || false
 
 >&2 echo "## Test whithout @init"
 $cmd "@test=without @init ok" true @success
 $cmd "@test=without @init ko" false @fail
+$cmd "@test=test suite/without @init ok" true
 $cmd @report
+! $cmd @report || true
+$cmd @report="test suite"
 
 >&2 $cmd @init
 >&2 echo "## Test suite @init"
@@ -47,7 +53,7 @@ eval $( $cmd @init @stopOnFailure=false)
 
 >&2 echo "## Test without name"
 $cmd true @success
-$cmd "" true @success @ignore=false || true
+! $cmd "" true @success @ignore=false || false
 ! $cmd "" true @success @ignore=false || false
 $cmd sleep 0.2
 
@@ -90,7 +96,7 @@ $cmd "@test=stdout~ ok" echo foo "bar baz" @stdout~"bar"
 $cmd "@test=empty stderr" true @stderr=
 ! $cmd "@test=empty stderr" notExist @stderr= || false
 
-$cmd "@test=stderr= ok" sh foo @stderr="sh: 0: Can't open foo\n"
+$cmd "@test=stderr= ok" sh -c ">&2 echo foo" @stderr="foo\n"
 ! $cmd "@test=stderr= ko" sh foo @stderr="foo" || false
 
 >&2 echo "## Test suite @stderr~"
