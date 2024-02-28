@@ -1,8 +1,8 @@
 module mby.fr/mass
 
-go 1.22
+go 1.21
 
-toolchain go1.22.0
+toolchain go1.21.0
 
 replace mby.fr/utils => ../utils
 
