@@ -6,25 +6,15 @@ import (
 
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
-
-	"mby.fr/utils/container"
+	"mby.fr/utils/ctnrz"
 )
 
 var (
 	venomImage = "mxbossard/venom:1.0.1"
 
-	venomRunner = container.DockerRunner{
-		Image: venomImage,
-		//Volumes: []string{testDirMount},
-		CmdArgs: []string{"run"},
-		Remove:  true,
-	}
+	venomRunner = ctnrz.Engine().Container().Run(venomImage, "run").Rm()
 
-	dummyRunner = container.DockerRunner{
-		Image:   "alpine:3.16",
-		CmdArgs: []string{"sh", "-c", "echo 'Dummy venom runner '; for i in $(seq 3); do sleep 1; echo .; done"},
-		Remove:  true,
-	}
+	dummyRunner = ctnrz.Engine().Container().Run("alpine:3.16", "sh", "-c", "echo 'Dummy venom runner '; for i in $(seq 3); do sleep 1; echo .; done").Rm()
 )
 
 func RunProjectVenomTests(d display.Displayer, p resources.Project) (err error) {
@@ -69,18 +59,18 @@ func RunImageVenomTests(d display.Displayer, i resources.Image) (err error) {
 func RunVenomTests(d display.Displayer, res resources.Resourcer) (err error) {
 	tester, ok := res.(resources.Tester)
 	if !ok {
-		return fmt.Errorf("Resource of type %T does not implements Tester !", res)
+		return fmt.Errorf("resource of type %T does not implements Tester", res)
 	}
 
 	testDirMount := tester.AbsTestDir() + ":/venom:ro"
 
 	runner := venomRunner
-	runner.Volumes = []string{testDirMount}
+	runner.AddVolumes(testDirMount)
 
 	logger := d.BufferedActionLogger("test", res.QualifiedName())
 	//defer logger.Close()
 
-	err = runner.Wait(logger.Out(), logger.Err())
+	_, err = runner.Executer().SetOutputs(logger.Out(), logger.Err()).ErrorOnFailure(true).BlockRun()
 	return
 }
 
