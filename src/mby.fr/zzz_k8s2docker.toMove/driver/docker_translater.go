@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -29,9 +30,10 @@ const (
 */
 
 const (
-	MetadataLabelKeyPrefix = "k8s2docker.mby.fr"
-	ContainerMetadataKey   = "descriptor.container"
-	PodMetadataKey         = "descriptor.pod"
+	MetadataLabelKeyPrefix     = "k8s2docker.mby.fr"
+	ContainerMetadataKey       = "descriptor.container"
+	SecurityContextMetadataKey = "descriptor.securityContext"
+	PodMetadataKey             = "descriptor.pod"
 )
 
 func forgePodVolumeName(namespace, podName, volName string) (name string) {
@@ -249,13 +251,23 @@ func buildPod(namespace, name string, jr map[string]any) (*corev1.Pod, error) {
 }
 
 func (t DockerTranslater) DescribePod(namespace, podName string) cmdz.Formatter[*corev1.Pod] {
-	rootCtName := podRootContainerName0(namespace, podName)
+	// FIXME: add init containers
+	rootCtName := "/" + podRootContainerName0(namespace, podName)
 	formatter := func(rc int, stdout, stderr []byte) (res *corev1.Pod, err error) {
 		var jsonResults []map[string]any
 		err = yaml.Unmarshal(stdout, &jsonResults)
+		if err != nil {
+			return
+		}
 		var containers []corev1.Container
+		//var labels map[string]any
 		for _, jr := range jsonResults {
-			if jr["Name"] == rootCtName {
+			ctName := jr["Name"]
+			log.Printf("DescribePod: found container with name: [%s]. Looking for root container: [%s].", ctName, rootCtName)
+			if ctName == rootCtName {
+				//config := jr["Config"].(map[string]any)
+				//hostConfig := jr["HostConfig"].(map[string]any)
+				//labels = config["Labels"].(map[string]any)
 				res, err = buildPod(namespace, podName, jr)
 			} else {
 				ct, err := buildPodContainer(jr)
@@ -267,6 +279,8 @@ func (t DockerTranslater) DescribePod(namespace, podName string) cmdz.Formatter[
 		}
 		if res != nil {
 			res.Spec.Containers = containers
+			//res.ObjectMeta.Labels = labels
+			//res.Spec.SecurityContext, err = loadLabelMetadata[corev1.SecurityContext](labels, SecurityContextMetadataKey)
 		}
 		return
 	}
@@ -741,7 +755,7 @@ func loadLabelMetadata[T any](labels map[string]any, key string) (value T, err e
 	key = forgeLabelMetadataKey(key)
 	labelVal, ok := labels[key]
 	if !ok {
-		err = fmt.Errorf("no metada label correspond to key: %s", key)
+		err = fmt.Errorf("no metadata label correspond to key: %s", key)
 		return value, err
 	}
 	labelStr, ok := labelVal.(string)

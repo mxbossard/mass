@@ -1,15 +1,15 @@
 package main
 
-import(
+import (
+	"fmt"
 	"io"
+	"log"
 	"math"
 	"math/rand"
-	"time"
-	"strings"
 	"strconv"
+	"strings"
 	"sync"
-	"fmt"
-	"log"
+	"time"
 
 	"mby.fr/mass/internal/display"
 	//"mby.fr/mass/internal/logger"
@@ -22,7 +22,7 @@ var random = rand.New(rand.NewSource(99))
 
 func writeLorem(size int, writer io.Writer) error {
 	// Write full loremString
-	for i := 0; i < size / len(loremString); i++ {
+	for i := 0; i < size/len(loremString); i++ {
 		writer.Write([]byte(loremString))
 	}
 	// Writer last part of loremString
@@ -61,7 +61,7 @@ func actionLogger(d display.Displayer, action, subject string, logCount int) {
 	loggingFuncs := []func(string, ...interface{}){al.Trace, al.Debug, al.Warn, al.Error}
 	al.Info("Will log %d line(s).", logCount)
 	var i = 0
-	Loop:
+Loop:
 	for {
 		// Use logging functions
 		for _, lf := range loggingFuncs {
@@ -81,7 +81,7 @@ func actionLogger(d display.Displayer, action, subject string, logCount int) {
 			text := strconv.Itoa(i) + " " + produceText()
 			lf(text)
 			time.Sleep(logPeriodInMs * time.Millisecond)
-			i ++
+			i++
 		}
 	}
 	//al.Flush()
@@ -109,7 +109,7 @@ func main() {
 			//fmt.Printf("Launching ActionLoger: %s %s for %d lines ...\n", action, subject, logCount)
 			actionLogger(d, action, subject, logCount)
 			//fmt.Printf("Finished ActionLoger: %s %s printed %d lines.\n", action, subject, logCount)
-			<- ch
+			<-ch
 		}()
 	}
 

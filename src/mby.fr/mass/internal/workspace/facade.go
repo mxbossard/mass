@@ -10,7 +10,7 @@ import (
 	"mby.fr/mass/internal/deploy"
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
-	"mby.fr/mass/testing"
+	"mby.fr/mass/tester"
 	"mby.fr/utils/concurrent"
 	"mby.fr/utils/errorz"
 )
@@ -76,7 +76,7 @@ func DisplayResourcesVersion(args []string) {
 	d.Info("Version finished")
 }
 
-func forgeVersionBumpMessage(fromVer, toVer string) (string) {
+func forgeVersionBumpMessage(fromVer, toVer string) string {
 	return fmt.Sprintf("%s => %s", fromVer, toVer)
 }
 
@@ -285,7 +285,7 @@ func TestResources(args []string) {
 	}
 
 	tester := func(r resources.Resourcer) (void interface{}, err error) {
-		err = testing.VenomTests(d, r)
+		err = tester.VenomTests(d, r)
 		return
 	}
 	_, err := concurrent.RunWaiting(tester, res...)
