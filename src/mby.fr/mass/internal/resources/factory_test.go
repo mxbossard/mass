@@ -87,13 +87,13 @@ func TestBuildImage(t *testing.T) {
 	require.NoError(t, err, "should not error")
 	assert.NoFileExists(t, path, "should not exists")
 
-	resPath := path + "/" + expectedProjectName + "/" + expectedImageName
-	assertBaseContent(t, resPath, r)
-	assertTestableContent(t, resPath, r)
+	expectedResPath := path + "/" + expectedProjectName + "/img-" + expectedImageName
+	assertBaseContent(t, expectedResPath, r)
+	assertTestableContent(t, expectedResPath, r)
 
 	assert.Equal(t, ImageKind, r.Kind(), "bad resource kind")
-	assert.Equal(t, resPath+"/"+DefaultSourceDir, r.AbsSourceDir(), "bad source dir")
-	assert.Equal(t, resPath+"/"+DefaultBuildFile, r.AbsBuildFile(), "bad buildfile")
+	assert.Equal(t, expectedResPath+"/"+DefaultSourceDir, r.AbsSourceDir(), "bad source dir")
+	assert.Equal(t, expectedResPath+"/"+DefaultBuildFile, r.AbsBuildFile(), "bad buildfile")
 	assert.Equal(t, DefaultInitialVersion, r.Version(), "bad version")
 
 	project, err := r.Project()

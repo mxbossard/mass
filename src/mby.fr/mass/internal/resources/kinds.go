@@ -15,11 +15,23 @@ const (
 	EnvKind
 	ProjectKind
 	ImageKind
+	DeploymentKind
 	PodKind
 	EndpointKind
 	ServiceKind
 	kindLimit
 )
+
+var kindAlias = map[Kind][]string{
+	EnvKind:        []string{"e", EnvKind.String(), EnvKind.String() + "s"},
+	ProjectKind:    []string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
+	ImageKind:      []string{"i", ImageKind.String(), ImageKind.String() + "s"},
+	DeploymentKind: []string{"d", DeploymentKind.String(), DeploymentKind.String() + "s"},
+	PodKind:        []string{"po", PodKind.String(), PodKind.String() + "s"},
+	EndpointKind:   []string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
+	ServiceKind:    []string{"s", ServiceKind.String(), ServiceKind.String() + "s"},
+	AllKind:        []string{AllKind.String()},
+}
 
 func TypeFromKind(kind Kind) (t reflect.Type) {
 	switch kind {
@@ -29,6 +41,8 @@ func TypeFromKind(kind Kind) (t reflect.Type) {
 		t = reflect.TypeOf((*Project)(nil)).Elem()
 	case ImageKind:
 		t = reflect.TypeOf((*Image)(nil)).Elem()
+	case DeploymentKind:
+		t = reflect.TypeOf((*Deployment)(nil)).Elem()
 	case PodKind:
 		t = reflect.TypeOf((*Pod)(nil)).Elem()
 	case EndpointKind:
@@ -150,16 +164,6 @@ func NewKindSet(kinds ...Kind) *KindSet {
 	return &set
 }
 
-var kindAlias = map[Kind][]string{
-	EnvKind:      []string{"e", EnvKind.String(), EnvKind.String() + "s"},
-	ProjectKind:  []string{"p", ProjectKind.String(), ProjectKind.String() + "s"},
-	ImageKind:    []string{"i", ImageKind.String(), ImageKind.String() + "s"},
-	PodKind:      []string{"po", PodKind.String(), PodKind.String() + "s"},
-	EndpointKind: []string{"end", EndpointKind.String(), EndpointKind.String() + "s"},
-	ServiceKind:  []string{"s", ServiceKind.String(), ServiceKind.String() + "s"},
-	AllKind:      []string{AllKind.String()},
-}
-
 func KindExists(k Kind) bool {
 	return k >= 0 && k < kindLimit
 }
@@ -177,6 +181,15 @@ func KindFromAlias(alias string) (Kind, bool) {
 		}
 	}
 	return AllKind, false
+}
+
+func AliasFromKind(kind Kind) (string, bool) {
+	for k, v := range kindAlias {
+		if kind == k {
+			return v[0], true
+		}
+	}
+	return "", false
 }
 
 func IsKindIn(kind Kind, kinds []Kind) bool {

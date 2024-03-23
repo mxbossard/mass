@@ -23,39 +23,39 @@ func assertFileContains(t *testing.T, path string, expectedContent string) {
 }
 
 /*
-func TestWriteDirectoryBase(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	os.MkdirAll(path, 0755)
-	defer os.RemoveAll(path)
+	func TestWriteDirectoryBase(t *testing.T) {
+		path, err := test.BuildRandTempPath()
+		os.MkdirAll(path, 0755)
+		defer os.RemoveAll(path)
 
-	b, err := buildDirectoryBase(EnvKind, path)
-	require.NoError(t, err, "should not error")
+		b, err := buildDirectoryBase(EnvKind, path)
+		require.NoError(t, err, "should not error")
 
-	err = Write(b)
-	require.NoError(t, err, "should not error")
+		err = Write(b)
+		require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := b.backingFilepath()
-	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
-	//base := filepath.Base(path)
-	//expectedContent := fmt.Sprintf("{1 %s %s}\n", base, path)
-	expectedContent := "resourceKind: env\n"
-	assertFileContains(t, expectedResourceFilepath, expectedContent)
-}
+		expectedResourceFilepath := b.backingFilepath()
+		assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
+		//base := filepath.Base(path)
+		//expectedContent := fmt.Sprintf("{1 %s %s}\n", base, path)
+		expectedContent := "resourceKind: env\n"
+		assertFileContains(t, expectedResourceFilepath, expectedContent)
+	}
 
-func TestWriteTestable(t *testing.T) {
-	path, err := test.BuildRandTempPath()
-	os.MkdirAll(path, 0755)
-	defer os.RemoveAll(path)
+	func TestWriteTestable(t *testing.T) {
+		path, err := test.BuildRandTempPath()
+		os.MkdirAll(path, 0755)
+		defer os.RemoveAll(path)
 
-	te, err := buildProject(path)
-	require.NoError(t, err, "should not error")
+		te, err := buildProject(path)
+		require.NoError(t, err, "should not error")
 
-	err = Write(te)
-	require.NoError(t, err, "should not error")
+		err = Write(te)
+		require.NoError(t, err, "should not error")
 
-	expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
-	assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
-}
+		expectedResourceFilepath := filepath.Join(path, DefaultResourceFile)
+		assert.FileExists(t, expectedResourceFilepath, "resource file should exist")
+	}
 */
 func TestWriteProject(t *testing.T) {
 	path, err := test.BuildRandTempPath()
@@ -162,7 +162,7 @@ func TestWriteThenRead(t *testing.T) {
 	expectedProjectName := "monProjet"
 	expectedImageFullName := fmt.Sprintf("%s/%s", expectedProjectName, expectedImageName)
 	expectedProjectDir := filepath.Join(path, expectedProjectName)
-	expectedImageDir := filepath.Join(expectedProjectDir, expectedImageName)
+	expectedImageDir := filepath.Join(expectedProjectDir, "img-"+expectedImageName)
 	p, err := Build[Project](expectedProjectName, path)
 	require.NoError(t, err, "should not error")
 	i, err := Build[Image](expectedImageName, p)
