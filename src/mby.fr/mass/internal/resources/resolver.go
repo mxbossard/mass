@@ -191,7 +191,6 @@ func resolveExpresionForKinds(expr string, kinds KindSet) (res Resourcer, aggErr
 // env1 env/env1 e/env1 envs/env1
 // project1 project/project1 projects/project1
 // project1/image2 image/project1/image2
-//
 func resolveResource(expr string, expectedKind Kind) (r Resourcer, err error) {
 	if !KindExists(expectedKind) {
 		err = InvalidArgument
@@ -328,7 +327,39 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 		return res, err
 	}
 
-	// 3- Scan to find resource
+	// 3- Attempt to resolve resource name first part
+	splittedName := strings.Split(name, PathSeparator)
+	if len(splittedName) > 1 {
+		firstDir := fromDir
+		firstName := splittedName[0]
+		remainingName := strings.Join(splittedName[1:], PathSeparator)
+		if len(firstName) == 0 {
+			// First name char is a spearator => resolve from root dir
+			firstDir = ss.WorkspaceDir()
+			firstName = splittedName[1]
+			if len(splittedName) > 2 {
+				remainingName = strings.Join(splittedName[2:], PathSeparator)
+			} else {
+				remainingName = ""
+			}
+		}
+		firstRes, error := resolveResourceFrom(firstDir, firstName, AllKind)
+		if error != nil && !IsResourceNotFound(error) {
+			// Swallow ResourceNotFound
+			return nil, error
+		}
+		if firstRes != nil && remainingName != "" {
+			foundRes, error := resolveResourceFrom(firstRes.Dir(), remainingName, kind)
+			if error != nil && !IsResourceNotFound(error) {
+				// Swallow ResourceNotFound
+				return nil, error
+			} else if error == nil {
+				return foundRes, nil
+			}
+		}
+	}
+
+	// 4- Scan to find resource
 	var resources []Resourcer
 	if kind == AllKind {
 		resources, err = scanResourcesFrom(fromDir, AllKind, 1)
@@ -339,17 +370,19 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 		return
 	}
 
+	//fmt.Printf("Scanned resources: %s, %s, %s => %s\n", fromDir, name, kind, resources)
 	// Filter found resources
 	// Keep only resources matching specified kind
 	// For Image, keep by Name() in general, plus keep by ImageName() if in context of a Project
 	for _, res := range resources {
 		if kind == AllKind || kind == res.Kind() {
 			switch v := res.(type) {
-			case *Image:
+			case Image:
+				//fmt.Printf("Filtering: %s, %s > %v\n", kind, name, v.FullName() == name)
 				if v.FullName() == name {
 					// Image general case
-					r = res
-					return
+					//r = res
+					return res, nil
 				}
 
 				fromDirRes, err := ReadResourcer(fromDir)
@@ -371,6 +404,7 @@ func resolveResourceFrom(fromDir, name string, kind Kind) (r Resourcer, err erro
 			}
 		}
 	}
+	//fmt.Printf("Not filtered: %s, %s\n", kind, name)
 	err = ResourceNotFound{Expression: name, Kinds: NewKindSet(kind)}
 	return
 }

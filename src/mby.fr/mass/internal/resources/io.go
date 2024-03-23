@@ -21,10 +21,10 @@ func Write(r Resourcer) (err error) {
 
 	var content []byte
 	switch res := r.(type) {
-	case *Env, *Project, *Image, *Pod, *Service, *Endpoint:
+	case *Env, *Project, *Image, *Deployment, *Pod, *Service, *Endpoint:
 		//fmt.Printf("Debug: resource pointer [%T] content: [%s] ...\n", res, res)
 		content, err = yaml.Marshal(res)
-	case base, Env, Project, Image, Pod, Service, Endpoint:
+	case base, Env, Project, Image, Deployment, Pod, Service, Endpoint:
 		//fmt.Printf("Debug: resource [%T] content: [%v] ...\n", res, res)
 		content, err = yaml.Marshal(&res)
 	default:
@@ -78,7 +78,8 @@ func ReadAny(path string) (r any, err error) {
 		return
 	}
 
-	resName := filepath.Base(filepath.Dir(path))
+	//resName := filepath.Base(filepath.Dir(path))
+	resName := resourceName(filepath.Dir(path))
 	var parentResOrDir any = parentDir
 	var parentProject Project
 	kind := base.Kind()

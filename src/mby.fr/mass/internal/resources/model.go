@@ -112,12 +112,13 @@ func (r directoryBase) backingFilepath() string {
 	return filepath.Join(r.base.Dir(), DefaultResourceFile)
 }
 
-func buildDirectoryBase(kind Kind, dirPath string) (b directoryBase, err error) {
+func buildDirectoryBase(kind Kind, dirPath, name string) (b directoryBase, err error) {
+	//name := resourceName(dirPath)
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		return
 	}
-	name := resourceName(dirPath)
+
 	b = directoryBase{base{ResourceKind: kind, name: name, dir: absDirPath}}
 	return
 }
@@ -176,7 +177,7 @@ func (e Env) init() (err error) {
 }
 
 func buildEnv(envDir string) (r Env, err error) {
-	base, err := buildDirectoryBase(EnvKind, envDir)
+	base, err := buildDirectoryBase(EnvKind, envDir, resourceName(envDir))
 	if err != nil {
 		return
 	}

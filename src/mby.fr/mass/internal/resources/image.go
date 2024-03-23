@@ -98,12 +98,12 @@ func (i Image) Project() (project Project, err error) {
 }
 
 func buildImage(project Project, imageName string) (r Image, err error) {
-	imageDir := filepath.Join(project.Dir(), imageName)
+	imageDir := filepath.Join(project.Dir(), "img-"+imageName)
 	version := DefaultInitialVersion
 	buildfile := DefaultBuildFile
 	sourceDir := DefaultSourceDir
 
-	b, err := buildDirectoryBase(ImageKind, imageDir)
+	b, err := buildDirectoryBase(ImageKind, imageDir, imageName)
 	if err != nil {
 		return
 	}

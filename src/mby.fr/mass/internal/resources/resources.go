@@ -39,7 +39,10 @@ func Init[T Resourcer](name string, parentResOrDir any) (r T, err error) {
 }
 
 func resourceName(path string) string {
-	return filepath.Base(path)
+	base := filepath.Base(path)
+	base = strings.TrimPrefix(base, "img-")
+	base = strings.TrimPrefix(base, "dep-")
+	return base
 }
 
 // Return a resource relative path from an absolute path

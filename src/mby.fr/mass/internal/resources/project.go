@@ -66,7 +66,7 @@ func (p *Project) Images() ([]*Image, error) {
 
 func buildProject(projectDir string) (p Project, err error) {
 	deployfile := DefaultDeployFile
-	b, err := buildDirectoryBase(ProjectKind, projectDir)
+	b, err := buildDirectoryBase(ProjectKind, projectDir, resourceName(projectDir))
 	if err != nil {
 		return
 	}
