@@ -6,6 +6,9 @@ scriptDir=$( dirname $( readlink -f $0 ) )
 #packages="src/mby.fr/k8s2docker src/mby.fr/utils src/mby.fr/mass src/mby.fr/scribble"
 packages="src/mby.fr/utils src/mby.fr/mass"
 
+# BUG: fix bad coverage percentage https://github.com/golang/go/issues/62212
+export GOEXPERIMENT=nocoverageredesign
+
 success=true
 for pkg in $packages; do
 	>&2 echo ""
