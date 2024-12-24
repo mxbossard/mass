@@ -286,7 +286,7 @@ func resolveContextualResource(name string, kind Kind) (r Resourcer, err error) 
 	}
 	workspaceDir := ss.WorkspaceDir()
 
-	workDir, err2 := filez.WorkDirPath()
+	workDir, err2 := filez.WorkingDir()
 	if err != nil {
 		return r, err2
 	}
@@ -448,7 +448,7 @@ func getDirResource(fromDir string, resourceKind Kind) (res Resourcer, err error
 
 // Return resource with kind in current dir if it exists
 func getCurrentDirResource(resourceKind Kind) (res Resourcer, err error) {
-	workDir, err := filez.WorkDirPath()
+	workDir, err := filez.WorkingDir()
 	if err != nil {
 		return
 	}

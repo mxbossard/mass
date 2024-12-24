@@ -22,7 +22,7 @@ func Init(path string) (err error) {
 		return
 	}
 
-	err = filez.CreateDirectory(path)
+	err = filez.MkdirAll(path, 0700)
 	if err != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func Init(path string) (err error) {
 		return
 	}
 
-	workspacePath, err := filez.WorkDirPath()
+	workspacePath, err := filez.WorkingDir()
 	if err != nil {
 		return
 	}

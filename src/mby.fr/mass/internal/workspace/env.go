@@ -12,7 +12,7 @@ func InitEnvs() (err error) {
 		return
 	}
 
-	err = filez.CreateNewDirectory(settingsService.EnvsDir())
+	err = filez.Mkdir(settingsService.EnvsDir(), 0700)
 	if err != nil {
 		return
 	}

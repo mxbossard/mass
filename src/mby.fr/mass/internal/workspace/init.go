@@ -45,7 +45,7 @@ func InitImage(name string) (imagePath string, err error) {
 	splittedName := strings.Split(name, "/")
 	if len(splittedName) == 1 {
 		// Work dir must be project dir
-		workDir, err := filez.WorkDirPath()
+		workDir, err := filez.WorkingDir()
 		if err != nil {
 			return "", err
 		}
