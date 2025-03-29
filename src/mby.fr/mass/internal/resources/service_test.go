@@ -4,19 +4,19 @@ import (
 	//"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	//k8s "k8s.io/api"
-	"os"
 	"fmt"
-	"testing"
+	"os"
 	"path/filepath"
+	"testing"
 
 	//"mby.fr/mass/internal/commontest"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
-
 func TestReadService(t *testing.T) {
-	expectedProjectDir, err := test.BuildRandTempPath()
+	expectedProjectDir, err := tezt.BuildRandTempPath()
 	os.MkdirAll(expectedProjectDir, 0755)
 	defer os.RemoveAll(expectedProjectDir)
 
@@ -57,7 +57,7 @@ spec:
 
 	service, err := Read[Service](expectedServiceResFilePath)
 	require.NoError(t, err, "should not error")
-	
+
 	assert.Equal(t, expectedServiceName, service.Name())
 	assert.Equal(t, expectedProjectDir, service.Dir())
 	assert.Equal(t, podSpecFilePath, service.ServiceFile)

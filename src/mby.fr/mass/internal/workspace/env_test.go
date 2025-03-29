@@ -2,14 +2,15 @@ package workspace
 
 import (
 	//"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"mby.fr/mass/internal/commontest"
 	"mby.fr/mass/internal/resources"
-	_ "mby.fr/utils/test"
+	_ "mby.fr/utils/tezt"
 )
 
 func TestInitEnv(t *testing.T) {

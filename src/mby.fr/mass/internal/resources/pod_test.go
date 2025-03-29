@@ -4,18 +4,19 @@ import (
 	//"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	//k8s "k8s.io/api"
 	"os"
 	"path/filepath"
 	"testing"
 
 	//"mby.fr/mass/internal/commontest"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func TestReadPod(t *testing.T) {
 	t.Skip("WIP")
-	expectedProjectDir, err := test.BuildRandTempPath()
+	expectedProjectDir, err := tezt.BuildRandTempPath()
 	os.MkdirAll(expectedProjectDir, 0755)
 	defer os.RemoveAll(expectedProjectDir)
 

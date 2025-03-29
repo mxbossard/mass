@@ -1,18 +1,18 @@
 package config
 
 import (
-	"testing"
 	"os"
+	"testing"
 
-        "github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
 	"mby.fr/mass/internal/settings"
+	"mby.fr/utils/tezt"
 )
 
 func TestInit(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	require.NoFileExists(t, tempDir, "should not exists")
 
@@ -28,9 +28,8 @@ func TestInit(t *testing.T) {
 	assert.FileExists(t, tempFile, "should exists")
 }
 
-
 func TestRead(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	require.NoFileExists(t, tempDir, "should not exists")
 	err = Init(tempDir, nil)
@@ -109,4 +108,3 @@ func TestMergeConfig(t *testing.T) {
 	assert.Equal(t, "val4", mergedConfig.Environment["key4"], "key modified")
 	assert.Equal(t, "val5", mergedConfig.Environment["key5"], "key modified")
 }
-

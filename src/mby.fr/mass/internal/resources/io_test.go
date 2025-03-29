@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func assertFileContains(t *testing.T, path string, expectedContent string) {
@@ -58,7 +58,7 @@ func assertFileContains(t *testing.T, path string, expectedContent string) {
 	}
 */
 func TestWriteProject(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
@@ -73,7 +73,7 @@ func TestWriteProject(t *testing.T) {
 }
 
 func TestReadAny(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
@@ -88,7 +88,7 @@ func TestReadAny(t *testing.T) {
 }
 
 func TestReadResourcer(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
@@ -126,7 +126,7 @@ func TestReadResourcer(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
@@ -154,7 +154,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestWriteThenRead(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 

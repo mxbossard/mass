@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func TestInitResourcer(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work
@@ -34,7 +34,7 @@ func TestInitResourcer(t *testing.T) {
 }
 
 func TestInitEnv(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work
@@ -52,7 +52,7 @@ func TestInitEnv(t *testing.T) {
 }
 
 func TestInitProject(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work
@@ -73,7 +73,7 @@ func TestInitProject(t *testing.T) {
 }
 
 func TestInitImage(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work
@@ -97,7 +97,7 @@ func TestInitImage(t *testing.T) {
 }
 
 func TestInitProjectWithImages(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	// Init Settings for templates to work

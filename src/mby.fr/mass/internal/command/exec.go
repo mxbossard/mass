@@ -4,7 +4,7 @@ import (
 	"os/exec"
 
 	"mby.fr/mass/internal/logger"
-	"mby.fr/utils/inout"
+	"mby.fr/utils/inoutz"
 )
 
 func RunLogging(cmd *exec.Cmd, logger logger.ActionLogger) (err error) {
@@ -19,8 +19,8 @@ func RunLogging(cmd *exec.Cmd, logger logger.ActionLogger) (err error) {
 		errors <- err
 	}
 
-	go inout.CopyChannelingErrors(stdout, logger.Out(), errors)
-	go inout.CopyChannelingErrors(stderr, logger.Err(), errors)
+	go inoutz.CopyChannelingErrors(stdout, logger.Out(), errors)
+	go inoutz.CopyChannelingErrors(stderr, logger.Err(), errors)
 
 	err = cmd.Start()
 	if err != nil {

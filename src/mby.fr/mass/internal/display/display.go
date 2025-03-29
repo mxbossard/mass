@@ -8,7 +8,7 @@ import (
 	"mby.fr/mass/internal/logger"
 	"mby.fr/mass/internal/output"
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/logz"
+	"mby.fr/utils/logz_toDel"
 )
 
 // Display should display data to user.
@@ -23,7 +23,7 @@ const (
 )
 
 type Displayer interface {
-	logz.Logger
+	logz_toDel.Logger
 	Display(...interface{})
 	BufferedActionLogger(string, string) logger.ActionLogger
 	ImmediateActionLogger(string, string) logger.ActionLogger

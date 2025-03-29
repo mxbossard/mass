@@ -7,15 +7,15 @@ import (
 
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/cache"
-	"mby.fr/utils/trust"
+	"mby.fr/utils/cachz"
+	"mby.fr/utils/truzt"
 )
 
 const defaultImageCacheDir = "imageSignatures"
 const defaultDeployCacheDir = "deploySignatures"
 
-var imageCacheDir cache.Cache[string]
-var deployCacheDir cache.Cache[string]
+var imageCacheDir cachz.Cache[string]
+var deployCacheDir cachz.Cache[string]
 
 func Init() (err error) {
 	if imageCacheDir != nil && deployCacheDir != nil {
@@ -30,11 +30,11 @@ func Init() (err error) {
 	imageSignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultImageCacheDir)
 	deploySignaturesCacheDir := filepath.Join(ss.CacheDir(), defaultDeployCacheDir)
 
-	imageCacheDir, err = cache.NewPersistentCache[string](imageSignaturesCacheDir)
+	imageCacheDir, err = cachz.NewPersistentCache[string](imageSignaturesCacheDir)
 	if err != nil {
 		return
 	}
-	deployCacheDir, err = cache.NewPersistentCache[string](deploySignaturesCacheDir)
+	deployCacheDir, err = cachz.NewPersistentCache[string](deploySignaturesCacheDir)
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ func fileTree(rootPath string) (tree string, err error) {
 
 func calcImageSignature(res resources.Image) (signature string, err error) {
 	filesToSign := []string{res.AbsBuildFile(), res.AbsSourceDir()}
-	filesSignature, err := trust.SignFsContents(filesToSign...)
+	filesSignature, err := truzt.SignFsContents(filesToSign...)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +82,7 @@ func calcImageSignature(res resources.Image) (signature string, err error) {
 		return "", err
 	}
 
-	signature, err = trust.SignObjects(configs.BuildArgs, filesSignature, fileTree)
+	signature, err = truzt.SignObjects(configs.BuildArgs, filesSignature, fileTree)
 
 	return
 }
@@ -132,7 +132,7 @@ func DoesImageChanged(res resources.Image) (changed bool, sign string, err error
 func calcDeploySignature(res resources.Image) (signature string, err error) {
 	// TODO add volumes in signature
 	filesToSign := []string{}
-	filesSignature, err := trust.SignFsContents(filesToSign...)
+	filesSignature, err := truzt.SignFsContents(filesToSign...)
 	if err != nil {
 		return "", err
 	}
@@ -141,7 +141,7 @@ func calcDeploySignature(res resources.Image) (signature string, err error) {
 	if err != nil {
 		return "", err
 	}
-	signature, err = trust.SignObjects(filesSignature, configs.Environment, configs.Entrypoint, configs.CommandArgs)
+	signature, err = truzt.SignObjects(filesSignature, configs.Environment, configs.Entrypoint, configs.CommandArgs)
 
 	return
 }

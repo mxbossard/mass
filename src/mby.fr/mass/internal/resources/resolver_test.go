@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 
 	//"mby.fr/utils/errorz"
 	"mby.fr/mass/internal/settings"
@@ -50,7 +50,7 @@ var (
 
 func initWorkspace(t *testing.T) (path string) {
 	// Build fake workspace with resources tree
-	path, err := test.MkRandTempDir()
+	path, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "must not error")
 
 	// Init Settings for templates to work

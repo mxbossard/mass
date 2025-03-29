@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func initRandResource(t *testing.T, parentResOrDir any, name string, kind Kind) (res Resourcer) {
@@ -60,7 +60,7 @@ func TestScanNotExistingDir(t *testing.T) {
 }
 
 func TestScanProjects(t *testing.T) {
-	parentPath, err := test.MkRandTempDir()
+	parentPath, err := tezt.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
 	res, err := Scan[Project](parentPath)
@@ -79,8 +79,8 @@ func TestScanProjects(t *testing.T) {
 	_ = r5
 
 	// Empty dirs
-	test.MkRandSubDir(parentPath)
-	test.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
 
 	res, err = Scan[Project](parentPath)
 	require.NoError(t, err, "should not error")
@@ -109,7 +109,7 @@ func TestScanProjects(t *testing.T) {
 }
 
 func TestScanEnvs(t *testing.T) {
-	parentPath, err := test.MkRandTempDir()
+	parentPath, err := tezt.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
 	res, err := Scan[Env](parentPath)
@@ -128,8 +128,8 @@ func TestScanEnvs(t *testing.T) {
 	_ = r5
 
 	// Empty dirs
-	test.MkRandSubDir(parentPath)
-	test.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
 
 	res, err = Scan[Env](parentPath)
 	require.NoError(t, err, "should not error")
@@ -158,7 +158,7 @@ func TestScanEnvs(t *testing.T) {
 }
 
 func TestScanImages(t *testing.T) {
-	parentPath, err := test.MkRandTempDir()
+	parentPath, err := tezt.MkRandTempDir()
 	defer os.RemoveAll(parentPath)
 
 	res, err := Scan[Image](parentPath)
@@ -177,8 +177,8 @@ func TestScanImages(t *testing.T) {
 	_ = r4
 
 	// Empty dirs
-	test.MkRandSubDir(parentPath)
-	test.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
+	tezt.MkRandSubDir(parentPath)
 
 	res, err = Scan[Image](parentPath)
 	require.NoError(t, err, "should not error")

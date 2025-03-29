@@ -10,11 +10,11 @@ import (
 
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func TestInit(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	defer os.RemoveAll(tempDir)
 	require.NoError(t, err, "should not error")
 	require.NoFileExists(t, tempDir, "should not exists")
@@ -30,7 +30,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestCalcImageSignature(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	defer os.RemoveAll(path)
 	require.NoError(t, err, "should not error")
 
@@ -137,7 +137,7 @@ func TestCalcImageSignature(t *testing.T) {
 }
 
 func TestDoesImageChanged(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	defer os.RemoveAll(path)
 	require.NoError(t, err, "should not error")
 

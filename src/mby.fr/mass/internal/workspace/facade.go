@@ -12,7 +12,7 @@ import (
 	"mby.fr/mass/internal/display"
 	"mby.fr/mass/internal/resources"
 	"mby.fr/mass/tester"
-	"mby.fr/utils/concurrent"
+	"mby.fr/utils/concurrenz"
 	"mby.fr/utils/errorz"
 )
 
@@ -181,7 +181,7 @@ func BuildResources(args []string) {
 		err = buildResource(r)
 		return
 	}
-	_, err := concurrent.RunWaiting(builder, res...)
+	_, err := concurrenz.RunWaiting(builder, res...)
 	if err != nil {
 		d.Error(fmt.Sprintf("Encountered error during build phase: %s", err))
 		manageFatalError(err)
@@ -211,7 +211,7 @@ func PullResources(args []string) {
 		err = pullResource(r)
 		return
 	}
-	_, err := concurrent.RunWaiting(puller, res...)
+	_, err := concurrenz.RunWaiting(puller, res...)
 	if err != nil {
 		d.Error(fmt.Sprintf("Encountered error during pull phase: %s", err))
 		manageFatalError(err)
@@ -247,7 +247,7 @@ func UpResources(args []string) {
 		err = upResource(r)
 		return
 	}
-	_, err := concurrent.RunWaiting(upper, res...)
+	_, err := concurrenz.RunWaiting(upper, res...)
 	if err != nil {
 		d.Error(fmt.Sprintf("Encountered error during up phase: %s", err))
 		manageFatalError(err)
@@ -276,7 +276,7 @@ func DownResources(args []string) {
 		err = downResource(r)
 		return
 	}
-	_, err := concurrent.RunWaiting(downer, res...)
+	_, err := concurrenz.RunWaiting(downer, res...)
 	if err != nil {
 		d.Error(fmt.Sprintf("Encountered error during down phase: %s", err))
 		manageFatalError(err)
@@ -302,7 +302,7 @@ func TestResources(args []string) {
 		err = tester.VenomTests(d, r)
 		return
 	}
-	_, err := concurrent.RunWaiting(tester, res...)
+	_, err := concurrenz.RunWaiting(tester, res...)
 	if err != nil {
 		d.Error(fmt.Sprintf("Encountered error during test phase: %s", err))
 		manageFatalError(err)

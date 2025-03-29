@@ -2,17 +2,18 @@ package workspace
 
 import (
 	//"fmt"
-	"testing"
 	"os"
 	"path/filepath"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 
-	"mby.fr/utils/test"
 	"mby.fr/mass/internal/commontest"
+	"mby.fr/utils/tezt"
 )
 
 func TestInitInNotExistingAbsolutePath(t *testing.T) {
-	wksDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -25,7 +26,7 @@ func TestInitInNotExistingAbsolutePath(t *testing.T) {
 }
 
 func TestInitInNotExistingRelativePath(t *testing.T) {
-	wksDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -39,7 +40,7 @@ func TestInitInNotExistingRelativePath(t *testing.T) {
 }
 
 func TestInitInExistingAbsolutePath(t *testing.T) {
-	wksDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -53,8 +54,8 @@ func TestInitInExistingAbsolutePath(t *testing.T) {
 }
 
 func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
-	wksDir := test.RandSeq(10)
-	parentDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
+	parentDir := tezt.RandSeq(10)
 	parentPath := filepath.Join(os.TempDir(), parentDir)
 	wksPath := filepath.Join(parentPath, wksDir)
 	os.RemoveAll(parentPath)
@@ -69,7 +70,7 @@ func TestInitInNotExistingAbsoluteSubPath(t *testing.T) {
 }
 
 func TestInitWithDotPath(t *testing.T) {
-	wksDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)
@@ -85,7 +86,7 @@ func TestInitWithDotPath(t *testing.T) {
 }
 
 func TestInitWithEmptyPath(t *testing.T) {
-	wksDir := test.RandSeq(10)
+	wksDir := tezt.RandSeq(10)
 	wksPath := filepath.Join(os.TempDir(), wksDir)
 	os.RemoveAll(wksPath)
 	defer os.RemoveAll(wksPath)

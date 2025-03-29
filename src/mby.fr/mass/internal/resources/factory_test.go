@@ -10,7 +10,7 @@ import (
 
 	"mby.fr/mass/internal/config"
 	//"mby.fr/utils/filez"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 func assertBaseContent(t *testing.T, path string, b Resourcer) {
@@ -42,7 +42,7 @@ func assertTestableFs(t *testing.T, r Resourcer) {
 }
 
 func TestBuildEnv(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	r, err := buildEnv(path)
@@ -54,7 +54,7 @@ func TestBuildEnv(t *testing.T) {
 }
 
 func TestBuildProject(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	expectedName := filepath.Base(path)
@@ -75,7 +75,7 @@ func TestBuildProject(t *testing.T) {
 }
 
 func TestBuildImage(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	expectedProjectName := "monProjet"
@@ -121,7 +121,7 @@ func TestBuildImageOutsideProject(t *testing.T) {
 */
 
 func TestBuildAny(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	expectedEnvName := "monEnv"
@@ -131,7 +131,7 @@ func TestBuildAny(t *testing.T) {
 }
 
 func TestBuildResourcer(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	expectedEnvName := "monEnv"
@@ -144,7 +144,7 @@ func TestBuildResourcer(t *testing.T) {
 }
 
 func TestBuild(t *testing.T) {
-	path, err := test.BuildRandTempPath()
+	path, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 
 	expectedEnvName := "monEnv"

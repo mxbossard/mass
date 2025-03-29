@@ -14,7 +14,7 @@ import (
 
 	"mby.fr/mass/internal/config"
 	"mby.fr/mass/internal/templates"
-	"mby.fr/utils/ansi"
+	"mby.fr/utils/anzi"
 	"mby.fr/utils/errorz"
 )
 
@@ -122,7 +122,7 @@ func stringify(obj interface{}) (str string, err error) {
 			return "", err
 		}
 		if o.format != "" {
-			str = fmt.Sprintf("%s%s%s", o.format, content, ansi.Reset)
+			str = fmt.Sprintf("%s%s%s", o.format, content, anzi.Reset)
 		} else {
 			str = content
 		}

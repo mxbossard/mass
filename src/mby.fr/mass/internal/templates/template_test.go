@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 const testTemplate = "test.txt"
 const testNewlineTemplate = "testNewline.txt"
 
 func TestInit(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	err = Init(tempDir)
 	assert.NoError(t, err, "should not error")
@@ -25,7 +25,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestInitWithNotExistingDir(t *testing.T) {
-	tempFile, err := test.BuildRandTempPath()
+	tempFile, err := tezt.BuildRandTempPath()
 	require.NoError(t, err, "should not error")
 	err = Init(tempFile)
 	assert.NoError(t, err, "should not error")
@@ -50,7 +50,7 @@ func TestReadFromEmbeded(t *testing.T) {
 }
 
 func TestReadFromDir(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	err = Init(tempDir)
 	require.NoError(t, err, "should not error")
@@ -77,7 +77,7 @@ func TestReadNewlineFromEmbeded(t *testing.T) {
 }
 
 func TestReadNewlineFromDir(t *testing.T) {
-	tempDir, err := test.MkRandTempDir()
+	tempDir, err := tezt.MkRandTempDir()
 	require.NoError(t, err, "should not error")
 	err = Init(tempDir)
 	require.NoError(t, err, "should not error")
@@ -110,7 +110,7 @@ func TestRender(t *testing.T) {
 func TestRenderToFile(t *testing.T) {
 	r := New("")
 
-	tempFile, err := test.BuildRandTempPath()
+	tempFile, err := tezt.BuildRandTempPath()
 	require.NoFileExists(t, tempFile, "should not exists")
 
 	err = r.RenderToFile(testTemplate, tempFile, nil)

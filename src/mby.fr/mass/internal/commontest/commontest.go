@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mby.fr/mass/internal/settings"
-	"mby.fr/utils/test"
+	"mby.fr/utils/tezt"
 )
 
 // Common function for testing which import minimum packages to not introduce dep cycle.
@@ -113,7 +113,7 @@ func initResourceFile(t *testing.T, dir string, kind string) {
 }
 
 func InitMinimalTempWorkspace(t *testing.T) (path string) {
-	path, _ = test.BuildRandTempPath()
+	path, _ = tezt.BuildRandTempPath()
 	err := settings.Init(path)
 	require.NoError(t, err, "Init settings should not return an error")
 
@@ -147,7 +147,7 @@ func InitTempWorkspace(t *testing.T) (path string) {
 }
 
 func InitRandEnv(t *testing.T, workspacePath string) (path string) {
-	name := test.RandSeq(6)
+	name := tezt.RandSeq(6)
 	path = filepath.Join(workspacePath, "envs", name)
 	err := createEmptyFiles(path, "config.yaml", "resource.yaml")
 	require.NoError(t, err, "Init temp files should not error")
@@ -159,7 +159,7 @@ func InitRandEnv(t *testing.T, workspacePath string) (path string) {
 }
 
 func InitRandProject(t *testing.T, workspacePath string) (name, path string) {
-	name = test.RandSeq(6)
+	name = tezt.RandSeq(6)
 	path = filepath.Join(workspacePath, name)
 	err := createEmptyFiles(path, "config.yaml", "resource.yaml", "test/foo")
 	require.NoError(t, err, "Init temp files should not error")
@@ -170,7 +170,7 @@ func InitRandProject(t *testing.T, workspacePath string) (name, path string) {
 }
 
 func InitRandImage(t *testing.T, projectDir string) (name, path string) {
-	name = test.RandSeq(6)
+	name = tezt.RandSeq(6)
 	path = filepath.Join(projectDir, name)
 	err := createEmptyFiles(path, "config.yaml", "resource.yaml", "version.txt", "Dockerfile", "src/empty", "test/empty")
 	require.NoError(t, err, "Init temp files should not error")

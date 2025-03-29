@@ -1,14 +1,15 @@
 package output
 
 import (
+	"bufio"
 	"io"
 	"os"
-	"bufio"
 	"time"
+
 	//"fmt"
 
-	"mby.fr/utils/datetime"
-	"mby.fr/utils/inout"
+	"mby.fr/utils/inoutz"
+	"mby.fr/utils/timez"
 )
 
 // Outputs responsible for keeping reference of outputs writers (example: stdout, file, ...)
@@ -27,7 +28,7 @@ type Outputs interface {
 }
 
 type ActivityOutputs struct {
-	log, out, err *inout.ActivityWriter
+	log, out, err *inoutz.ActivityWriter
 }
 
 func (o ActivityOutputs) Flush() error {
@@ -45,7 +46,7 @@ func (o ActivityOutputs) Flush() error {
 }
 
 func (o ActivityOutputs) LastWriteTime() time.Time {
-	lastTime := datetime.Max(o.log.Activity, o.out.Activity, o.err.Activity)
+	lastTime := timez.Max(o.log.Activity, o.out.Activity, o.err.Activity)
 	return lastTime
 }
 
@@ -72,9 +73,9 @@ func (o AwareOutputs) Flush() error {
 
 func New(log, out, err io.Writer) ActivityOutputs {
 	t := time.Time{}
-	aLog := inout.ActivityWriter{log, t}
-	aOut := inout.ActivityWriter{out, t}
-	aErr := inout.ActivityWriter{err, t}
+	aLog := inoutz.ActivityWriter{log, t}
+	aOut := inoutz.ActivityWriter{out, t}
+	aErr := inoutz.ActivityWriter{err, t}
 	return ActivityOutputs{&aLog, &aOut, &aErr}
 }
 
